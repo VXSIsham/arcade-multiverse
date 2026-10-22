@@ -72,12 +72,22 @@ class PixelArenaGame {
                 if (ev) ev.preventDefault();
                 this.touchInputs[player] = v;
                 btn.classList.toggle('active', v !== 0);
+                if (v !== 0) {
+                    try { if (navigator.vibrate) navigator.vibrate(10); } catch (err) {}
+                }
             };
             btn.addEventListener('mousedown', (e) => setVal(dir, e));
             btn.addEventListener('mouseup', (e) => setVal(0, e));
             btn.addEventListener('mouseleave', (e) => setVal(0, e));
+            btn.addEventListener('pointerdown', (e) => {
+                try { btn.setPointerCapture(e.pointerId); } catch (err) {}
+                setVal(dir, e);
+            });
+            btn.addEventListener('pointerup', (e) => setVal(0, e));
+            btn.addEventListener('pointercancel', (e) => setVal(0, e));
             btn.addEventListener('touchstart', (e) => setVal(dir, e), { passive: false });
             btn.addEventListener('touchend', (e) => setVal(0, e), { passive: false });
+            btn.addEventListener('touchcancel', (e) => setVal(0, e), { passive: false });
         };
 
         bindTouch('btn-p1-left', 'p1', -1);
@@ -485,8 +495,12 @@ class PixelArenaGame {
         document.getElementById('koPolaroid').classList.add('hidden');
 
         const p2Touch = document.getElementById('touch-p2-group');
+        const touchBar = document.querySelector('.touch-controls-bar');
         if (p2Touch) {
             p2Touch.style.display = this.mode === '2p' ? 'flex' : 'none';
+        }
+        if (touchBar) {
+            touchBar.classList.toggle('mode-2p', this.mode === '2p');
         }
 
         const p2Label = document.getElementById('p2LabelTag');

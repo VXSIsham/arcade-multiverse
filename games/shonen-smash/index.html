@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 </head>
 <body>
 <title>Shōnen Smash</title>
@@ -83,6 +83,369 @@ kbd{font:700 11.5px var(--ui);background:var(--ink-3);border:1px solid var(--ink
 @media (max-width:760px){
   #slots{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+/* =========================================================
+   RESPONSIVIDAD Y CONTROLES TÁCTILES MÓVILES (100% FLUIDO)
+   ========================================================= */
+#cv {
+  touch-action: none;
+}
+.touch-hud {
+  position: fixed;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  touch-action: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) calc(12px + env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) calc(12px + env(safe-area-inset-left, 0px));
+}
+.touch-hud[hidden] {
+  display: none !important;
+}
+.touch-top-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  pointer-events: auto;
+}
+.touch-mini-btn {
+  background: rgba(18, 20, 30, 0.78);
+  border: 1.5px solid rgba(255, 255, 255, 0.28);
+  color: #fff;
+  border-radius: 999px;
+  width: 42px;
+  height: 42px;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.55);
+  touch-action: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.touch-mini-btn:active {
+  transform: scale(0.92);
+  background: rgba(255, 210, 63, 0.35);
+  border-color: var(--gold);
+}
+
+/* D-Pad Virtual (Izquierda) */
+.touch-dpad-container {
+  position: absolute;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  left: calc(12px + env(safe-area-inset-left, 0px));
+  width: 154px;
+  height: 154px;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.touch-dpad-disc {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(28, 33, 52, 0.88) 0%, rgba(10, 12, 20, 0.94) 82%);
+  border: 2.5px solid rgba(255, 210, 63, 0.6);
+  border-radius: 50%;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), inset 0 2px 6px rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+}
+.touch-dir-btn {
+  position: absolute;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.85);
+  font-family: var(--display);
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  pointer-events: none;
+}
+.touch-dir-btn.d-up { top: 6px; left: 50%; transform: translateX(-50%); width: 48px; height: 38px; }
+.touch-dir-btn.d-down { bottom: 6px; left: 50%; transform: translateX(-50%); width: 48px; height: 38px; }
+.touch-dir-btn.d-left { left: 6px; top: 50%; transform: translateY(-50%); width: 38px; height: 48px; }
+.touch-dir-btn.d-right { right: 6px; top: 50%; transform: translateY(-50%); width: 38px; height: 48px; }
+.touch-dir-btn.active {
+  color: var(--gold);
+  text-shadow: 0 0 12px rgba(255, 210, 63, 0.9);
+  transform: scale(1.18);
+}
+.touch-dir-btn.d-up.active { transform: translateX(-50%) scale(1.18); }
+.touch-dir-btn.d-down.active { transform: translateX(-50%) scale(1.18); }
+.touch-dir-btn.d-left.active { transform: translateY(-50%) scale(1.18); }
+.touch-dir-btn.d-right.active { transform: translateY(-50%) scale(1.18); }
+
+.touch-dpad-stick {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 48px;
+  height: 48px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, #ffd23f 0%, #d97706 100%);
+  border: 2.5px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.75), inset 0 2px 4px rgba(255, 255, 255, 0.6);
+  pointer-events: none;
+  transition: transform 0.05s ease-out;
+}
+
+/* Cluster de Botones de Acción Arcade (Derecha) */
+.touch-actions-cluster {
+  position: absolute;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.touch-btn-row {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items: center;
+}
+.touch-act-btn {
+  border: none;
+  border-radius: 999px;
+  font-family: var(--display);
+  letter-spacing: 0.05em;
+  color: #fff;
+  cursor: pointer;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.35);
+  transition: transform 0.07s ease, filter 0.07s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.touch-act-btn:active, .touch-act-btn.pressed {
+  transform: scale(0.92) translateY(2px);
+  filter: brightness(1.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7), inset 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+.touch-act-btn.btn-attack {
+  width: 66px;
+  height: 66px;
+  font-size: 20px;
+  background: linear-gradient(135deg, #ffd23f, #ea580c);
+  border: 2.5px solid #ffffff;
+  color: #111;
+  text-shadow: none;
+  font-weight: 900;
+}
+.touch-act-btn.btn-special {
+  width: 60px;
+  height: 60px;
+  font-size: 18px;
+  background: linear-gradient(135deg, #ff4b4b, #b91c1c);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+}
+.touch-act-btn.btn-jump {
+  width: 58px;
+  height: 58px;
+  font-size: 16px;
+  background: linear-gradient(135deg, #38bdf8, #0369a1);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+}
+.touch-act-btn.btn-shield {
+  width: 48px;
+  height: 48px;
+  font-size: 20px;
+  background: linear-gradient(135deg, #a855f7, #6d28d9);
+  border: 2px solid rgba(255, 255, 255, 0.75);
+}
+.touch-act-btn.btn-grab {
+  width: 48px;
+  height: 48px;
+  font-size: 20px;
+  background: linear-gradient(135deg, #10b981, #047857);
+  border: 2px solid rgba(255, 255, 255, 0.75);
+}
+.touch-act-btn.btn-smash {
+  padding: 6px 14px;
+  height: 38px;
+  border-radius: 12px;
+  font-size: 15px;
+  background: linear-gradient(135deg, #f97316, #c2410c);
+  border: 2px solid #fed7aa;
+  color: #fff;
+}
+
+/* Banner de rotación a horizontal */
+.orient-hint {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  background: rgba(14, 18, 30, 0.94);
+  border: 1.5px solid var(--gold);
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gold);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+  backdrop-filter: blur(8px);
+  display: none;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  animation: pulseOrient 2s infinite ease-in-out;
+}
+@keyframes pulseOrient {
+  0%, 100% { opacity: 0.95; transform: translateX(-50%) scale(1); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.04); }
+}
+
+/* MEDIA QUERIES RESPONSIVAS PARA SMARTPHONES Y TABLETS */
+@media (max-width: 860px) {
+  .scr {
+    padding: 10px;
+    gap: 10px;
+  }
+  .logo {
+    font-size: clamp(42px, 11vw, 76px);
+  }
+  h2.big {
+    font-size: 30px;
+  }
+  #cssWrap, #sssWrap, #ctrlWrap {
+    gap: 8px;
+    width: 100%;
+  }
+  #grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    max-height: 44vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 8px;
+  }
+  .ch {
+    padding: 4px;
+    gap: 2px;
+  }
+  .ch canvas {
+    width: 62px;
+    height: 62px;
+  }
+  .ch b {
+    font-size: 14px;
+  }
+  .ch small {
+    display: none;
+  }
+  #slots {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .slot {
+    padding: 8px;
+    gap: 4px;
+  }
+  .slot header {
+    font-size: 18px;
+  }
+  .slot canvas {
+    max-width: 85px;
+  }
+  .slot .nm {
+    font-size: 16px;
+    min-height: 16px;
+  }
+  .slot select {
+    padding: 5px;
+    font-size: 12px;
+  }
+  .bar {
+    position: sticky;
+    bottom: 0;
+    background: rgba(18, 19, 25, 0.96);
+    padding: 8px 0;
+    z-index: 10;
+    width: 100%;
+    border-top: 1px solid var(--ink-4);
+  }
+  .btn {
+    padding: 10px 16px;
+    font-size: 21px;
+  }
+  #stages {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .stg canvas {
+    aspect-ratio: 16/9;
+  }
+  .stg b {
+    font-size: 19px;
+  }
+}
+
+@media (max-width: 580px) {
+  #grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  #stages {
+    grid-template-columns: 1fr;
+  }
+  .touch-dpad-container {
+    width: 136px;
+    height: 136px;
+    bottom: 8px;
+    left: 8px;
+  }
+  .touch-act-btn.btn-attack {
+    width: 58px;
+    height: 58px;
+    font-size: 18px;
+  }
+  .touch-act-btn.btn-special {
+    width: 52px;
+    height: 52px;
+    font-size: 16px;
+  }
+  .touch-act-btn.btn-jump {
+    width: 48px;
+    height: 48px;
+    font-size: 14px;
+  }
+  .touch-act-btn.btn-shield,
+  .touch-act-btn.btn-grab {
+    width: 42px;
+    height: 42px;
+    font-size: 18px;
+  }
+  .touch-act-btn.btn-smash {
+    font-size: 13px;
+    padding: 4px 10px;
+    height: 32px;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 900px) {
+  .orient-hint {
+    display: flex;
+  }
+}
+
 </style>
 
 <canvas id="cv"></canvas>
@@ -187,6 +550,44 @@ kbd{font:700 11.5px var(--ui);background:var(--ink-3);border:1px solid var(--ink
     <button class="btn" id="rAgain" type="button">Revancha</button>
     <button class="btn alt" id="rChars" type="button">Cambiar luchadores</button>
     <button class="btn ghost" id="rMenu" type="button">Menú</button>
+  </div>
+</div>
+
+
+<!-- ORIENTATION HINT ON PORTRAIT MOBILE -->
+<div id="orientHint" class="orient-hint" title="Gira a horizontal para mejor visión">
+  <span>📱 Gira la pantalla a horizontal para mayor comodidad 🔄</span>
+</div>
+
+<!-- MANDOS VIRTUALES TÁCTILES PARA MÓVIL / TABLET -->
+<div id="touchPad" class="touch-hud" hidden>
+  <div class="touch-top-bar">
+    <button id="touchBtnPause" class="touch-mini-btn" type="button" title="Pausar">⏸️</button>
+    <button id="touchBtnFs" class="touch-mini-btn" type="button" title="Pantalla Completa">⛶</button>
+    <button id="touchBtnToggle" class="touch-mini-btn" type="button" title="Ocultar/Mostrar Controles">🎮</button>
+  </div>
+
+  <div class="touch-dpad-container" id="touchDpadArea">
+    <div class="touch-dpad-disc">
+      <div class="touch-dir-btn d-up" data-dir="up">▲</div>
+      <div class="touch-dir-btn d-left" data-dir="left">◀</div>
+      <div class="touch-dir-btn d-right" data-dir="right">▶</div>
+      <div class="touch-dir-btn d-down" data-dir="down">▼</div>
+      <div class="touch-dpad-stick" id="touchStickKnob"></div>
+    </div>
+  </div>
+
+  <div class="touch-actions-cluster" id="touchActionsArea">
+    <div class="touch-btn-row top-row">
+      <button class="touch-act-btn btn-smash" data-act="smash" type="button" title="Golpe Smash">⚡ SMASH</button>
+      <button class="touch-act-btn btn-shield" data-act="shield" type="button" title="Escudo">🛡️</button>
+      <button class="touch-act-btn btn-grab" data-act="grab" type="button" title="Agarre">✋</button>
+    </div>
+    <div class="touch-btn-row main-row">
+      <button class="touch-act-btn btn-jump" data-act="jump" type="button" title="Salto">SALTO</button>
+      <button class="touch-act-btn btn-special" data-act="special" type="button" title="Especial (B)">B · ESP</button>
+      <button class="touch-act-btn btn-attack" data-act="attack" type="button" title="Ataque (A)">A · ATQ</button>
+    </div>
   </div>
 </div>
 
@@ -1776,9 +2177,28 @@ const KEYMAP={
 const GAME_KEYS=new Set(Object.values(KEYMAP).flatMap(m=>Object.values(m).flat()));
 const blank=()=>({x:0,y:0,jump:false,attack:false,special:false,shield:false,grab:false,cx:0,cy:0,start:false});
 let padPrevStart={};
+const TOUCH_IN={x:0,y:0,jump:false,attack:false,special:false,shield:false,grab:false,cx:0,cy:0,start:false};
 function readDevice(dev){
- if(dev==='k1'||dev==='k2'){const m=KEYMAP[dev],h=a=>a.some(c=>KEY[c]);
-  return {x:(h(m.r)?1:0)-(h(m.l)?1:0),y:(h(m.d)?1:0)-(h(m.u)?1:0),jump:h(m.jump),attack:h(m.attack),special:h(m.special),shield:h(m.shield),grab:h(m.grab),cx:0,cy:0,start:false};}
+ if(dev==='k1'||dev==='k2'){
+  const m=KEYMAP[dev],h=a=>a.some(c=>KEY[c]);
+  const tin=(dev==='k1'?TOUCH_IN:null);
+  let x=(h(m.r)?1:0)-(h(m.l)?1:0);
+  let y=(h(m.d)?1:0)-(h(m.u)?1:0);
+  let jump=h(m.jump), attack=h(m.attack), special=h(m.special), shield=h(m.shield), grab=h(m.grab), cx=0, cy=0, start=false;
+  if(tin){
+   if(tin.x) x=tin.x;
+   if(tin.y) y=tin.y;
+   if(tin.jump) jump=true;
+   if(tin.attack) attack=true;
+   if(tin.special) special=true;
+   if(tin.shield) shield=true;
+   if(tin.grab) grab=true;
+   if(tin.cx) cx=tin.cx;
+   if(tin.cy) cy=tin.cy;
+   if(tin.start) start=true;
+  }
+  return {x,y,jump,attack,special,shield,grab,cx,cy,start};
+ }
  if(dev&&dev[0]==='g'){let pads=[];try{pads=navigator.getGamepads?navigator.getGamepads():[];}catch(e){}const gp=pads[+dev.slice(1)];if(!gp)return blank();
   const ax=i=>Math.abs(gp.axes[i]||0)>.25?gp.axes[i]:0,b=i=>!!(gp.buttons[i]&&gp.buttons[i].pressed);
   let x=ax(0),y=ax(1);if(b(14))x=-1;if(b(15))x=1;if(b(12))y=-1;if(b(13))y=1;
@@ -3737,7 +4157,7 @@ function loop(now){
    ========================================================= */
 const $=id=>document.getElementById(id);
 const SCREENS=['title','css','sss','ctrl','pause','results'];
-function show(id){for(const s of SCREENS)$(s).hidden=s!==id;}
+function show(id){for(const s of SCREENS)$(s).hidden=s!==id;updateTouchPad();}
 function startMatch(cfgs,stage,rules,demo){
  G.stage=STAGES[stage];G.rules=rules;G.fighters=[];G.projs=[];G.fx=[];G.ledges=[null,null];G.domain=null;G.shadows=[];G.orb=null;G.orbWait=null;G.over=0;G.frame=0;G.timer=rules.time*60;G.demo=!!demo;
  const xs=[-300,300,-130,130];
@@ -3829,6 +4249,143 @@ function goArcadeHub() {
     window.location.href = '../../index.html';
   }
 }
+
+/* =========================================================
+   VIRTUAL TOUCH GAMEPAD CONTROLLER LOGIC
+   ========================================================= */
+function updateTouchPad(){
+  const pad=$('touchPad');if(!pad)return;
+  const isMob=('ontouchstart' in window)||navigator.maxTouchPoints>0||innerWidth<=960;
+  if(isMob&&G.mode==='fight'&&!G.paused&&!pad.dataset.forceHide){
+    pad.hidden=false;
+  }else{
+    pad.hidden=true;
+  }
+}
+
+(function initTouchController(){
+  const pad=$('touchPad');
+  const dpad=$('touchDpadArea');
+  const stick=$('touchStickKnob');
+  if(!pad||!dpad)return;
+
+  let dpadPointerId=null;
+  function handleDpad(px,py){
+    const rect=dpad.getBoundingClientRect();
+    const cx=rect.left+rect.width/2;
+    const cy=rect.top+rect.height/2;
+    const dx=px-cx;
+    const dy=py-cy;
+    const dist=Math.hypot(dx,dy);
+    const maxR=rect.width*0.38;
+    const clampedDist=Math.min(dist,maxR);
+    const angle=Math.atan2(dy,dx);
+    const sx=Math.cos(angle)*clampedDist;
+    const sy=Math.sin(angle)*clampedDist;
+    if(stick)stick.style.transform=`translate(calc(-50% + ${sx}px), calc(-50% + ${sy}px))`;
+
+    const deadzone=14;
+    TOUCH_IN.x=0;
+    TOUCH_IN.y=0;
+    if(dist>deadzone){
+      if(Math.abs(dx)>deadzone*0.75)TOUCH_IN.x=dx>0?1:-1;
+      if(Math.abs(dy)>deadzone*0.75)TOUCH_IN.y=dy>0?1:-1;
+    }
+    document.querySelectorAll('.touch-dir-btn').forEach(b=>{
+      const dir=b.dataset.dir;
+      const active=(dir==='left'&&TOUCH_IN.x<0)||(dir==='right'&&TOUCH_IN.x>0)||(dir==='up'&&TOUCH_IN.y<0)||(dir==='down'&&TOUCH_IN.y>0);
+      b.classList.toggle('active',active);
+    });
+  }
+
+  function resetDpad(){
+    dpadPointerId=null;
+    TOUCH_IN.x=0;
+    TOUCH_IN.y=0;
+    if(stick)stick.style.transform='translate(-50%, -50%)';
+    document.querySelectorAll('.touch-dir-btn').forEach(b=>b.classList.remove('active'));
+  }
+
+  dpad.addEventListener('pointerdown',e=>{
+    e.preventDefault();
+    dpadPointerId=e.pointerId;
+    try{dpad.setPointerCapture(e.pointerId);}catch(err){}
+    handleDpad(e.clientX,e.clientY);
+  });
+  dpad.addEventListener('pointermove',e=>{
+    if(dpadPointerId===e.pointerId){
+      e.preventDefault();
+      handleDpad(e.clientX,e.clientY);
+    }
+  });
+  dpad.addEventListener('pointerup',e=>{
+    if(dpadPointerId===e.pointerId){
+      e.preventDefault();
+      resetDpad();
+    }
+  });
+  dpad.addEventListener('pointercancel',e=>{
+    if(dpadPointerId===e.pointerId){
+      resetDpad();
+    }
+  });
+
+  // Action Buttons
+  document.querySelectorAll('.touch-act-btn').forEach(btn=>{
+    const act=btn.dataset.act;
+    const press=e=>{
+      e.preventDefault();
+      btn.classList.add('pressed');
+      try{if(navigator.vibrate)navigator.vibrate(10);}catch(err){}
+      if(act==='smash'){
+        TOUCH_IN.attack=true;
+        if(TOUCH_IN.x!==0)TOUCH_IN.cx=TOUCH_IN.x;
+        else if(TOUCH_IN.y!==0)TOUCH_IN.cy=TOUCH_IN.y;
+        else TOUCH_IN.cx=1;
+      }else if(act in TOUCH_IN){
+        TOUCH_IN[act]=true;
+      }
+    };
+    const release=e=>{
+      if(e)e.preventDefault();
+      btn.classList.remove('pressed');
+      if(act==='smash'){
+        TOUCH_IN.attack=false;
+        TOUCH_IN.cx=0;
+        TOUCH_IN.cy=0;
+      }else if(act in TOUCH_IN){
+        TOUCH_IN[act]=false;
+      }
+    };
+    btn.addEventListener('pointerdown',press);
+    btn.addEventListener('pointerup',release);
+    btn.addEventListener('pointercancel',release);
+  });
+
+  // Top Bar Actions
+  $('touchBtnPause')?.addEventListener('click',togglePause);
+  $('touchBtnToggle')?.addEventListener('click',()=>{
+    pad.dataset.forceHide=pad.dataset.forceHide==='1'?'0':'1';
+    updateTouchPad();
+  });
+  $('touchBtnFs')?.addEventListener('click',()=>{
+    if(!document.fullscreenElement){
+      document.documentElement.requestFullscreen?.().catch(()=>{});
+    }else{
+      document.exitFullscreen?.().catch(()=>{});
+    }
+  });
+
+  // Orientation Hint dismiss
+  $('orientHint')?.addEventListener('click',function(){
+    this.style.display='none';
+  });
+})();
+
+addEventListener('resize',()=>{
+  updateTouchPad();
+});
+
 if ($('btnArcadeHub1')) $('btnArcadeHub1').addEventListener('click', goArcadeHub);
 if ($('btnArcadeHub2')) $('btnArcadeHub2').addEventListener('click', goArcadeHub);
 </script>

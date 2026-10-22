@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Head Soccer 2D — Authentic Arcade Championship</title>
 
   <!-- Google Fonts -->
@@ -17,6 +17,10 @@
   <link rel="stylesheet" href="css/inspector.css?v=rework5">
 </head>
 <body>
+  <!-- BANNER ROTACIÓN EN MÓVIL VERTICAL -->
+  <div id="orientHintHS" class="orient-hint-hs" onclick="this.style.display='none'">
+    <span>📱 Gira la pantalla a horizontal para jugar mejor 🔄</span>
+  </div>
 
   <!-- TOP COMPACT APP HEADER -->
   <header class="arcade-header">
@@ -380,6 +384,10 @@
   <!-- Main Game Bootstrap -->
   <script src="bundle.js"></script>
   <script>
+    (function checkMobile(){
+      const isMob = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth <= 900);
+      if (isMob) document.body.classList.add('mobile-mode');
+    })();
     document.getElementById('btnGoArcadeHub')?.addEventListener('click', () => {
       if (window.parent && window.parent !== window) {
         window.parent.postMessage({ type: 'ARCADE_HUB_HOME' }, '*');

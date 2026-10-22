@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>ARCADE MULTIVERSE 3-EN-1 — Pixel Arena Cars · Head Soccer · Shōnen Smash</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -485,10 +485,14 @@
     #consoleStage {
       position: fixed;
       inset: 0;
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
       z-index: 20;
       background: #000;
       display: none;
       flex-direction: column;
+      touch-action: none;
     }
 
     #consoleStage.active {
@@ -573,18 +577,103 @@
     @media (max-width: 980px) {
       html, body {
         overflow-y: auto;
+        touch-action: manipulation;
+        -webkit-overflow-scrolling: touch;
       }
       #hubView {
         height: auto;
         min-height: 100%;
-        gap: 16px;
+        min-height: 100dvh;
+        gap: 14px;
+        padding: 10px 12px calc(14px + env(safe-area-inset-bottom, 0px));
+      }
+      .hub-header {
+        padding: 8px 12px;
+        border-radius: 14px;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .hub-title {
+        font-size: 22px;
+      }
+      .coin-slot-badge {
+        font-size: 10px;
+        padding: 4px 8px;
+      }
+      .hub-controls-top {
+        gap: 6px;
+        width: 100%;
+        justify-content: space-between;
+      }
+      .top-pill-btn {
+        padding: 6px 10px;
+        font-size: 11.5px;
+        flex: 1;
+        justify-content: center;
+      }
+      .arcade-main-grid {
+        gap: 12px;
       }
       .cards-row {
         grid-template-columns: 1fr;
+        gap: 14px;
+      }
+      .game-card {
+        border-radius: 18px;
+      }
+      .card-body {
+        padding: 14px;
+        gap: 8px;
+      }
+      .card-title-group h2 {
+        font-size: 22px;
+      }
+      .card-desc {
+        font-size: 12.5px;
+      }
+      .play-card-btn {
+        padding: 13px 16px;
+        font-size: 20px;
       }
       .spotlight-bar {
         grid-template-columns: 1fr;
         text-align: center;
+        padding: 12px 14px;
+        gap: 10px;
+      }
+      .spotlight-name {
+        font-size: 20px;
+      }
+      .spotlight-controls {
+        gap: 8px;
+      }
+      .ctrl-box {
+        padding: 6px 10px;
+      }
+      .launch-master-btn {
+        padding: 12px 20px;
+        font-size: 22px;
+        width: 100%;
+      }
+      .hub-footer {
+        flex-direction: column;
+        gap: 6px;
+        text-align: center;
+      }
+      .nav-hints {
+        display: none;
+      }
+      #floatingDock {
+        top: calc(4px + env(safe-area-inset-top, 0px));
+        padding: 3px 8px;
+        gap: 4px;
+        opacity: 0.45;
+        max-width: 95vw;
+        overflow-x: auto;
+      }
+      .dock-btn {
+        padding: 4px 8px;
+        font-size: 11px;
       }
     }
   </style>
@@ -937,6 +1026,15 @@
       consoleStage.classList.add('active');
       gameFrame.src = GAMES[index].url;
 
+      const isMob = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth <= 900);
+      if (isMob) {
+        try {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen?.().catch(() => {});
+          }
+        } catch (_) {}
+      }
+
       wakeDockBriefly();
 
       gameFrame.onload = () => {
@@ -1010,10 +1108,15 @@
     });
 
     function toggleFullscreen() {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen?.().catch(() => {});
+      const doc = document;
+      const el = doc.documentElement;
+      const isFs = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement;
+      if (!isFs) {
+        const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+        req?.call(el)?.catch?.(() => {});
       } else {
-        document.exitFullscreen?.().catch(() => {});
+        const exit = doc.exitFullscreen || doc.webkitExitFullscreen || doc.mozCancelFullScreen || doc.msExitFullscreen;
+        exit?.call(doc)?.catch?.(() => {});
       }
     }
 
