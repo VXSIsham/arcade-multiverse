@@ -1,0 +1,652 @@
+/* ==========================================================================
+   AUTHENTIC HEAD SOCCER ARCADE HUD & RETRO CABINET STYLING
+   Modeled precisely after D&D Dream Head Soccer official arcade interface
+   ========================================================================== */
+
+.arcade-hud-root {
+  position: absolute;
+  top: 14px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: none;
+  z-index: 50;
+}
+
+/* --------------------------------------------------------------------------
+   FIGHTER STATUS BARS (LEFT P1 & RIGHT RIVAL)
+   -------------------------------------------------------------------------- */
+.hud-fighter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 330px;
+}
+
+.hud-fighter-bar.p1 {
+  align-items: flex-start;
+}
+
+.hud-fighter-bar.rival {
+  align-items: flex-end;
+}
+
+/* WINGED POWER GAUGE (FEATHERED DRAGON/EAGLE WINGS) */
+.winged-power-frame {
+  position: relative;
+  width: 310px;
+  height: 26px;
+  background: linear-gradient(180deg, #1e293b 0%, #0c121c 100%);
+  border: 2.5px solid #94a3b8;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.7), inset 0 1px 3px rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+}
+
+.winged-power-frame.p1 {
+  transform: skewX(-14deg);
+  border-top-left-radius: 4px;
+}
+
+.winged-power-frame.rival {
+  transform: skewX(14deg);
+  border-top-right-radius: 4px;
+}
+
+.power-fill-bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 30%;
+  background: linear-gradient(90deg, #ff8800, #ff3700, #ff0055);
+  transition: width 0.15s ease-out;
+  box-shadow: 0 0 14px rgba(255, 68, 0, 0.9);
+}
+
+.hud-fighter-bar.p1 .power-fill-bar {
+  left: 0;
+}
+
+.hud-fighter-bar.rival .power-fill-bar {
+  right: 0;
+  background: linear-gradient(-90deg, #ff8800, #ff3700, #ff0055);
+}
+
+.power-fill-bar.ready {
+  background: linear-gradient(90deg, #fff700, #ff5500, #ff0055) !important;
+  animation: powerReadyPulse 0.4s infinite alternate ease-in-out;
+}
+
+@keyframes powerReadyPulse {
+  from { filter: brightness(1) drop-shadow(0 0 5px #ffd700); }
+  to { filter: brightness(1.5) drop-shadow(0 0 16px #ff3700); }
+}
+
+.power-label-overlay {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 12px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1.2px;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+}
+
+/* SLANTED TRAPEZOID LIFE BAR */
+.life-bar-frame {
+  position: relative;
+  width: 320px;
+  height: 18px;
+  background: rgba(12, 16, 24, 0.85);
+  border: 2px solid #ffffff;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7);
+}
+
+.life-bar-frame.p1 {
+  transform: skewX(-14deg);
+}
+
+.life-bar-frame.rival {
+  transform: skewX(14deg);
+}
+
+.life-damage-ghost {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 100%;
+  background: #ff0044;
+  transition: width 0.35s ease-out;
+}
+
+.life-fill-bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #00ff88 0%, #a6ff00 50%, #ffd700 100%);
+  transition: width 0.15s ease-out, background 0.3s;
+  box-shadow: 0 0 12px rgba(0, 255, 136, 0.6);
+}
+
+.hud-fighter-bar.p1 .life-fill-bar, .hud-fighter-bar.p1 .life-damage-ghost {
+  left: 0;
+}
+
+.hud-fighter-bar.rival .life-fill-bar, .hud-fighter-bar.rival .life-damage-ghost {
+  right: 0;
+  background: linear-gradient(-90deg, #00ff88 0%, #a6ff00 50%, #ffd700 100%);
+}
+
+.hud-name-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+  font-style: italic;
+  color: #fff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+  margin-top: 1px;
+}
+
+.char-flag-icon {
+  font-size: 16px;
+}
+
+/* --------------------------------------------------------------------------
+   CENTER SCOREBOARD & MATCH TIMER (AUTHENTIC D&D DREAM CLUSTER)
+   -------------------------------------------------------------------------- */
+.arcade-center-board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: -4px;
+}
+
+.match-clock-box {
+  background: radial-gradient(circle at 50% 30%, #202b3d 0%, #0a0f17 100%);
+  border: 2px solid #ffd700;
+  padding: 3px 16px;
+  border-radius: 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  font-weight: 900;
+  color: #ffd700;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.7), 0 0 10px rgba(255, 215, 0, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.match-clock-box span:first-child {
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 900;
+  color: #ffaa00;
+}
+
+.score-discs-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.score-disc {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 28%, #fff8b3 0%, #ffbb00 45%, #b36e00 100%);
+  border: 3.5px solid #ffffff;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7), inset 0 2px 5px rgba(255, 255, 255, 0.9), 0 0 12px rgba(255, 187, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Outfit', sans-serif;
+  font-size: 28px;
+  font-weight: 900;
+  color: #1a0f00;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.score-colon {
+  font-size: 26px;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.7);
+}
+
+/* --------------------------------------------------------------------------
+   STATUS PILLS (STUN / KNOCKDOWN)
+   -------------------------------------------------------------------------- */
+.hud-status-pills {
+  position: absolute;
+  top: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.status-pill {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 900;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+  display: none;
+}
+
+.status-pill.dizzy {
+  background: rgba(0, 229, 255, 0.95);
+  color: #000;
+  border: 2px solid #ffffff;
+  animation: pulsePill 0.35s infinite alternate;
+}
+
+.status-pill.knockdown {
+  background: rgba(255, 0, 68, 0.95);
+  color: #fff;
+  border: 2px solid #ffffff;
+  animation: pulsePill 0.35s infinite alternate;
+}
+
+@keyframes pulsePill {
+  from { transform: scale(1); }
+  to { transform: scale(1.08); }
+}
+
+/* --------------------------------------------------------------------------
+   GOAL BANNER & MATCH OVER OVERLAYS
+   -------------------------------------------------------------------------- */
+.goal-banner-overlay {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  font-size: 78px;
+  font-weight: 900;
+  font-style: italic;
+  color: #fff;
+  text-shadow: 0 0 40px #ffd700, 0 0 80px #ff3700, 0 8px 0 #801a00;
+  letter-spacing: 2px;
+  pointer-events: none;
+  opacity: 0;
+  transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.35s;
+  z-index: 80;
+  white-space: nowrap;
+}
+
+.goal-banner-overlay.show {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+}
+
+.match-over-overlay {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  pointer-events: none;
+  opacity: 0;
+  transition: transform 0.4s ease, opacity 0.4s;
+  z-index: 85;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.match-over-overlay.show {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+#matchOverTitle {
+  font-size: 72px;
+  font-weight: 900;
+  font-style: italic;
+  color: #fff;
+  text-shadow: 
+    0 1px 0 #d49b20,
+    0 2px 0 #b37e10,
+    0 3px 0 #946505,
+    0 4px 0 #734c00,
+    0 6px 15px rgba(0, 0, 0, 0.8),
+    0 0 35px rgba(255, 215, 0, 0.7);
+  letter-spacing: 2px;
+}
+
+#matchOverSub {
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffd700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  background: rgba(10, 15, 25, 0.88);
+  backdrop-filter: blur(12px);
+  padding: 10px 28px;
+  border-radius: 24px;
+  border: 1.5px solid rgba(255, 215, 0, 0.5);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+}
+
+/* --------------------------------------------------------------------------
+   AUTHENTIC GOLDEN RETRO ARCADE CONTROLS
+   Positioned comfortably along the bottom floor, out of players' feet
+   -------------------------------------------------------------------------- */
+.arcade-bottom-controls {
+  position: absolute;
+  bottom: 12px;
+  left: 18px;
+  right: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  pointer-events: none;
+  z-index: 60;
+}
+
+.ctrl-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+/* GOLDEN D-PAD (LEFT MOVEMENT) */
+.arcade-dpad-golden {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(180deg, rgba(240, 175, 30, 0.45) 0%, rgba(140, 75, 5, 0.55) 100%);
+  border: 3px solid #f5b820;
+  border-radius: 24px;
+  padding: 3px 5px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(8px);
+}
+
+.dpad-arrow-btn {
+  background: transparent;
+  border: none;
+  color: #fff;
+  padding: 10px 22px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border-radius: 18px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9), 0 0 6px rgba(255, 200, 0, 0.7);
+  transition: all 0.1s ease;
+  user-select: none;
+}
+
+.dpad-arrow-btn:active, .dpad-arrow-btn.active {
+  transform: scale(0.94);
+  background: rgba(255, 215, 0, 0.35);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.dpad-divider {
+  width: 2px;
+  height: 28px;
+  background: rgba(255, 215, 0, 0.4);
+}
+
+.arrow-key-hint {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  opacity: 0.75;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* GOLDEN ARCADE ACTION BUTTONS (RIGHT) */
+.golden-arcade-btn {
+  background: linear-gradient(180deg, rgba(250, 185, 35, 0.6) 0%, rgba(160, 85, 10, 0.7) 100%);
+  border: 3px solid #ffcc10;
+  border-radius: 20px;
+  color: #fff;
+  padding: 10px 18px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 900;
+  font-style: italic;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 82px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(8px);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9), 0 0 8px rgba(255, 200, 0, 0.7);
+  transition: all 0.1s ease;
+  user-select: none;
+}
+
+.golden-arcade-btn:hover {
+  filter: brightness(1.15);
+  transform: translateY(-2px);
+}
+
+.golden-arcade-btn:active, .golden-arcade-btn.active {
+  transform: translateY(2px) scale(0.95);
+  background: linear-gradient(180deg, rgba(255, 215, 0, 0.85) 0%, rgba(200, 110, 15, 0.9) 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.golden-arcade-btn .btn-key-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-style: normal;
+  opacity: 0.8;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* SUPER BUTTON (SPECIAL FLAME GLOW) */
+.golden-arcade-btn.super-btn {
+  background: linear-gradient(180deg, rgba(255, 80, 20, 0.7) 0%, rgba(180, 20, 20, 0.8) 100%);
+  border-color: #ffaa00;
+  min-width: 140px;
+  box-shadow: 0 6px 20px rgba(255, 68, 0, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.6);
+}
+
+.golden-arcade-btn.super-btn.ready {
+  background: linear-gradient(180deg, #ffd700 0%, #ff3700 100%) !important;
+  color: #000 !important;
+  border-color: #ffffff !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  animation: superReadyGlow 0.4s infinite alternate ease-in-out;
+}
+
+@keyframes superReadyGlow {
+  from { transform: translateY(-2px) scale(1.02); box-shadow: 0 0 25px rgba(255, 215, 0, 0.8); }
+  to { transform: translateY(-4px) scale(1.08); box-shadow: 0 0 45px rgba(255, 60, 0, 1.0); }
+}
+
+/* --------------------------------------------------------------------------
+   CHARACTER SELECT MODAL
+   -------------------------------------------------------------------------- */
+.roster-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+  gap: 16px;
+}
+
+.modal-char-card {
+  background: rgba(22, 33, 52, 0.92);
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  border-radius: 16px;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.modal-char-card:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+}
+
+.modal-char-card.active-p1 {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+  background: rgba(0, 240, 255, 0.08);
+}
+
+.modal-char-card.active-rival {
+  border-color: #ff3700;
+  box-shadow: 0 0 20px rgba(255, 55, 0, 0.4);
+  background: rgba(255, 55, 0, 0.08);
+}
+
+.modal-char-avatar-box {
+  width: 90px;
+  height: 90px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.modal-char-avatar-box img {
+  width: 90%;
+  height: 90%;
+  object-fit: contain;
+  transition: transform 0.2s ease;
+}
+
+.modal-char-card:hover .modal-char-avatar-box img {
+  transform: scale(1.1);
+}
+
+.modal-char-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.modal-char-name {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.modal-char-title {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.modal-super-badge {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(255, 107, 0, 0.2);
+  border: 1px solid rgba(255, 107, 0, 0.4);
+  color: #ffaa00;
+  margin-top: 4px;
+}
+
+.modal-stat-bars {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.stat-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #ccc;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.stat-track {
+  width: 75px;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.stat-fill {
+  height: 100%;
+  border-radius: 3px;
+}
+
+.modal-card-buttons {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.btn-card-choose {
+  flex: 1;
+  padding: 6px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  transition: all 0.15s;
+}
+
+.btn-card-choose.p1:hover, .btn-card-choose.p1.active {
+  background: var(--accent-cyan);
+  color: #000;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+}
+
+.btn-card-choose.rival:hover, .btn-card-choose.rival.active {
+  background: #ff3700;
+  color: #fff;
+  border-color: #ff3700;
+  box-shadow: 0 0 10px rgba(255, 55, 0, 0.5);
+}

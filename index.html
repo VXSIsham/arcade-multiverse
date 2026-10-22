@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ARCADE MULTIVERSE 3-EN-1 — Pixel Arena Cars · Head Soccer · Shōnen Smash</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=JetBrains+Mono:wght@600;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-deep: #07080f;
+      --bg-panel: rgba(16, 19, 32, 0.86);
+      --border-subtle: rgba(255, 255, 255, 0.12);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #ff8a00;
+      --accent-glow: rgba(255, 138, 0, 0.45);
+      --accent-secondary: #ffd000;
+      --font-display: 'Bangers', 'Impact', system-ui, sans-serif;
+      --font-sans: 'Outfit', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-deep);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+    }
+
+    /* Fondo animado del Hub */
+    #bgCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Efecto Scanlines CRT sutil */
+    .scanlines {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 2px,
+        rgba(0, 0, 0, 0.18) 3px,
+        rgba(0, 0, 0, 0.18) 4px
+      );
+      opacity: 0.55;
+      transition: opacity 0.3s ease;
+    }
+    body.no-crt .scanlines {
+      opacity: 0;
+    }
+
+    /* Contenedor Principal del Hub */
+    #hubView {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: clamp(12px, 2vw, 24px) clamp(16px, 3vw, 42px);
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+
+    #hubView.hidden-hub {
+      opacity: 0;
+      transform: scale(0.96);
+      pointer-events: none;
+    }
+
+    /* Header Superior de Consola */
+    .hub-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 10px 20px;
+      background: rgba(11, 14, 25, 0.82);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    }
+
+    .brand-cluster {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .coin-slot-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #ff9900, #ff2a6d);
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      box-shadow: 0 0 18px rgba(255, 138, 0, 0.5);
+      animation: pulseBadge 2.2s infinite ease-in-out;
+    }
+
+    @keyframes pulseBadge {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .hub-title {
+      font-family: var(--font-display);
+      font-size: clamp(24px, 3vw, 36px);
+      letter-spacing: 0.06em;
+      color: #fff;
+      text-shadow: 0 3px 0 #000, 0 0 18px var(--accent-glow);
+    }
+
+    .hub-title span {
+      color: var(--accent-secondary);
+    }
+
+    .hub-controls-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .top-pill-btn {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: var(--text-main);
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-family: var(--font-sans);
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .top-pill-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+      border-color: var(--accent-secondary);
+      transform: translateY(-1px);
+    }
+
+    .top-pill-btn.random-btn {
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      border-color: rgba(255, 255, 255, 0.35);
+      box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
+    }
+
+    /* Zona Central: 3 Tarjetas de Juegos + Spotlight Inferior */
+    .arcade-main-grid {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(12px, 1.8vh, 20px);
+      flex: 1;
+      justify-content: center;
+      max-width: 1380px;
+      width: 100%;
+      margin: 0 auto;
+      min-height: 0;
+    }
+
+    .cards-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(14px, 2vw, 26px);
+      align-items: stretch;
+    }
+
+    .game-card {
+      position: relative;
+      background: var(--bg-panel);
+      border: 2px solid rgba(255, 255, 255, 0.12);
+      border-radius: 22px;
+      overflow: hidden;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+                  border-color 0.28s ease,
+                  box-shadow 0.28s ease;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 14px 35px rgba(0, 0, 0, 0.55);
+    }
+
+    .game-card:hover {
+      transform: translateY(-6px) scale(1.015);
+    }
+
+    .game-card.selected {
+      border-color: var(--card-accent, #ffd000);
+      transform: translateY(-8px) scale(1.025);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75),
+                  0 0 32px var(--card-glow, rgba(255, 208, 0, 0.45));
+    }
+
+    .card-ribbon {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 11px;
+      border-radius: 999px;
+      background: rgba(8, 10, 18, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--card-accent, #ffd000);
+      backdrop-filter: blur(6px);
+    }
+
+    .card-plays-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 3;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(8, 10, 18, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      font-size: 11px;
+      font-weight: 700;
+      color: #cbd5e1;
+    }
+
+    .card-preview-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #05070e;
+      overflow: hidden;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .card-preview-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .card-body {
+      padding: clamp(14px, 1.6vw, 20px);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+      justify-content: space-between;
+    }
+
+    .card-title-group h2 {
+      font-family: var(--font-display);
+      font-size: clamp(24px, 2.4vw, 33px);
+      letter-spacing: 0.04em;
+      color: #fff;
+      line-height: 1;
+      text-shadow: 0 3px 0 #000;
+      margin-bottom: 6px;
+    }
+
+    .card-desc {
+      font-size: clamp(12.5px, 1vw, 14px);
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag-chip {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 9px;
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #e2e8f0;
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .play-card-btn {
+      flex: 1;
+      padding: 11px 16px;
+      border-radius: 12px;
+      border: none;
+      font-family: var(--font-display);
+      font-size: 21px;
+      letter-spacing: 0.06em;
+      color: #090a0f;
+      background: var(--card-accent, #ffd000);
+      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.45), 0 0 18px var(--card-glow, transparent);
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+
+    .play-card-btn:hover {
+      filter: brightness(1.12);
+      transform: translateY(-1px);
+    }
+
+    .open-tab-btn {
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.06);
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .open-tab-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    /* Panel Inferior de Detalles y Controles del Juego Seleccionado */
+    .spotlight-bar {
+      display: grid;
+      grid-template-columns: 1.3fr 1.7fr auto;
+      align-items: center;
+      gap: 20px;
+      padding: 14px 22px;
+      background: rgba(12, 15, 28, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 18px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .spotlight-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .spotlight-kicker {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent-secondary);
+    }
+
+    .spotlight-name {
+      font-family: var(--font-display);
+      font-size: 28px;
+      letter-spacing: 0.04em;
+      color: #fff;
+    }
+
+    .spotlight-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .spotlight-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ctrl-box {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 8px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .ctrl-box-label {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #94a3b8;
+    }
+
+    .ctrl-keys {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    kbd {
+      display: inline-block;
+      padding: 2px 6px;
+      background: rgba(255, 255, 255, 0.13);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-bottom-width: 2px;
+      border-radius: 5px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #ffd000;
+    }
+
+    .launch-master-btn {
+      padding: 14px 28px;
+      border-radius: 14px;
+      border: none;
+      font-family: var(--font-display);
+      font-size: 26px;
+      letter-spacing: 0.06em;
+      color: #090a0f;
+      background: linear-gradient(135deg, var(--accent-secondary), var(--accent));
+      box-shadow: 0 6px 0 rgba(0, 0, 0, 0.5), 0 0 28px var(--accent-glow);
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .launch-master-btn:hover {
+      transform: translateY(-2px) scale(1.02);
+      filter: brightness(1.1);
+    }
+
+    /* Footer de navegación del Hub */
+    .hub-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 4px 8px;
+    }
+
+    .nav-hints {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    /* =====================================================
+       VISTA DE CONSOLA (JUEGO ACTIVO EN PANTALLA COMPLETA)
+       ===================================================== */
+    #consoleStage {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      background: #000;
+      display: none;
+      flex-direction: column;
+    }
+
+    #consoleStage.active {
+      display: flex;
+    }
+
+    #gameFrame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+      background: #000;
+    }
+
+    /* Barra Flotante Discreta de Consola */
+    #floatingDock {
+      position: fixed;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(10, 12, 22, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.65);
+      opacity: 0.28;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    #floatingDock:hover,
+    #floatingDock.dock-awake {
+      opacity: 1;
+      transform: translateX(-50%) scale(1.02);
+    }
+
+    .dock-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: #f8fafc;
+      padding: 5px 11px;
+      border-radius: 999px;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.18s ease;
+      white-space: nowrap;
+    }
+
+    .dock-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: #ffd000;
+    }
+
+    .dock-btn.home-btn {
+      background: linear-gradient(135deg, #ff2a6d, #7c3aed);
+      border-color: rgba(255, 255, 255, 0.35);
+      color: #fff;
+    }
+
+    .dock-btn.active-game-pill {
+      border-color: #ffd000;
+      color: #ffd000;
+      background: rgba(255, 208, 0, 0.14);
+    }
+
+    .dock-divider {
+      width: 1px;
+      height: 16px;
+      background: rgba(255, 255, 255, 0.18);
+      margin: 0 2px;
+    }
+
+    @media (max-width: 980px) {
+      html, body {
+        overflow-y: auto;
+      }
+      #hubView {
+        height: auto;
+        min-height: 100%;
+        gap: 16px;
+      }
+      .cards-row {
+        grid-template-columns: 1fr;
+      }
+      .spotlight-bar {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Fondo dinámico Synthwave / Arcade -->
+  <canvas id="bgCanvas"></canvas>
+  <div class="scanlines"></div>
+
+  <!-- =====================================================
+       MENÚ PRINCIPAL DEL ARCADE HUB
+       ===================================================== -->
+  <div id="hubView">
+    <header class="hub-header">
+      <div class="brand-cluster">
+        <span class="coin-slot-badge">🪙 INSERT COIN · 3 EN 1</span>
+        <h1 class="hub-title">ARCADE <span>MULTIVERSE</span></h1>
+      </div>
+
+      <div class="hub-controls-top">
+        <button class="top-pill-btn random-btn" id="btnRandomGame" title="Elegir uno de los 3 juegos al azar">
+          🎲 Juego Aleatorio
+        </button>
+        <button class="top-pill-btn" id="btnToggleCrt" title="Activar/Desactivar filtro retro CRT">
+          📺 CRT: ON
+        </button>
+        <button class="top-pill-btn" id="btnToggleSound" title="Activar/Desactivar sonidos del menú">
+          🔊 Audio: ON
+        </button>
+        <button class="top-pill-btn" id="btnHubFullscreen" title="Pantalla Completa">
+          ⛶ Pantalla Completa
+        </button>
+      </div>
+    </header>
+
+    <main class="arcade-main-grid">
+      <div class="cards-row" id="cardsContainer">
+        <!-- Tarjeta 1: Pixel Arena Cars -->
+        <article class="game-card selected" data-index="0" style="--card-accent:#ffb703; --card-glow:rgba(255,183,3,0.45);">
+          <div class="card-ribbon">🏎️ ARENA DERBY · 1-2P</div>
+          <div class="card-plays-badge" id="playsBadge0">🔥 Listo</div>
+          <div class="card-preview-wrap">
+            <canvas class="card-preview-canvas" id="previewCanvas0" width="480" height="270"></canvas>
+          </div>
+          <div class="card-body">
+            <div class="card-title-group">
+              <h2>PIXEL ARENA CARS</h2>
+              <p class="card-desc">
+                Batallas acrobáticas de vehículos 2D estilo <em>Drive Ahead!</em> con 8 estadios interactivos, lava, sierras, mortales con turbo y Rey de la Colina.
+              </p>
+            </div>
+            <div class="card-tags">
+              <span class="tag-chip">🏆 1v1 &amp; 2 Jugadores</span>
+              <span class="tag-chip">👑 Rey de la Colina</span>
+              <span class="tag-chip">🎯 Misiones &amp; Ruleta</span>
+            </div>
+            <div class="card-footer">
+              <button class="play-card-btn" data-launch="0">🔥 ¡ENTRAR A LA ARENA!</button>
+              <button class="open-tab-btn" data-tab="0" title="Abrir en pestaña nueva">↗️</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- Tarjeta 2: Head Soccer Championship -->
+        <article class="game-card" data-index="1" style="--card-accent:#00f0ff; --card-glow:rgba(0,240,255,0.45);">
+          <div class="card-ribbon">⚽ ARCADE SOCCER · 1-2P</div>
+          <div class="card-plays-badge" id="playsBadge1">🔥 Listo</div>
+          <div class="card-preview-wrap">
+            <canvas class="card-preview-canvas" id="previewCanvas1" width="480" height="270"></canvas>
+          </div>
+          <div class="card-body">
+            <div class="card-title-group">
+              <h2>HEAD SOCCER 2D</h2>
+              <p class="card-desc">
+                Fútbol arcade explosivo con animación esquelética 2D, Super Tiros elementales, nocauts, Copa Mundial, Supervivencia y Gol de Oro.
+              </p>
+            </div>
+            <div class="card-tags">
+              <span class="tag-chip">🏆 Copa Mundial</span>
+              <span class="tag-chip">🔥 Supervivencia</span>
+              <span class="tag-chip">⚡ Super Tiros</span>
+            </div>
+            <div class="card-footer">
+              <button class="play-card-btn" data-launch="1">⚽ ¡JUGAR PARTIDO!</button>
+              <button class="open-tab-btn" data-tab="1" title="Abrir en pestaña nueva">↗️</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- Tarjeta 3: Shonen Smash -->
+        <article class="game-card" data-index="2" style="--card-accent:#ff3b5c; --card-glow:rgba(255,59,92,0.48);">
+          <div class="card-ribbon">💥 PLATFORM FIGHTER · 1-4P</div>
+          <div class="card-plays-badge" id="playsBadge2">🔥 Listo</div>
+          <div class="card-preview-wrap">
+            <canvas class="card-preview-canvas" id="previewCanvas2" width="480" height="270"></canvas>
+          </div>
+          <div class="card-body">
+            <div class="card-title-group">
+              <h2>SHŌNEN SMASH</h2>
+              <p class="card-desc">
+                Pelea de plataformas hasta para 4 luchadores anime (Goku, Luffy, Naruto, Gojo, Deku, Tanjiro, Ichigo y más) con transformaciones y ataques definitivos.
+              </p>
+            </div>
+            <div class="card-tags">
+              <span class="tag-chip">🥊 11 Luchadores</span>
+              <span class="tag-chip">🐉 Esfera del Dragón</span>
+              <span class="tag-chip">🎮 Hasta 4 Jugadores</span>
+            </div>
+            <div class="card-footer">
+              <button class="play-card-btn" data-launch="2">💥 ¡A PELEAR!</button>
+              <button class="open-tab-btn" data-tab="2" title="Abrir en pestaña nueva">↗️</button>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- Barra Spotlight con Controles Rápidos del Juego Seleccionado -->
+      <section class="spotlight-bar" id="spotlightBar">
+        <div class="spotlight-info">
+          <span class="spotlight-kicker" id="spotKicker">SELECCIONADO · JUEGO 1 DE 3</span>
+          <div class="spotlight-name" id="spotTitle">PIXEL ARENA CARS — EDICIÓN ARCADE</div>
+          <div class="spotlight-sub" id="spotSub">Golpea el casco del rival o haz mortales en el aire para ganar Turbo y monedas.</div>
+        </div>
+
+        <div class="spotlight-controls" id="spotControls">
+          <!-- Rellenado dinámicamente -->
+        </div>
+
+        <button class="launch-master-btn" id="btnLaunchSelected">
+          ▶ INICIAR JUEGO
+        </button>
+      </section>
+    </main>
+
+    <footer class="hub-footer">
+      <div class="nav-hints">
+        <span><kbd>⬅️</kbd> <kbd>➡️</kbd> Cambiar Juego</span>
+        <span><kbd>ENTER</kbd> o <kbd>ESPACIO</kbd> Jugar</span>
+        <span><kbd>R</kbd> Juego Aleatorio</span>
+        <span><kbd>F9</kbd> Volver al Arcade desde cualquier juego</span>
+      </div>
+      <div>Arcade Multiverse Hub · 3 Juegos Unificados</div>
+    </footer>
+  </div>
+
+  <!-- =====================================================
+       ESCENARIO DE CONSOLA (IFRAME + DOCK FLOTANTE)
+       ===================================================== -->
+  <div id="consoleStage">
+    <nav id="floatingDock" title="Barra de Consola Arcade">
+      <button class="dock-btn home-btn" id="btnDockHome">🕹️ Menú Arcade</button>
+      <div class="dock-divider"></div>
+      <button class="dock-btn" data-switch="0" id="dockGame0">🏎️ Cars</button>
+      <button class="dock-btn" data-switch="1" id="dockGame1">⚽ Soccer</button>
+      <button class="dock-btn" data-switch="2" id="dockGame2">💥 Smash</button>
+      <div class="dock-divider"></div>
+      <button class="dock-btn" id="btnDockReload" title="Reiniciar juego actual">🔄</button>
+      <button class="dock-btn" id="btnDockFullscreen" title="Pantalla Completa">⛶</button>
+    </nav>
+
+    <iframe id="gameFrame" allow="autoplay; fullscreen; gamepad"></iframe>
+  </div>
+
+  <script>
+    'use strict';
+
+    const GAMES = [
+      {
+        id: 'pixel-arena-cars',
+        title: 'PIXEL ARENA CARS — EDICIÓN ARCADE',
+        kicker: 'SELECCIONADO · 01 / 03 · DERBY ACROBÁTICO',
+        sub: 'Golpea el casco del rival, sobrevive a sierras y lava o domina el modo Rey de la Colina.',
+        url: 'games/pixel-arena-cars/index.html',
+        accent: '#ffb703',
+        accent2: '#ff5500',
+        glow: 'rgba(255, 183, 3, 0.45)',
+        controls: [
+          { label: 'Jugador 1 (Azul)', keys: '<kbd>A</kbd> Atrás · <kbd>D</kbd> Acelerar' },
+          { label: 'Jugador 2 (Rojo)', keys: '<kbd>⬅️</kbd> Atrás · <kbd>➡️</kbd> Acelerar' },
+          { label: 'Acrobacias', keys: 'Mortales = <kbd>+15🪙 + TURBO</kbd>' }
+        ]
+      },
+      {
+        id: 'head-soccer',
+        title: 'HEAD SOCCER 2D — CHAMPIONSHIP',
+        kicker: 'SELECCIONADO · 02 / 03 · FÚTBOL DE COMBATE',
+        sub: 'Carga tu barra de poder, desata Super Tiros elementales y conquista la Copa Mundial.',
+        url: 'games/head-soccer/index.html',
+        accent: '#00f0ff',
+        accent2: '#00e676',
+        glow: 'rgba(0, 240, 255, 0.45)',
+        controls: [
+          { label: 'Movimiento', keys: '<kbd>A</kbd> <kbd>D</kbd> o <kbd>⬅️</kbd> <kbd>➡️</kbd>' },
+          { label: 'Salto', keys: '<kbd>W</kbd> o <kbd>⬆️</kbd>' },
+          { label: 'Patada / Super Tiro', keys: '<kbd>ESPACIO</kbd> · <kbd>J</kbd> · <kbd>K</kbd>' }
+        ]
+      },
+      {
+        id: 'shonen-smash',
+        title: 'SHŌNEN SMASH — ANIME BRAWL',
+        kicker: 'SELECCIONADO · 03 / 03 · PELEA DE PLATAFORMAS (1-4P)',
+        sub: 'Acumula daño en tus rivales, rompe la Esfera del Dragón y sácalos volando del escenario.',
+        url: 'games/shonen-smash/index.html',
+        accent: '#ff3b5c',
+        accent2: '#ffd23f',
+        glow: 'rgba(255, 59, 92, 0.48)',
+        controls: [
+          { label: 'Jugador 1', keys: '<kbd>WASD</kbd> + <kbd>Espacio</kbd> + <kbd>J</kbd><kbd>K</kbd><kbd>L</kbd>' },
+          { label: 'Jugador 2', keys: '<kbd>Flechas</kbd> + <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd>' },
+          { label: 'Mandos', keys: 'Soporte directo hasta <kbd>4 Gamepads</kbd>' }
+        ]
+      }
+    ];
+
+    let selectedIndex = 0;
+    let activeGameIndex = null;
+    let hubSoundOn = true;
+    let audioCtx = null;
+
+    // Estadísticas simples guardadas en localStorage
+    const STATS_KEY = 'arcade_multiverse_stats_v1';
+    function loadStats() {
+      try {
+        return JSON.parse(localStorage.getItem(STATS_KEY)) || { plays: [0, 0, 0], lastPlayed: 0 };
+      } catch (_) {
+        return { plays: [0, 0, 0], lastPlayed: 0 };
+      }
+    }
+    function saveStats(stats) {
+      try {
+        localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+      } catch (_) {}
+    }
+    const stats = loadStats();
+
+    function updatePlaysBadges() {
+      GAMES.forEach((g, idx) => {
+        const el = document.getElementById(`playsBadge${idx}`);
+        if (!el) return;
+        const count = stats.plays[idx] || 0;
+        el.textContent = count > 0 ? `🕹️ ${count} partida${count === 1 ? '' : 's'}` : '🔥 Listo';
+      });
+    }
+
+    // Sintetizador WebAudio para el Menú Arcade
+    function playHubSfx(type) {
+      if (!hubSoundOn) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const now = audioCtx.currentTime;
+
+        if (type === 'move') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(320, now);
+          osc.frequency.exponentialRampToValueAtTime(580, now + 0.065);
+          gain.gain.setValueAtTime(0.08, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+          osc.connect(gain).connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.075);
+        } else if (type === 'launch') {
+          const notes = [440, 554.37, 659.25, 880];
+          notes.forEach((freq, i) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(freq, now + i * 0.055);
+            gain.gain.setValueAtTime(0.07, now + i * 0.055);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.055 + 0.16);
+            osc.connect(gain).connect(audioCtx.destination);
+            osc.start(now + i * 0.055);
+            osc.stop(now + i * 0.055 + 0.17);
+          });
+        } else if (type === 'back') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.exponentialRampToValueAtTime(240, now + 0.12);
+          gain.gain.setValueAtTime(0.09, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+          osc.connect(gain).connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.14);
+        }
+      } catch (_) {}
+    }
+
+    // Selección de tarjeta en el Hub
+    const cards = Array.from(document.querySelectorAll('.game-card'));
+    function selectGame(index, silent = false) {
+      selectedIndex = (index + GAMES.length) % GAMES.length;
+      const g = GAMES[selectedIndex];
+
+      cards.forEach((c, i) => c.classList.toggle('selected', i === selectedIndex));
+
+      document.documentElement.style.setProperty('--accent', g.accent2);
+      document.documentElement.style.setProperty('--accent-secondary', g.accent);
+      document.documentElement.style.setProperty('--accent-glow', g.glow);
+
+      document.getElementById('spotKicker').textContent = g.kicker;
+      document.getElementById('spotTitle').textContent = g.title;
+      document.getElementById('spotSub').textContent = g.sub;
+
+      const ctrlContainer = document.getElementById('spotControls');
+      ctrlContainer.innerHTML = g.controls.map(c => `
+        <div class="ctrl-box">
+          <span class="ctrl-box-label">${c.label}</span>
+          <span class="ctrl-keys">${c.keys}</span>
+        </div>
+      `).join('');
+
+      if (!silent) playHubSfx('move');
+    }
+
+    // Lanzar juego dentro de la Consola Unificada
+    const hubView = document.getElementById('hubView');
+    const consoleStage = document.getElementById('consoleStage');
+    const gameFrame = document.getElementById('gameFrame');
+    const floatingDock = document.getElementById('floatingDock');
+    let dockWakeTimer = null;
+
+    function wakeDockBriefly() {
+      floatingDock.classList.add('dock-awake');
+      clearTimeout(dockWakeTimer);
+      dockWakeTimer = setTimeout(() => {
+        floatingDock.classList.remove('dock-awake');
+      }, 2800);
+    }
+
+    function launchGame(index) {
+      selectGame(index, true);
+      playHubSfx('launch');
+
+      activeGameIndex = index;
+      stats.plays[index] = (stats.plays[index] || 0) + 1;
+      stats.lastPlayed = index;
+      saveStats(stats);
+      updatePlaysBadges();
+
+      // Actualizar botones activos del dock
+      GAMES.forEach((_, i) => {
+        document.getElementById(`dockGame${i}`)?.classList.toggle('active-game-pill', i === index);
+      });
+
+      hubView.classList.add('hidden-hub');
+      consoleStage.classList.add('active');
+      gameFrame.src = GAMES[index].url;
+
+      wakeDockBriefly();
+
+      gameFrame.onload = () => {
+        try {
+          gameFrame.focus();
+          gameFrame.contentWindow?.focus();
+        } catch (_) {}
+      };
+    }
+
+    function returnToHub() {
+      if (activeGameIndex === null) return;
+      playHubSfx('back');
+      activeGameIndex = null;
+      gameFrame.src = 'about:blank';
+      consoleStage.classList.remove('active');
+      hubView.classList.remove('hidden-hub');
+      window.focus();
+    }
+
+    // Eventos de las tarjetas
+    cards.forEach((card, idx) => {
+      card.addEventListener('mouseenter', () => {
+        if (selectedIndex !== idx) selectGame(idx);
+      });
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('[data-tab]')) return;
+        if (selectedIndex !== idx) {
+          selectGame(idx);
+        }
+        launchGame(idx);
+      });
+    });
+
+    document.querySelectorAll('[data-launch]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        launchGame(Number(btn.dataset.launch));
+      });
+    });
+
+    document.querySelectorAll('[data-tab]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = Number(btn.dataset.tab);
+        window.open(GAMES[idx].url, '_blank');
+      });
+    });
+
+    document.getElementById('btnLaunchSelected').addEventListener('click', () => {
+      launchGame(selectedIndex);
+    });
+
+    document.getElementById('btnRandomGame').addEventListener('click', () => {
+      const rndIdx = Math.floor(Math.random() * GAMES.length);
+      selectGame(rndIdx);
+      setTimeout(() => launchGame(rndIdx), 180);
+    });
+
+    document.getElementById('btnToggleCrt').addEventListener('click', (e) => {
+      document.body.classList.toggle('no-crt');
+      const isOff = document.body.classList.contains('no-crt');
+      e.currentTarget.textContent = isOff ? '📺 CRT: OFF' : '📺 CRT: ON';
+      playHubSfx('move');
+    });
+
+    document.getElementById('btnToggleSound').addEventListener('click', (e) => {
+      hubSoundOn = !hubSoundOn;
+      e.currentTarget.textContent = hubSoundOn ? '🔊 Audio: ON' : '🔇 Audio: OFF';
+      if (hubSoundOn) playHubSfx('move');
+    });
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen?.().catch(() => {});
+      } else {
+        document.exitFullscreen?.().catch(() => {});
+      }
+    }
+
+    document.getElementById('btnHubFullscreen').addEventListener('click', toggleFullscreen);
+    document.getElementById('btnDockFullscreen').addEventListener('click', () => {
+      toggleFullscreen();
+      setTimeout(() => gameFrame.contentWindow?.focus(), 100);
+    });
+
+    document.getElementById('btnDockHome').addEventListener('click', returnToHub);
+
+    document.getElementById('btnDockReload').addEventListener('click', () => {
+      if (activeGameIndex !== null) {
+        gameFrame.src = GAMES[activeGameIndex].url;
+        wakeDockBriefly();
+      }
+    });
+
+    document.querySelectorAll('[data-switch]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = Number(btn.dataset.switch);
+        launchGame(idx);
+      });
+    });
+
+    // Escuchar mensaje desde los botones internos "🕹️ ARCADE" de cada juego
+    window.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'ARCADE_HUB_HOME') {
+        returnToHub();
+      }
+    });
+
+    // Teclado en el Hub y atajo global F9
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'F9') {
+        e.preventDefault();
+        returnToHub();
+        return;
+      }
+      if (activeGameIndex !== null) return;
+
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        e.preventDefault();
+        selectGame(selectedIndex + 1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        selectGame(selectedIndex - 1);
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        launchGame(selectedIndex);
+      } else if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        document.getElementById('btnRandomGame').click();
+      }
+    });
+
+    // =====================================================
+    // ANIMACIONES EN VIVO (FONDO + 3 MINI CANVASES DE PREVIEW)
+    // =====================================================
+    const bgCanvas = document.getElementById('bgCanvas');
+    const bgCtx = bgCanvas.getContext('2d');
+    const pCanvases = [0, 1, 2].map(i => document.getElementById(`previewCanvas${i}`));
+    const pCtxs = pCanvases.map(c => c.getContext('2d'));
+
+    function resizeBg() {
+      bgCanvas.width = window.innerWidth;
+      bgCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeBg);
+    resizeBg();
+
+    const stars = Array.from({ length: 75 }, () => ({
+      x: Math.random(),
+      y: Math.random(),
+      s: 0.8 + Math.random() * 2.2,
+      v: 0.0002 + Math.random() * 0.0006
+    }));
+
+    function drawBackground(t) {
+      const w = bgCanvas.width, h = bgCanvas.height;
+      const g = GAMES[selectedIndex];
+
+      const grad = bgCtx.createRadialGradient(w * 0.5, h * 0.35, 40, w * 0.5, h * 0.5, Math.max(w, h) * 0.85);
+      grad.addColorStop(0, selectedIndex === 0 ? '#1f1608' : selectedIndex === 1 ? '#071e26' : '#240b15');
+      grad.addColorStop(0.55, '#090b14');
+      grad.addColorStop(1, '#04050a');
+      bgCtx.fillStyle = grad;
+      bgCtx.fillRect(0, 0, w, h);
+
+      // Partículas estelares
+      bgCtx.fillStyle = g.accent;
+      for (const st of stars) {
+        st.y -= st.v;
+        if (st.y < 0) st.y = 1;
+        bgCtx.globalAlpha = 0.25 + 0.35 * Math.sin(t * 0.003 + st.x * 10);
+        bgCtx.fillRect(st.x * w, st.y * h, st.s, st.s);
+      }
+      bgCtx.globalAlpha = 1;
+
+      // Rejilla Synthwave en perspectiva abajo
+      const horizon = h * 0.72;
+      bgCtx.strokeStyle = g.accent;
+      bgCtx.globalAlpha = 0.14;
+      bgCtx.lineWidth = 1;
+      bgCtx.beginPath();
+      for (let i = -12; i <= 12; i++) {
+        const xTop = w * 0.5 + i * 45;
+        const xBot = w * 0.5 + i * 190;
+        bgCtx.moveTo(xTop, horizon);
+        bgCtx.lineTo(xBot, h);
+      }
+      const offset = (t * 0.04) % 28;
+      for (let y = horizon; y < h; y += 28) {
+        const yy = y + offset;
+        bgCtx.moveTo(0, yy);
+        bgCtx.lineTo(w, yy);
+      }
+      bgCtx.stroke();
+      bgCtx.globalAlpha = 1;
+    }
+
+    // Preview 0: Pixel Arena Cars (2 coches chocando sobre puente con lava y sierras)
+    function drawPreviewCars(ctx, t) {
+      const w = 480, h = 270;
+      const sky = ctx.createLinearGradient(0, 0, 0, h);
+      sky.addColorStop(0, '#120824');
+      sky.addColorStop(0.65, '#2b102f');
+      sky.addColorStop(1, '#ff4d00');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, w, h);
+
+      // Lava burbujeante abajo
+      ctx.fillStyle = '#ff3300';
+      ctx.fillRect(0, h - 38, w, 38);
+      ctx.fillStyle = '#ffbe0b';
+      for (let x = 0; x < w; x += 24) {
+        const wave = Math.sin(t * 0.006 + x * 0.05) * 5;
+        ctx.fillRect(x, h - 38 + wave, 18, 6);
+      }
+
+      // Plataforma / Rampa central
+      ctx.fillStyle = '#2b2d42';
+      ctx.fillRect(50, 178, 380, 22);
+      ctx.fillStyle = '#ffb703';
+      for (let x = 60; x < 410; x += 36) {
+        ctx.fillRect(x, 182, 18, 6);
+      }
+
+      // Sierras giratorias en los bordes
+      [75, 405].forEach((sx, idx) => {
+        ctx.save();
+        ctx.translate(sx, 172);
+        ctx.rotate(t * 0.012 * (idx === 0 ? 1 : -1));
+        ctx.fillStyle = '#e2e8f0';
+        for (let a = 0; a < 8; a++) {
+          ctx.rotate(Math.PI / 4);
+          ctx.fillRect(-5, -22, 10, 44);
+        }
+        ctx.fillStyle = '#ef233c';
+        ctx.beginPath();
+        ctx.arc(0, 0, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+
+      // Coche Azul (J1) y Coche Rojo (J2) embistiendo
+      const clash = Math.sin(t * 0.0055);
+      const p1x = 175 + clash * 36;
+      const p2x = 305 - clash * 36;
+      const bounce = Math.abs(Math.sin(t * 0.011)) * 6;
+
+      function drawPixelCar(x, y, bodyCol,flip) {
+        ctx.save();
+        ctx.translate(x, y - bounce);
+        ctx.rotate(flip * -0.08 * clash);
+        // Chasis
+        ctx.fillStyle = bodyCol;
+        ctx.fillRect(-34, -22, 68, 20);
+        ctx.fillRect(-18, -36, 36, 16);
+        // Casco del piloto
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(0, -28, 9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#00f5d4';
+        ctx.fillRect(flip * 2, -31, 6 * flip, 5);
+        // Ruedas Monster
+        ctx.fillStyle = '#111';
+        [-22, 22].forEach(wx => {
+          ctx.beginPath();
+          ctx.arc(wx, 0, 13, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#94a3b8';
+          ctx.beginPath();
+          ctx.arc(wx, 0, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#111';
+        });
+        ctx.restore();
+      }
+
+      drawPixelCar(p1x, 165, '#3a86ff', 1);
+      drawPixelCar(p2x, 165, '#ff0055', -1);
+
+      // Chispas de choque en el centro cuando están cerca
+      if (clash > 0.45) {
+        ctx.fillStyle = '#ffd166';
+        for (let i = 0; i < 8; i++) {
+          const ang = (i / 8) * Math.PI * 2 + t * 0.02;
+          const r = 10 + (clash - 0.45) * 45;
+          ctx.fillRect(240 + Math.cos(ang) * r, 145 + Math.sin(ang) * r, 5, 5);
+        }
+      }
+    }
+
+    // Preview 1: Head Soccer (Estadio nocturno, 2 cabezones y balón de fuego)
+    function drawPreviewSoccer(ctx, t) {
+      const w = 480, h = 270;
+      const bg = ctx.createLinearGradient(0, 0, 0, h);
+      bg.addColorStop(0, '#041226');
+      bg.addColorStop(0.7, '#0a2e36');
+      bg.addColorStop(1, '#14532d');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+
+      // Reflectores del estadio
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.09)';
+      ctx.beginPath();
+      ctx.moveTo(60, 0); ctx.lineTo(180, h); ctx.lineTo(20, h); ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(420, 0); ctx.lineTo(460, h); ctx.lineTo(300, h); ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // Césped con franjas
+      for (let i = 0; i < 8; i++) {
+        ctx.fillStyle = i % 2 === 0 ? '#16a34a' : '#15803d';
+        ctx.fillRect(i * 60, 208, 60, 62);
+      }
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 208, w, 3);
+
+      // Porterías
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(14, 118, 36, 90);
+      ctx.strokeRect(w - 50, 118, 36, 90);
+
+      // Jugadores Cabezones
+      function drawHeadPlayer(x, y, col, headbandCol, dir) {
+        ctx.save();
+        ctx.translate(x, y);
+        // Cuerpo y botín
+        ctx.fillStyle = col;
+        ctx.fillRect(-12, 16, 24, 24);
+        ctx.fillStyle = '#f8fafc';
+        const kick = Math.sin(t * 0.01 + dir) * 10;
+        ctx.fillRect(dir * (8 + Math.max(0, kick)), 34, 16 * dir, 10);
+        // Cabeza grande estilo Head Soccer
+        ctx.fillStyle = '#fcd5b5';
+        ctx.beginPath();
+        ctx.arc(0, -4, 26, 0, Math.PI * 2);
+        ctx.fill();
+        // Cinta / Cabello
+        ctx.fillStyle = headbandCol;
+        ctx.fillRect(-25, -18, 50, 8);
+        // Ojos determinados
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(dir * 6, -8, 6, 7);
+        ctx.restore();
+      }
+
+      const p1Y = 165 - Math.abs(Math.sin(t * 0.005)) * 28;
+      const p2Y = 165 - Math.abs(Math.cos(t * 0.005)) * 28;
+      drawHeadPlayer(135, p1Y, '#2563eb', '#ef4444', 1);
+      drawHeadPlayer(345, p2Y, '#dc2626', '#facc15', -1);
+
+      // Super Tiro de Fuego cruzando la cancha
+      const bx = 240 + Math.sin(t * 0.007) * 95;
+      const by = 135 + Math.cos(t * 0.014) * 28;
+      const trailDir = Math.cos(t * 0.007) >= 0 ? -1 : 1;
+
+      const fireGrad = ctx.createLinearGradient(bx, by, bx + trailDir * 65, by);
+      fireGrad.addColorStop(0, 'rgba(255, 215, 0, 0.95)');
+      fireGrad.addColorStop(0.5, 'rgba(255, 69, 0, 0.7)');
+      fireGrad.addColorStop(1, 'rgba(255, 0, 85, 0)');
+      ctx.fillStyle = fireGrad;
+      ctx.beginPath();
+      ctx.moveTo(bx, by - 14);
+      ctx.lineTo(bx + trailDir * 70, by);
+      ctx.lineTo(bx, by + 14);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(bx, by, 13, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    }
+
+    // Preview 2: Shonen Smash (Plataformas flotantes, auras de Ki y Esfera del Dragón)
+    function drawPreviewSmash(ctx, t) {
+      const w = 480, h = 270;
+      const bg = ctx.createRadialGradient(w * 0.5, h * 0.4, 20, w * 0.5, h * 0.5, 280);
+      bg.addColorStop(0, '#31102f');
+      bg.addColorStop(0.6, '#150d2a');
+      bg.addColorStop(1, '#090714');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+
+      // Escenario principal y 2 plataformas flotantes estilo Battlefield
+      ctx.fillStyle = '#3b4256';
+      ctx.fillRect(75, 195, 330, 18);
+      ctx.fillStyle = '#ffd23f';
+      ctx.fillRect(75, 195, 330, 4);
+
+      ctx.fillStyle = '#4b5563';
+      ctx.fillRect(115, 132, 95, 7);
+      ctx.fillRect(270, 132, 95, 7);
+
+      // Esfera del Dragón flotando en el centro superior
+      const dby = 72 + Math.sin(t * 0.006) * 8;
+      ctx.save();
+      ctx.shadowColor = '#ff9900';
+      ctx.shadowBlur = 18;
+      ctx.fillStyle = '#ff9e00';
+      ctx.beginPath();
+      ctx.arc(240, dby, 15, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#e63946';
+      ctx.fillRect(237, dby - 3, 6, 6);
+      ctx.restore();
+
+      // Dos luchadores con aura de Ki chocando en el aire
+      function drawFighter(x, y, auraCol, hairCol, suitCol, dir) {
+        ctx.save();
+        ctx.translate(x, y);
+        // Aura llameante
+        ctx.fillStyle = auraCol;
+        ctx.globalAlpha = 0.38 + 0.15 * Math.sin(t * 0.02);
+        ctx.beginPath();
+        ctx.arc(0, -18, 28 + Math.sin(t * 0.03) * 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // Traje
+        ctx.fillStyle = suitCol;
+        ctx.fillRect(-10, -24, 20, 24);
+        // Cabeza y cabello anime puntiagudo
+        ctx.fillStyle = '#fbd3b6';
+        ctx.beginPath();
+        ctx.arc(0, -34, 11, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = hairCol;
+        ctx.beginPath();
+        ctx.moveTo(-14, -38);
+        ctx.lineTo(-6, -54);
+        ctx.lineTo(2, -44);
+        ctx.lineTo(10, -55);
+        ctx.lineTo(15, -36);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      const d = Math.sin(t * 0.006) * 28;
+      drawFighter(175 + d, 192, '#ffd23f', '#ffd23f', '#ff5a1f', 1);
+      drawFighter(305 - d, 192, '#00f0ff', '#f8fafc', '#1e293b', -1);
+
+      // Rayo de choque / Kamehameha en el centro
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = 'rgba(0, 225, 255, 0.75)';
+      ctx.beginPath();
+      ctx.arc(240, 168, 14 + Math.sin(t * 0.03) * 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function animateHub(t) {
+      if (activeGameIndex === null) {
+        drawBackground(t);
+        drawPreviewCars(pCtxs[0], t);
+        drawPreviewSoccer(pCtxs[1], t);
+        drawPreviewSmash(pCtxs[2], t);
+      }
+      requestAnimationFrame(animateHub);
+    }
+
+    // Inicializar estado
+    updatePlaysBadges();
+    selectGame(stats.lastPlayed || 0, true);
+    requestAnimationFrame(animateHub);
+  </script>
+</body>
+</html>

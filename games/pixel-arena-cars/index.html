@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Pixel Arena Cars — Edición Arcade Completa</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <div class="arcade-wrapper">
+        <!-- Marcador Superior de Estrellas y Monedas -->
+        <header class="top-hud">
+            <div class="player-score-box">
+                <span class="player-tag p1">J1 AZUL</span>
+                <div id="p1Stars" class="stars-row">
+                    <span class="star">★</span>
+                    <span class="star">★</span>
+                    <span class="star">★</span>
+                    <span class="star">★</span>
+                    <span class="star">★</span>
+                </div>
+            </div>
+
+            <div class="hud-center">
+                <button id="btnGoArcadeHub" class="hud-btn" style="background:linear-gradient(135deg,#ff3b6b,#7c3aed);color:#fff;border-color:#ffd700;" title="Volver al Selector de 3 Juegos">🕹️ ARCADE</button>
+                <span id="hudCoins" class="coin-badge">🪙 250</span>
+                <span id="hudArenaName" class="arena-badge">LA RUEDA LOCA</span>
+                <button id="btnNextArena" class="hud-btn" title="Cambiar a la siguiente arena">🔄 ARENA</button>
+                <button id="btnMute" class="hud-btn">🔊 AUDIO ON</button>
+                <button id="btnBackMenu" class="hud-btn">⚙️ MENÚ</button>
+            </div>
+
+            <div class="player-score-box">
+                <div id="p2Stars" class="stars-row">
+                    <span class="star">★</span>
+                    <span class="star">★</span>
+                    <span class="star">★</span>
+                    <span class="star">★</span>
+                    <span class="star">★</span>
+                </div>
+                <span id="p2LabelTag" class="player-tag p2">CPU ROJO</span>
+            </div>
+        </header>
+
+        <!-- Escenario Principal 2D Pixel Art -->
+        <main class="stage-container">
+            <canvas id="gameCanvas" width="960" height="560"></canvas>
+
+            <!-- Instantánea Polaroid del KO (Clásico de Drive Ahead!) -->
+            <div id="koPolaroid" class="ko-polaroid hidden">
+                <canvas id="polaroidCanvas" width="160" height="100"></canvas>
+                <div id="polaroidCaption">📸 ¡FOTO DEL KO!</div>
+            </div>
+
+            <!-- Banner Dinámico de Rondas / KO / Muerte Súbita -->
+            <div id="roundBanner" class="round-banner hidden">
+                <div id="bannerTitle">¡LA RUEDA LOCA!</div>
+                <div id="bannerSub">¡Golpea el casco del rival para ganar una estrella!</div>
+            </div>
+
+            <!-- Menú Principal -->
+            <div id="menuOverlay" class="overlay-panel">
+                <div class="menu-card">
+                    <h1 class="game-logo">PIXEL ARENA CARS</h1>
+                    <p class="game-subtitle">¡Batallas acrobáticas 2D en arenas giratorias estilo Drive Ahead!</p>
+
+                    <div class="mode-selector">
+                        <button class="mode-btn selected" data-mode="cpu">🏆 1V1 CLÁSICO</button>
+                        <button class="mode-btn" data-mode="2p">👥 2 JUGADORES</button>
+                        <button class="mode-btn" data-mode="koth">👑 REY COLINA</button>
+                        <button class="mode-btn" data-mode="mission">🎯 MISIONES</button>
+                    </div>
+
+                    <div class="config-grid">
+                        <div class="config-row">
+                            <label for="arenaSelect">🏟️ SELECCIONA ARENA (8 ESTADIOS INTERACTIVOS):</label>
+                            <select id="arenaSelect" class="pixel-select">
+                                <option value="random">🎲 ARENA ALEATORIA EN CADA RONDA</option>
+                            </select>
+                        </div>
+
+                        <div class="config-row">
+                            <label for="p1CarSelect">🔵 VEHÍCULO JUGADOR 1 (AZUL):</label>
+                            <select id="p1CarSelect" class="pixel-select">
+                                <option value="random">🎲 ALEATORIO EN CADA RONDA</option>
+                            </select>
+                        </div>
+
+                        <div class="config-row">
+                            <label for="p2CarSelect">🔴 VEHÍCULO RIVAL (ROJO):</label>
+                            <select id="p2CarSelect" class="pixel-select">
+                                <option value="random">🎲 ALEATORIO EN CADA RONDA</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="menu-actions-row">
+                        <button id="btnOpenGarage" class="secondary-action-btn">🎰 GARAJE, CASCOS & RULETA</button>
+                        <button id="btnOpenMissions" class="secondary-action-btn">🎯 ESTADIO DE MISIONES</button>
+                    </div>
+
+                    <button id="btnStartMatch" class="start-btn">🔥 ¡ENTRAR A LA ARENA! 🔥</button>
+
+                    <div class="controls-hint">
+                        <div>
+                            <strong>J1:</strong>
+                            <span class="key-pill">A</span> / <span class="key-pill">D</span>
+                        </div>
+                        <div>
+                            <strong>J2:</strong>
+                            <span class="key-pill">⬅️</span> / <span class="key-pill">➡️</span>
+                        </div>
+                        <div>
+                            <strong>Mortales en el aire =</strong>
+                            <span class="key-pill">+15 🪙 + TURBO</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal del Garaje, Cascos y Máquina de Premios -->
+            <div id="garageModal" class="overlay-panel hidden">
+                <div class="menu-card wide-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h2 class="game-logo" style="font-size: 18px; margin: 0;">🎰 GARAJE & MÁQUINA DE PREMIOS</h2>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <span id="garageCoins" class="coin-badge">🪙 250</span>
+                            <button id="btnCloseGarage" class="hud-btn">✖ CERRAR</button>
+                        </div>
+                    </div>
+
+                    <div class="gacha-banner">
+                        <div style="text-align: left;">
+                            <div style="font-family: 'Press Start 2P', monospace; font-size: 11px; color: #ffea00; margin-bottom: 4px;">
+                                CÁPSULA SORPRESA (100 🪙)
+                            </div>
+                            <div id="gachaResultText" style="font-size: 13px; color: #e2e8f0;">
+                                ¡Gira la ruleta para desbloquear coches épicos, legendarios o cascos especiales!
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button id="btnRollGacha" class="hud-btn" style="background: #d500f9; border-color: #f3e5f5; font-size: 13px; padding: 8px 14px;">
+                                🎰 GIRAR RULETA (100 🪙)
+                            </button>
+                            <button id="btnToggleUnlockAll" class="hud-btn" style="background: #1e293b;">
+                                🔓 ACTIVAR MODO LIBRE (DESBLOQUEAR TODO)
+                            </button>
+                        </div>
+                    </div>
+
+                    <h3 style="text-align: left; font-size: 13px; color: #ffd600; margin-bottom: 8px;">
+                        🏎️ 12 VEHÍCULOS DE COMBATE:
+                    </h3>
+                    <div id="garageCarsGrid" class="garage-grid"></div>
+
+                    <h3 style="text-align: left; font-size: 13px; color: #00e5ff; margin-bottom: 8px;">
+                        🪖 8 CASCOS DE PILOTO:
+                    </h3>
+                    <div id="garageHelmetsGrid" class="garage-grid"></div>
+                </div>
+            </div>
+
+            <!-- Modal de Estadio de Misiones -->
+            <div id="missionsModal" class="overlay-panel hidden">
+                <div class="menu-card wide-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                        <h2 class="game-logo" style="font-size: 18px; margin: 0;">🎯 ESTADIO DE MISIONES & JEFES</h2>
+                        <button id="btnCloseMissions" class="hud-btn">✖ VOLVER</button>
+                    </div>
+                    <div id="missionsGrid" class="missions-grid"></div>
+                </div>
+            </div>
+
+            <!-- Modal de Fin de Partida / Victoria -->
+            <div id="victoryModal" class="overlay-panel hidden">
+                <div class="menu-card">
+                    <h2 id="victoryTitle" class="game-logo">🏆 ¡JUGADOR 1 GANA!</h2>
+                    <p id="victorySub" class="game-subtitle" style="font-size: 16px; color: #fff; margin: 14px 0 22px;">
+                        Marcador Final: 5 ★ — 2 ★
+                    </p>
+                    <div style="display: flex; gap: 12px;">
+                        <button id="btnRematch" class="start-btn">⚡ JUGAR DE NUEVO</button>
+                        <button id="btnVictoryMenu" class="mode-btn" style="flex: 0.6; font-size: 11px;">MENÚ / GARAJE</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Controles Táctiles / Botones de Pedal en Pantalla -->
+        <footer class="touch-controls-bar">
+            <div class="touch-group">
+                <button id="btn-p1-left" class="pedal-btn p1-btn">◀</button>
+                <button id="btn-p1-right" class="pedal-btn p1-btn">▶</button>
+            </div>
+
+            <div class="center-tip">
+                💥 <strong>Tip Pro:</strong> ¡Haz mortales en el aire para ganar <strong>+15 🪙 y Turbo</strong>! Aplasta el casco del rival o empújalo a las sierras.
+            </div>
+
+            <div id="touch-p2-group" class="touch-group" style="display: none;">
+                <button id="btn-p2-left" class="pedal-btn p2-btn">◀</button>
+                <button id="btn-p2-right" class="pedal-btn p2-btn">▶</button>
+            </div>
+        </footer>
+    </div>
+
+    <script src="js/storage.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/sprites.js"></script>
+    <script src="js/physics.js"></script>
+    <script src="js/arenas.js"></script>
+    <script src="js/game.js"></script>
+    <script>
+      document.getElementById('btnGoArcadeHub')?.addEventListener('click', () => {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ type: 'ARCADE_HUB_HOME' }, '*');
+        } else {
+          window.location.href = '../../index.html';
+        }
+      });
+    </script>
+</body>
+</html>

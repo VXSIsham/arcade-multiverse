@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Head Soccer 2D — Authentic Arcade Championship</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700;900&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Modular Stylesheets -->
+  <link rel="stylesheet" href="css/variables.css?v=rework5">
+  <link rel="stylesheet" href="css/layout.css?v=rework5">
+  <link rel="stylesheet" href="css/stage.css?v=rework5">
+  <link rel="stylesheet" href="css/inspector.css?v=rework5">
+</head>
+<body>
+
+  <!-- TOP COMPACT APP HEADER -->
+  <header class="arcade-header">
+    <div class="brand-row">
+      <span class="brand-badge-arcade">ARCADE 2D</span>
+      <div class="brand-title-arcade">HEAD SOCCER <span>CHAMPIONSHIP</span></div>
+    </div>
+
+    <div class="header-actions">
+      <button class="header-btn" id="btnGoArcadeHub" style="background:linear-gradient(135deg,#ff3b6b,#7c3aed);color:#fff;border-color:#ffd700;">🕹️ Arcade</button>
+      <button class="header-btn highlight" id="btnOpenTournaments">🏆 Torneos</button>
+      <button class="header-btn" id="btnOpenRoster">👥 Personajes</button>
+      <button class="header-btn" id="btnToggleMobile">📱 Móvil: OFF</button>
+      <button class="header-btn" id="btnRestartMatch">⏱️ Reiniciar</button>
+      <button class="header-btn" id="audioToggleBtn">🔊 Audio: ON</button>
+      <button class="header-btn" id="btnFullscreen">⛶ Fullscreen</button>
+      <button class="header-btn" id="btnToggleDebug">🛠️ Debug</button>
+    </div>
+  </header>
+
+  <!-- FULLSCREEN GAME VIEWPORT -->
+  <div class="game-viewport-wrapper" id="gameViewport">
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- AUTHENTIC ARCADE HUD OVERLAY -->
+    <div class="arcade-hud-root">
+      
+      <!-- P1 STATUS (LEFT) -->
+      <div class="hud-fighter-bar p1">
+        <div class="winged-power-frame p1">
+          <div class="power-fill-bar" id="p1PowerBar" style="width: 30%;"></div>
+          <div class="power-label-overlay">
+            <span style="color: #ffd700;">⚡ POWER</span>
+            <span id="p1PowerPct" style="color: #fff;">30%</span>
+          </div>
+        </div>
+
+        <div class="life-bar-frame p1">
+          <div class="life-damage-ghost" id="p1DamageGhost"></div>
+          <div class="life-fill-bar" id="p1LifeBar"></div>
+        </div>
+
+        <div class="hud-name-badge" id="p1Badge">
+          <span class="char-flag-icon" id="p1Flag">🇯🇵</span>
+          <span id="p1Name">KENTA #10</span>
+          <span style="font-size: 11px; opacity: 0.7;" id="p1HpText">100/100</span>
+        </div>
+      </div>
+
+      <!-- CENTER SCOREBOARD & MATCH TIMER -->
+      <div class="arcade-center-board">
+        <div class="match-clock-box">
+          <span>TIME</span>
+          <span id="matchClock" style="color: #fff;">0:60</span>
+        </div>
+
+        <div class="score-discs-row">
+          <div class="score-disc" id="p1Score">0</div>
+          <div class="score-colon">:</div>
+          <div class="score-disc" id="rivalScore">0</div>
+        </div>
+
+        <div class="hud-tournament-pill" id="hudTournamentPill">
+          <span class="tourn-icon">🏆</span>
+          <span id="tournStatusText">AMISTOSO RÁPIDO</span>
+        </div>
+      </div>
+
+      <!-- RIVAL STATUS (RIGHT) -->
+      <div class="hud-fighter-bar rival">
+        <div class="winged-power-frame rival">
+          <div class="power-fill-bar" id="rivalPowerBar" style="width: 30%;"></div>
+          <div class="power-label-overlay" style="flex-direction: row-reverse;">
+            <span style="color: #ff3700;">⚡ POWER</span>
+            <span id="rivalPowerPct" style="color: #fff;">30%</span>
+          </div>
+        </div>
+
+        <div class="life-bar-frame rival">
+          <div class="life-damage-ghost" id="rivalDamageGhost"></div>
+          <div class="life-fill-bar" id="rivalLifeBar"></div>
+        </div>
+
+        <div class="hud-name-badge" id="rivalBadge" style="flex-direction: row-reverse;">
+          <span class="char-flag-icon" id="rivalFlag">🇲🇽</span>
+          <span id="rivalName">EL TORO #7</span>
+          <span style="font-size: 11px; opacity: 0.7;" id="rivalHpText">100/100</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- STATUS PILLS -->
+    <div class="hud-status-pills">
+      <div class="status-pill dizzy" id="pillDizzy">😵 ¡MAREADO / STUNNED!</div>
+      <div class="status-pill knockdown" id="pillKnockdown">💫 ¡DERRIBO / KNOCKDOWN!</div>
+    </div>
+
+    <!-- GOAL & MATCH OVER BANNERS -->
+    <div class="goal-banner-overlay" id="goalBanner">¡¡¡GOOOOOOOLAZO!!! 🔥</div>
+    <div class="match-over-overlay" id="matchOverBanner">
+      <div id="matchOverTitle">¡VICTORIA! 🏆</div>
+      <div style="font-size: 18px; margin-top: 6px; color: #ffd700;" id="matchOverSub">Presiona espacio para continuar</div>
+    </div>
+
+    <!-- BOTTOM ARCADE ACTION BUTTONS (AUTHENTIC RETRO CABINET) -->
+    <div class="arcade-bottom-controls">
+      <!-- Movement Group (Left Golden Dual D-Pad) -->
+      <div class="ctrl-group">
+        <div class="arcade-dpad-golden">
+          <button class="dpad-arrow-btn" id="btnMoveLeft">
+            <span>◄ L</span>
+            <span class="arrow-key-hint">A / ←</span>
+          </button>
+          <div class="dpad-divider"></div>
+          <button class="dpad-arrow-btn" id="btnMoveRight">
+            <span>R ►</span>
+            <span class="arrow-key-hint">D / →</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Actions Group (Right Golden Arcade Buttons) -->
+      <div class="ctrl-group">
+        <button class="golden-arcade-btn super-btn" id="btnSuper">
+          <span id="superBtnName">🔥 TIRO DRAGÓN</span>
+          <span class="btn-key-badge">SHIFT / F</span>
+        </button>
+        <button class="golden-arcade-btn" id="btnKick">
+          <span>⚡ TIRO / CARGA</span>
+          <span class="btn-key-badge">SPACE (HOLD) / J</span>
+        </button>
+        <button class="golden-arcade-btn" id="btnJump">
+          <span>🚀 SALTO</span>
+          <span class="btn-key-badge">W / ↑</span>
+        </button>
+        <button class="golden-arcade-btn" id="btnDash">
+          <span>🛡️ DASH</span>
+          <span class="btn-key-badge">S / ↓</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- FLOATING DEBUGGER PANEL (OPTIONAL PAIR-PROGRAMMING TOOLS) -->
+    <div class="floating-debug-panel" id="floatingDebugPanel">
+      <div class="debug-header">
+        <span>🦴 SPINE RIG & HITBOX INSPECTOR</span>
+        <button class="debug-close" id="btnCloseDebug">✕</button>
+      </div>
+
+      <div class="debug-section">
+        <div class="debug-section-title">Capas de Depuración</div>
+        <div class="debug-card">
+          <div class="debug-row">
+            <span>Hitboxes de Impacto</span>
+            <label class="debug-switch">
+              <input type="checkbox" id="dbgHitboxes">
+              <span class="debug-slider-track"></span>
+            </label>
+          </div>
+          <div class="debug-row">
+            <span>Huesos Spine 2D (Diamonds)</span>
+            <label class="debug-switch">
+              <input type="checkbox" id="dbgBones">
+              <span class="debug-slider-track"></span>
+            </label>
+          </div>
+          <div class="debug-row">
+            <span>Malla / Wireframe (Mesh)</span>
+            <label class="debug-switch">
+              <input type="checkbox" id="dbgMesh">
+              <span class="debug-slider-track"></span>
+            </label>
+          </div>
+          <div class="debug-row">
+            <span>Rival CPU Activo</span>
+            <label class="debug-switch">
+              <input type="checkbox" id="dbgRival" checked>
+              <span class="debug-slider-track"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="debug-section">
+        <div class="debug-section-title">Parámetros de Física</div>
+        <div class="debug-card">
+          <div class="debug-range-wrap">
+            <div class="debug-range-header">
+              <span>Tamaño Cabeza</span>
+              <span id="dbgValHead">1.0x</span>
+            </div>
+            <input type="range" id="dbgSliderHead" min="0.7" max="1.5" step="0.05" value="1.0">
+          </div>
+          <div class="debug-range-wrap">
+            <div class="debug-range-header">
+              <span>Velocidad de Juego</span>
+              <span id="dbgValSpeed">1.0x</span>
+            </div>
+            <input type="range" id="dbgSliderSpeed" min="0.2" max="2.0" step="0.1" value="1.0">
+          </div>
+        </div>
+      </div>
+
+      <div class="debug-section">
+        <div class="debug-section-title">Propiedades de Porterías 🥅</div>
+        <div class="debug-card">
+          <div class="debug-row">
+            <span>Estilo de Red</span>
+            <select class="debug-select" id="dbgNetStyle">
+              <option value="hexagon" selected>Hexagonal Champions 🏆</option>
+              <option value="diamond">Malla Diamante Pro 💎</option>
+              <option value="classic">Rejilla Clásica ⚽</option>
+            </select>
+          </div>
+          <div class="debug-row">
+            <span>Color de Red</span>
+            <select class="debug-select" id="dbgNetColor">
+              <option value="champions" selected>Plata Champions ✨</option>
+              <option value="gold">Dorado Torneo 🥇</option>
+              <option value="neon_cyan">Neón Arcade ⚡</option>
+              <option value="classic">Blanco Estadio 🏟️</option>
+            </select>
+          </div>
+          <div class="debug-row">
+            <span>Sensores LED de Gol</span>
+            <label class="debug-switch">
+              <input type="checkbox" id="dbgGoalLed">
+              <span class="debug-slider-track"></span>
+            </label>
+          </div>
+          <div class="debug-row">
+            <span>Línea Láser de Gol</span>
+            <label class="debug-switch">
+              <input type="checkbox" id="dbgGoalLaser">
+              <span class="debug-slider-track"></span>
+            </label>
+          </div>
+          <div class="debug-row">
+            <span>Vibración de Postes</span>
+            <label class="debug-switch">
+              <input type="checkbox" id="dbgGoalVibe" checked>
+              <span class="debug-slider-track"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHARACTER SELECTION MODAL -->
+  <div class="modal-backdrop" id="charSelectModal">
+    <div class="char-select-dialog">
+      <div class="char-select-header">
+        <div class="char-select-title-group">
+          <h2>🏆 ROSTER DE PERSONAJES</h2>
+          <p>Selecciona tu delantero <b>Player 1</b> y tu <b>Rival CPU</b>. Cada uno cuenta con estadísticas y un Súper Tiro único.</p>
+        </div>
+        <button class="modal-close-btn" id="btnCloseRosterModal">✕</button>
+      </div>
+
+      <div class="roster-modal-grid" id="modalRosterGrid">
+        <!-- Rendered dynamically by UIManager -->
+      </div>
+    </div>
+  </div>
+
+  <!-- TOURNAMENTS & GAME MODES MODAL -->
+  <div class="modal-backdrop" id="tournamentModal">
+    <div class="char-select-dialog tournament-dialog">
+      <div class="char-select-header">
+        <div class="char-select-title-group">
+          <h2>🏆 MODOS DE TORNEO Y CAMPEONATO</h2>
+          <p>Compite en la Copa Mundial con cuadro de eliminación, desafía la racha en Supervivencia o define en Gol de Oro.</p>
+        </div>
+        <button class="modal-close-btn" id="btnCloseTournModal">✕</button>
+      </div>
+
+      <!-- Mode Selection Tabs -->
+      <div class="tourn-tabs-bar">
+        <button class="tourn-tab-btn active" data-tab="copa">🏆 Copa Mundial</button>
+        <button class="tourn-tab-btn" data-tab="survival">🔥 Supervivencia</button>
+        <button class="tourn-tab-btn" data-tab="golden">⚡ Gol de Oro</button>
+        <button class="tourn-tab-btn" data-tab="quick">⚽ Partido Rápido</button>
+      </div>
+
+      <!-- Tab 1: Copa Mundial (Bracket) -->
+      <div class="tourn-tab-content active" id="tabContentCopa">
+        <div class="bracket-stage-header">
+          <div class="bracket-info-badge">
+            <span id="bracketRoundTitle">ESTADO: CUARTOS DE FINAL</span>
+            <span class="badge-sub">Gana 3 partidos consecutivos para coronarte Campeón Mundial</span>
+          </div>
+          <button class="tourn-action-btn pulse-glow" id="btnStartTournMatch">⚔️ ¡JUGAR PARTIDO! (CUARTOS)</button>
+        </div>
+
+        <div class="tournament-bracket-tree" id="bracketTreeRoot">
+          <!-- Rendered dynamically by UIManager -->
+        </div>
+      </div>
+
+      <!-- Tab 2: Supervivencia (Gauntlet) -->
+      <div class="tourn-tab-content" id="tabContentSurvival">
+        <div class="survival-view-card">
+          <div class="survival-badge-large">🔥 MODO SUPERVIVENCIA</div>
+          <p class="survival-desc">Enfréntate a una serie interminable de rivales. Tu vida <b>no se restaura completamente</b> entre partidos (+30 HP de bonificación por victoria). ¿Cuántos podrás vencer seguidos?</p>
+          
+          <div class="survival-stats-row">
+            <div class="survival-stat-box">
+              <span class="stat-num" id="survivalCurrentStreak">0</span>
+              <span class="stat-lbl">RACHA ACTUAL</span>
+            </div>
+            <div class="survival-stat-box highlight">
+              <span class="stat-num" id="survivalBestStreak">0</span>
+              <span class="stat-lbl">MEJOR RÉCORD</span>
+            </div>
+            <div class="survival-stat-box">
+              <span class="stat-num" id="survivalHpBonus">+30 HP</span>
+              <span class="stat-lbl">BONUS VICTORIA</span>
+            </div>
+          </div>
+
+          <button class="tourn-action-btn pulse-glow" id="btnStartSurvival">🔥 ¡COMENZAR DESAFÍO DE SUPERVIVENCIA!</button>
+        </div>
+      </div>
+
+      <!-- Tab 3: Gol de Oro (Sudden Death) -->
+      <div class="tourn-tab-content" id="tabContentGolden">
+        <div class="survival-view-card">
+          <div class="survival-badge-large" style="background: linear-gradient(135deg, #ffd700, #ff5500);">⚡ MUERTE SÚBITA / GOL DE ORO</div>
+          <p class="survival-desc">¡Máxima adrenalina! Sin tiempo límite. <b>El primer jugador en anotar un gol gana instantáneamente el partido.</b> Cualquier error es la derrota.</p>
+          <button class="tourn-action-btn pulse-glow" id="btnStartGoldenGoal" style="background: linear-gradient(135deg, #ff9100, #ff0055);">⚡ ¡INICIAR MUERTE SÚBITA!</button>
+        </div>
+      </div>
+
+      <!-- Tab 4: Amistoso Rápido -->
+      <div class="tourn-tab-content" id="tabContentQuick">
+        <div class="survival-view-card">
+          <div class="survival-badge-large" style="background: linear-gradient(135deg, #00f0ff, #0066ff);">⚽ AMISTOSO CLÁSICO ARCADE</div>
+          <p class="survival-desc">Partido tradicional de 60 segundos. Prueba técnicas, combos aéreos, tiros especiales y entrena libremente contra cualquier rival.</p>
+          <button class="tourn-action-btn" id="btnStartQuickMatch">⚽ JUGAR PARTIDO AMISTOSO</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TROPHY CHAMPIONSHIP CELEBRATION MODAL -->
+  <div class="modal-backdrop" id="trophyModal">
+    <div class="trophy-celebration-dialog">
+      <div class="trophy-icon-glow">🏆</div>
+      <h1 class="trophy-title">¡¡¡CAMPEÓN DEL MUNDO!!!</h1>
+      <p class="trophy-subtitle" id="trophySubtitle">Has conquistado la Gran Final del Torneo Head Soccer 2D</p>
+      <div class="trophy-champion-badge" id="trophyChampBadge">
+        <span class="trophy-flag" id="trophyFlag">🇯🇵</span>
+        <span class="trophy-name" id="trophyName">KENTA #10</span>
+      </div>
+      <button class="trophy-claim-btn pulse-glow" id="btnClaimTrophy">⭐ ¡LEVANTAR LA COPA DORADA! ⭐</button>
+    </div>
+  </div>
+
+  <!-- Main Game Bootstrap -->
+  <script src="bundle.js"></script>
+  <script>
+    document.getElementById('btnGoArcadeHub')?.addEventListener('click', () => {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'ARCADE_HUB_HOME' }, '*');
+      } else {
+        window.location.href = '../../index.html';
+      }
+    });
+  </script>
+</body>
+</html>
