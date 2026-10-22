@@ -710,12 +710,20 @@ const CH={
       us:{nm:'Levitación Psíquica',f:40,limb:'body',helpless:1,imp:[{f:8,vy:-21,vx:3}],hb:[S(8,18,0,-40,32,8,85,45,75)]},
       ds:{nm:'Represión / Barrera',f:42,limb:'body',reflect:{s:4,e:28},hb:[S(10,16,0,-36,44,5,80,40,30)]}}},
  denji:{name:'Denji',from:'Chainsaw Man',col:'#ff3b30',
-  st:{w:96,walk:3.6,run:8.2,air:4.7,aacc:.48,jump:15.6,dj:14.8,grav:.64,fall:10.4},nr:{sword:1,p:1.06,sp:.92},
-  look:{skin:'#f6cfa6',top:'#f4f6fa',bot:'#1c202c',shoe:'#d22a2a',hair:'#ebb93e',style:'denji',sword:'katana'},
-  sp:{ns:{nm:'Rugido de Motosierra',f:38,limb:'sword',proj:[{f:10,t:'crescent',x:36,y:-38,vx:14,r:30,life:42,d:10,a:40,b:42,g:78,pierce:1,col:'#ff2a3a'}]},
-      ss:{nm:'Embestida Desgarradora',f:36,limb:'sword',imp:[{f:6,to:20,vx:17}],hb:[S(6,20,30,-36,28,3.2,40,22,25,{multi:4}),S(20,24,36,-36,32,7,42,46,86)]},
-      us:{nm:'Gancho de Cadena',f:38,limb:'sword',helpless:1,imp:[{f:6,vy:-22,vx:3}],tether:{f:6,range:300},hb:[S(6,18,22,-55,28,3,85,26,20,{multi:4}),S(18,22,20,-70,32,6,85,46,82)]},
-      ds:{nm:'¡Tirón de Cuerda!',f:36,limb:'body',kiCharge:1,charge:{at:8,max:45,btn:'special',k:1},buff:{f:12,dmg:1.25,spd:1.15,t:480,cd:720,aura:'#ff2a3a'},hb:[S(10,16,0,-36,46,7,75,45,60)]}}}};
+    st:{w:96,walk:3.6,run:8.2,air:4.7,aacc:.48,jump:15.6,dj:14.8,grav:.64,fall:10.4},nr:{sword:1,p:1.06,sp:.92},
+    look:{skin:'#f6cfa6',top:'#f4f6fa',bot:'#1c202c',shoe:'#d22a2a',hair:'#ebb93e',style:'denji',sword:'katana'},
+    sp:{ns:{nm:'Rugido de Motosierra',f:38,limb:'sword',proj:[{f:10,t:'crescent',x:36,y:-38,vx:14,r:30,life:42,d:10,a:40,b:42,g:78,pierce:1,col:'#ff2a3a'}]},
+        ss:{nm:'Embestida Desgarradora',f:36,limb:'sword',imp:[{f:6,to:20,vx:17}],hb:[S(6,20,30,-36,28,3.2,40,22,25,{multi:4}),S(20,24,36,-36,32,7,42,46,86)]},
+        us:{nm:'Gancho de Cadena',f:38,limb:'sword',helpless:1,imp:[{f:6,vy:-22,vx:3}],tether:{f:6,range:300},hb:[S(6,18,22,-55,28,3,85,26,20,{multi:4}),S(18,22,20,-70,32,6,85,46,82)]},
+        ds:{nm:'¡Tirón de Cuerda!',f:36,limb:'body',kiCharge:1,charge:{at:8,max:45,btn:'special',k:1},buff:{f:12,dmg:1.25,spd:1.15,t:480,cd:720,aura:'#ff2a3a'},hb:[S(10,16,0,-36,46,7,75,45,60)]}}},
+  subaru:{name:'Subaru',from:'Re:Zero',col:'#9333ea',
+    st:{w:89,walk:3.2,run:6.8,air:4.2,aacc:.44,jump:15.5,dj:14.2,grav:.62,fall:10.0},nr:{sword:1,p:1.02,sp:1},
+    look:{skin:'#f6d6b4',top:'#1c1917',bot:'#f97316',shoe:'#292524',hair:'#18181b',style:'subaru',jacket:'#1c1917',accent:'#f97316'},
+    sp:{ns:{nm:'Shamac',f:36,limb:'body',proj:[{f:10,t:'shamac',x:35,y:-30,vx:6.5,r:38,life:90,d:2.5,a:60,b:15,g:0,slow:0.45,col:'#581c87'}]},
+        ss:{nm:'Enganche de Látigo',f:38,limb:'sword',whip:{f:6,to:18,range:360,spd:20,style:'subaruWhip',txt:'¡ATRÁPALO!',col:'#d8b4fe'},hb:[S(16,24,36,-32,28,10.0,45,45,84)]},
+        us:{nm:'Impulso de Patrasche',f:42,limb:'leg',helpless:1,imp:[{f:6,vy:-19,vx:6}],hb:[S(6,16,16,-50,28,8.0,80,45,75,{headBounce:true})],headBounce:1},
+        ds:{nm:'Invisible Providence (Ground Slam)',f:44,limb:'body',self:{f:10,pct:2.5},say:{f:10,txt:'¡MANO OCULTA!',col:'#a855f7'},shadowHand:{f:10,to:24,type:'ground'},hb:[S(11,20,50,-24,38,14.0,285,56,75,{groundBounce:true,unblockable:true,bypassShield:true})]},
+        ds_air:{nm:'Invisible Providence (Dark Spike)',f:44,limb:'body',air:1,self:{f:10,pct:2.5},say:{f:10,txt:'¡DESGARRO OSCURO!',col:'#a855f7'},shadowHand:{f:10,to:24,type:'air'},hb:[S(12,16,42,10,42,15.0,270,60,95,{meteor:true,unblockable:true,bypassShield:true}),S(17,24,40,6,36,8.0,260,35,50,{bypassShield:true})]}}}};
 const ORDER=Object.keys(CH);
 const SHEETS={};
 SHEETS['denji-mov']={src:'sprites/denji-mov/atlas.png',frames:[{"sx":0,"sy":0,"w":104,"h":181,"ax":45,"ay":181,"ext":{"r":[58,-8],"l":[-45,-9],"u":[-1,-181],"d":[-43,-1],"ur":[32,-168],"dr":[56,-4],"ul":[-21,-168],"dl":[-45,-3]},"rc":"0.0"},{"sx":106,"sy":0,"w":104,"h":181,"ax":43,"ay":181,"ext":{"r":[60,-11],"l":[-43,-8],"u":[-6,-181],"d":[-41,-1],"ur":[25,-172],"dr":[60,-6],"ul":[-24,-167],"dl":[-43,-3]},"rc":"0.1"},{"sx":212,"sy":0,"w":106,"h":181,"ax":47,"ay":181,"ext":{"r":[58,-11],"l":[-47,-8],"u":[-5,-181],"d":[-44,-1],"ur":[36,-164],"dr":[58,-6],"ul":[-22,-167],"dl":[-47,-3]},"rc":"0.2"},{"sx":320,"sy":0,"w":104,"h":181,"ax":45,"ay":181,"ext":{"r":[58,-8],"l":[-45,-8],"u":[-4,-181],"d":[-36,-1],"ur":[27,-172],"dr":[56,-4],"ul":[-22,-167],"dl":[-45,-3]},"rc":"0.3"},{"sx":426,"sy":0,"w":105,"h":179,"ax":50,"ay":179,"ext":{"r":[54,-89],"l":[-50,-9],"u":[-2,-179],"d":[-49,-1],"ur":[18,-179],"dr":[54,-6],"ul":[-18,-168],"dl":[-49,-1]},"rc":"0.4"},{"sx":533,"sy":0,"w":105,"h":181,"ax":48,"ay":181,"ext":{"r":[56,-12],"l":[-48,-104],"u":[-7,-181],"d":[-44,-1],"ur":[29,-168],"dr":[56,-6],"ul":[-23,-168],"dl":[-47,-3]},"rc":"0.5"},{"sx":640,"sy":0,"w":138,"h":173,"ax":71,"ay":173,"ext":{"r":[66,-109],"l":[-71,-45],"u":[20,-173],"d":[33,-1],"ur":[43,-173],"dr":[60,-10],"ul":[5,-162],"dl":[-71,-37]},"rc":"1.0"},{"sx":780,"sy":0,"w":140,"h":167,"ax":75,"ay":167,"ext":{"r":[64,-91],"l":[-75,-46],"u":[22,-167],"d":[2,-1],"ur":[46,-167],"dr":[9,-2],"ul":[-50,-105],"dl":[-75,-37]},"rc":"1.1"},{"sx":0,"sy":183,"w":141,"h":175,"ax":69,"ay":175,"ext":{"r":[71,-102],"l":[-69,-49],"u":[26,-175],"d":[11,-1],"ur":[64,-160],"dr":[30,-2],"ul":[10,-163],"dl":[-69,-40]},"rc":"1.2"},{"sx":143,"sy":183,"w":144,"h":165,"ax":76,"ay":165,"ext":{"r":[67,-89],"l":[-76,-43],"u":[25,-165],"d":[0,-1],"ur":[46,-164],"dr":[9,-2],"ul":[-47,-106],"dl":[-75,-35]},"rc":"1.3"},{"sx":289,"sy":183,"w":133,"h":173,"ax":71,"ay":173,"ext":{"r":[61,-15],"l":[-71,-30],"u":[20,-173],"d":[33,-1],"ur":[44,-173],"dr":[61,-9],"ul":[3,-161],"dl":[-66,-8]},"rc":"1.4"},{"sx":424,"sy":183,"w":138,"h":176,"ax":74,"ay":176,"ext":{"r":[63,-112],"l":[-74,-24],"u":[19,-176],"d":[-63,-1],"ur":[42,-175],"dr":[-2,-18],"ul":[1,-163],"dl":[-68,-6]},"rc":"1.5"},{"sx":564,"sy":183,"w":143,"h":169,"ax":74,"ay":169,"ext":{"r":[68,-104],"l":[-74,-43],"u":[23,-169],"d":[12,-1],"ur":[46,-169],"dr":[26,-1],"ul":[6,-157],"dl":[-74,-35]},"rc":"1.6"},{"sx":709,"sy":183,"w":133,"h":177,"ax":72,"ay":177,"ext":{"r":[60,-114],"l":[-72,-24],"u":[17,-177],"d":[-61,-1],"ur":[51,-166],"dr":[2,-20],"ul":[0,-164],"dl":[-64,-3]},"rc":"1.7"},{"sx":844,"sy":183,"w":91,"h":178,"ax":41,"ay":178,"ext":{"r":[49,-9],"l":[-41,-21],"u":[4,-178],"d":[19,-1],"ur":[33,-169],"dr":[49,-5],"ul":[-13,-167],"dl":[-41,-15]},"rc":"2.0"},{"sx":0,"sy":363,"w":90,"h":178,"ax":41,"ay":178,"ext":{"r":[48,-12],"l":[-41,-19],"u":[17,-178],"d":[18,-1],"ur":[36,-166],"dr":[46,-3],"ul":[-13,-167],"dl":[-38,-13]},"rc":"2.1"},{"sx":92,"sy":363,"w":98,"h":178,"ax":46,"ay":178,"ext":{"r":[51,-14],"l":[-46,-20],"u":[4,-178],"d":[21,-1],"ur":[36,-166],"dr":[50,-8],"ul":[-12,-168],"dl":[-45,-15]},"rc":"2.2"},{"sx":192,"sy":363,"w":98,"h":178,"ax":45,"ay":178,"ext":{"r":[52,-15],"l":[-45,-19],"u":[16,-178],"d":[22,-1],"ur":[35,-167],"dr":[52,-8],"ul":[-15,-166],"dl":[-39,-9]},"rc":"2.3"},{"sx":292,"sy":363,"w":91,"h":178,"ax":42,"ay":178,"ext":{"r":[48,-11],"l":[-42,-20],"u":[4,-178],"d":[17,-1],"ur":[36,-166],"dr":[48,-5],"ul":[-14,-167],"dl":[-36,-9]},"rc":"2.4"},{"sx":385,"sy":363,"w":90,"h":178,"ax":41,"ay":178,"ext":{"r":[48,-12],"l":[-41,-20],"u":[17,-178],"d":[17,-1],"ur":[35,-167],"dr":[48,-5],"ul":[-15,-166],"dl":[-40,-15]},"rc":"2.5"},{"sx":477,"sy":363,"w":99,"h":178,"ax":47,"ay":178,"ext":{"r":[51,-14],"l":[-47,-19],"u":[4,-178],"d":[21,-1],"ur":[32,-169],"dr":[51,-8],"ul":[-14,-167],"dl":[-44,-13]},"rc":"2.6"},{"sx":578,"sy":363,"w":97,"h":178,"ax":46,"ay":178,"ext":{"r":[50,-11],"l":[-46,-19],"u":[4,-178],"d":[20,-1],"ur":[34,-168],"dr":[50,-5],"ul":[-13,-167],"dl":[-39,-8]},"rc":"2.7"},{"sx":677,"sy":363,"w":90,"h":180,"ax":51,"ay":180,"ext":{"r":[38,-110],"l":[-51,-130],"u":[12,-180],"d":[-37,-1],"ur":[28,-168],"dr":[19,-28],"ul":[-36,-159],"dl":[-38,-2]},"rc":"3.0"},{"sx":769,"sy":363,"w":84,"h":180,"ax":43,"ay":180,"ext":{"r":[40,-110],"l":[-43,-22],"u":[12,-180],"d":[-33,-1],"ur":[17,-180],"dr":[21,-28],"ul":[-18,-169],"dl":[-38,-5]},"rc":"3.1"},{"sx":855,"sy":363,"w":85,"h":180,"ax":40,"ay":180,"ext":{"r":[44,-72],"l":[-40,-82],"u":[4,-180],"d":[-27,-1],"ur":[36,-169],"dr":[28,-28],"ul":[-14,-168],"dl":[-33,-7]},"rc":"3.2"},{"sx":0,"sy":545,"w":92,"h":180,"ax":54,"ay":180,"ext":{"r":[37,-78],"l":[-54,-140],"u":[-5,-180],"d":[-37,-1],"ur":[26,-169],"dr":[18,-32],"ul":[-47,-165],"dl":[-43,-6]},"rc":"3.3"},{"sx":94,"sy":545,"w":100,"h":181,"ax":61,"ay":181,"ext":{"r":[38,-89],"l":[-61,-157],"u":[-10,-181],"d":[-28,-1],"ur":[20,-170],"dr":[20,-39],"ul":[-59,-161],"dl":[-28,-1]},"rc":"3.4"},{"sx":196,"sy":545,"w":105,"h":167,"ax":65,"ay":167,"ext":{"r":[39,-66],"l":[-65,-147],"u":[-9,-167],"d":[9,-1],"ur":[10,-166],"dr":[38,-13],"ul":[-61,-152],"dl":[-1,-9]},"rc":"3.5"},{"sx":303,"sy":545,"w":104,"h":156,"ax":48,"ay":156,"ext":{"r":[55,-12],"l":[-48,-50],"u":[3,-156],"d":[4,-1],"ur":[38,-145],"dr":[55,-5],"ul":[-14,-143],"dl":[-45,-41]},"rc":"3.6"},{"sx":409,"sy":545,"w":89,"h":151,"ax":43,"ay":151,"ext":{"r":[45,-131],"l":[-43,-52],"u":[9,-151],"d":[-24,-1],"ur":[42,-139],"dr":[42,-4],"ul":[-10,-139],"dl":[-27,-3]},"rc":"3.7"},{"sx":500,"sy":545,"w":114,"h":175,"ax":61,"ay":175,"ext":{"r":[52,-111],"l":[-61,-25],"u":[10,-175],"d":[-52,-1],"ur":[45,-162],"dr":[17,-22],"ul":[-40,-129],"dl":[-55,-3]},"rc":"3.8"}]};
@@ -1313,6 +1321,30 @@ const DENJI_MV={
    full:{f:10,shake:22,p:[{t:'beam',x:0,y:-40,len:880,h:58,life:48,multi:5,d:5.8,a:42,b:78,g:138,col:'#ff1e38'}]}}
 };
 if(CH.denji)Object.assign(CH.denji.mv,DENJI_MV);
+
+const SUBARU_MV={
+  jab:{f:13,hb:[S(3,7,34,-32,18,2.8,80,14,18)],next:'jab2',chainAt:6},
+  jab2:{f:18,hb:[S(4,9,38,-32,20,4.2,45,28,42)]},
+  ftilt:{nm:'Látigo de Culpa',f:24,whip:{f:5,to:12,range:75,style:'subaruWhip'},hb:[S(7,12,68,-32,22,10.5,36,45,84),S(7,12,34,-32,20,6.0,45,30,50)]},
+  utilt:{nm:'Cabezazo Desesperado',f:22,hb:[S(5,10,12,-50,26,8.5,88,42,78)]},
+  dtilt:{nm:'Barrida Baja',f:20,lunge:6.5,hb:[S(4,9,36,-12,20,6.2,30,20,35)]},
+  fsmash:{nm:'Smash de Látigo Reforzado',f:46,smash:1,charge:{at:8,max:55,btn:'attack',k:.48},whip:{f:12,to:20,range:110,style:'subaruWhip'},hb:[S(14,18,62,-32,28,15.0,42,48,96)]},
+  usmash:{nm:'Poción Mágica Defectuosa',f:44,smash:1,charge:{at:6,max:55,btn:'attack',k:.46},hb:[S(11,16,10,-55,36,16.5,90,50,92)],proj:[{f:11,t:'orb',x:10,y:-55,vx:0,r:10,life:2,explode:{r:65,d:14,a:88,b:50,g:90,anim:'boom'}}]},
+  dsmash:{nm:'Pisotón de Pánico',f:40,smash:1,charge:{at:5,max:50,btn:'attack',k:.45},hb:[S(8,14,35,-12,24,13.0,25,40,82),S(8,14,-35,-12,24,13.0,155,40,82)]},
+  nair:{nm:'Giro 360 Látigo',f:28,air:1,hb:[S(6,18,0,-30,42,7.5,50,25,55)]},
+  fair:{nm:'Doble Patada Frontal',f:26,air:1,hb:[S(6,12,38,-28,24,9.0,40,38,76)]},
+  bair:{nm:'Codazo Letal',f:24,air:1,hb:[S(5,9,-34,-32,22,12.0,140,44,90)]},
+  uair:{nm:'Corte de Látigo Ascendente',f:25,air:1,hb:[S(5,11,10,-55,26,8.5,85,36,72)]},
+  dair:{nm:'Caída en Picada Torpe',f:36,air:1,dive:1,hb:[S(10,12,0,-10,24,11.0,270,35,80),S(13,24,0,-10,24,7.0,70,28,45)]},
+  ns:{nm:'Shamac',f:36,limb:'body',proj:[{f:10,t:'shamac',x:35,y:-30,vx:6.5,r:38,life:90,d:2.5,a:60,b:15,g:0,slow:0.45,col:'#581c87'}]},
+  ss:{nm:'Enganche de Látigo',f:38,limb:'sword',whip:{f:6,to:18,range:360,spd:20,style:'subaruWhip',txt:'¡ATRÁPALO!',col:'#d8b4fe'},hb:[S(16,24,36,-32,28,10.0,45,45,84)]},
+  us:{nm:'Impulso de Patrasche',f:42,limb:'leg',helpless:1,imp:[{f:6,vy:-19,vx:6}],hb:[S(6,16,16,-50,28,8.0,80,45,75,{headBounce:true})],headBounce:1},
+  ds:{nm:'Invisible Providence (Ground Slam)',f:44,limb:'body',self:{f:10,pct:2.5},say:{f:10,txt:'¡MANO OCULTA!',col:'#a855f7'},shadowHand:{f:10,to:24,type:'ground'},hb:[S(11,20,50,-24,38,14.0,285,56,75,{groundBounce:true,unblockable:true,bypassShield:true})]},
+  ds_air:{nm:'Invisible Providence (Dark Spike)',f:44,limb:'body',air:1,self:{f:10,pct:2.5},say:{f:10,txt:'¡DESGARRO OSCURO!',col:'#a855f7'},shadowHand:{f:10,to:24,type:'air'},hb:[S(12,16,42,10,42,15.0,270,60,95,{meteor:true,unblockable:true,bypassShield:true}),S(17,24,40,6,36,8.0,260,35,50,{bypassShield:true})]},
+  final:{nm:'¡Al Shamac & E·M·M!',f:100,sup:{at:1,nm:'¡AL SHAMAC & E·M·M!',col:'#a855f7'},intan:[0,100],hb:[S(10,30,0,-40,120,35,45,80,140)],full:{f:10,shake:20,p:[{t:'beam',x:0,y:-40,len:800,h:60,life:45,multi:5,d:6,a:45,b:80,g:130,col:'#9333ea'}]}}
+};
+if(CH.subaru)Object.assign(CH.subaru.mv,SUBARU_MV);
+
 const GS='suelo:',GM='smash:',GA='aereo:',GE='esp:',GR='reac:',GG='agarre:',G3='ssj:';
 const GOKU_MV={
  jab:{f:14,spr:[[0,GS+'0.0'],[2,GS+'0.2'],[8,GS+'0.3']],hb:[{s:2,e:4,at:GS+'0.2:r',r:14,d:2.6,a:80,b:14,g:20,x:30,y:-52}],next:'jab2',chainAt:7},
@@ -2087,6 +2119,7 @@ const GAUGE={
  shiryu:{nm:'COSMOS',col:'#5fe0a0',start:0,hit:.35,take:1.3,hint:'entre más te golpean, más arde'},
 
  mob:{nm:'ESTRÉS',col:'#e84393',start:0,take:.75,hit:.35,still:.15,autoMode:[100,'cien',0],hint:'recibe daño y pelea; al 100 % desata su poder'},
+ subaru:{nm:'MIASMA RBD',col:'#a855f7',start:0,take:.5,hit:.35,hint:'recibe daño (1% c/2%) y conecta golpes; al 100% otorga 1 resurrección extra'},
  denji:{nm:'MOTOR / SANGRE',col:'#ff2a3a',start:25,hit:.95,take:.65,charge:1.35,autoMode:[100,'motosierra',0],hint:'↓+especial jala la cuerda del pecho o desgarra rivales'}};
 function gaugeAdd(f,v){const Gd=GAUGE[f.C.id];if(!Gd||!v)return;if(v>0&&f.gLock>0)return;const was=f.gauge||0;f.gauge=clamp(was+v,0,100);
  if(was<100&&f.gauge>=100){fx('text',f.x,f.y-140,{txt:'¡'+Gd.nm+' AL MÁXIMO!',col:Gd.col});fx('ring',f.x,f.y-40,{r:60,col:Gd.col,dur:18});sfx('vanish');}}
@@ -2265,7 +2298,7 @@ function makeFighter(i,cfg,x){
  return {i,C,ctrl:cfg.type,ai:cfg.type==='cpu'?{lvl:cfg.lvl,t:0,plan:'approach',choice:null,cool:0,hold:0,prev:blank()}:null,
   col:SLOT_COL[i],x,y:0,vx:0,vy:0,lvx:0,lvy:0,face:x<0?1:-1,ground:'main',jumps:1,pct:0,stocks:G.rules.stocks,
   st:'ground',sf:0,mv:null,mvKey:null,mf:0,mvAir:false,hit:new Map(),charge:0,hitlag:0,hitstun:0,tumble:false,intan:0,shield:50,
-  ledge:-1,ledgeCd:0,airdodged:false,ff:false,dropT:0,buff:null,cds:{},kos:0,falls:0,dmgDone:0,lastHitBy:null,lastHitF:-999,
+  ledge:-1,ledgeCd:0,airdodged:false,ff:false,dropT:0,buff:null,cds:{},kos:0,falls:0,dmgDone:0,lastHitBy:null,lastHitF:-999,hasDefaultRevive:cfg.ch==='subaru',hasMeterRevive:false,
   in:blank(),pin:blank(),tapX:99,tapY:99,victim:null,holder:null,holdT:0,pummelCd:0,dead:0,respawn:0,shakeHud:0,anim:0,usedUp:false,
   counterOn:false,reflectOn:false,out:false,place:0};
 }
@@ -2306,6 +2339,7 @@ function startMove(f,key){
  if(f.C.mv[key]&&f.C.mv[key].combo&&f.blueT&&G.frame-f.blueT<f.C.mv[key].combo.within&&f.C.mv[f.C.mv[key].combo.to]){f.blueT=0;key=f.C.mv[key].combo.to;}
  else if(f.mode&&f.C.mv[key+'_'+f.mode])key=key+'_'+f.mode;
  else if(f.mode&&modeOf(f).base&&f.C.mv[key+'_'+modeOf(f).base])key=key+'_'+modeOf(f).base;
+ if(f.C.id==='subaru'&&key==='ds'&&!f.ground&&f.C.mv.ds_air)key='ds_air';
  const mv=f.C.mv[key];if(!mv)return false;
  if(mv.buff&&(f.cds[key]||0)>0)return false;
  if(mv.modeAt!=null&&(f.cds.modo||0)>0)return false;
@@ -2358,6 +2392,7 @@ function land(f,gid,surfY){
  f.sq=Math.max(0.68, 0.84 - Math.abs(f.vy) * 0.015);
 }
 function stepFighter(f){
+ updateSubaruGroundedTracking(f);
  if(f.out)return;
  if(f.kaioken>0){f.kaioken--;if(f.kaioken%20===0){f.pct=Math.min(999,f.pct+1);f.shakeHud=4;}if(G.frame%2===0)fx('ember',f.x+rnd(-22,22),f.y-rnd(4,80),{col:'#ff3b3b',dur:20,vx:rnd(-.3,.3)});}
  {const MM=MODES[f.C.id];if(MM&&MM.auto&&!f.dead){let want=null;for(const [th,m] of MM.auto)if(f.pct>=th){want=m;break;}
@@ -2657,7 +2692,7 @@ function stepAttack(f,spd){
  if(mv.tp&&m===mv.tp.f){let dx=I.x,dy=I.y;const l=Math.hypot(dx,dy);if(l<.3){dx=0;dy=-1;}else{dx/=l;dy/=l;}
   fx('ring',f.x,f.y-34,{r:40,col:'#ffffff'});f.x+=dx*mv.tp.dist;f.y+=dy*mv.tp.dist;f.ground=null;f.vx=dx*3;f.vy=dy*3;fx('ring',f.x,f.y-34,{r:40,col:'#ffffff'});}
  if(mv.buff&&m===mv.buff.f){f.buff={dmg:mv.buff.dmg,spd:mv.buff.spd,t:mv.buff.t,aura:mv.buff.aura};f.cds[f.mvKey]=mv.buff.cd;fx('text',f.x,f.y-110,{txt:mv.nm,col:mv.buff.aura});}
- if(mv.self&&m===mv.self.f){f.pct+=mv.self.pct*(1+f.charge/60);}
+ if(mv.self&&m===mv.self.f){const selfDmg=mv.self.pct*(1+f.charge/60);f.pct=Math.min(999,f.pct+selfDmg);f.shakeHud=8;if(f.C.id==='subaru'){gaugeAdd(f,selfDmg*0.5);fx('ring',f.x,f.y-35,{r:42,col:'#7e22ce',dur:14});}}
  if(mv.modeAt!=null&&m===mv.modeAt){const prevM=f.mode,prevT=f.modeT;f.mode=mv.toMode||null;
   if(mv.toMode&&MODES[f.C.id][mv.toMode].endOnKO){f.oathLeft=new Set(G.fighters.filter(t=>t!==f&&!t.out).map(t=>t.i));f.oathN=Math.min(2,f.oathLeft.size);f.oathDone=0;}f.cds.modo=300;f.modeT=mv.modeT||(mv.toMode&&MODES[f.C.id][mv.toMode].dur)||0;
   if(mv.toMode&&MODES[f.C.id][mv.toMode].base===prevM)f.restT=prevT;else if(prevM&&MODES[f.C.id][prevM]&&MODES[f.C.id][prevM].base===mv.toMode&&f.restT)f.modeT=f.restT;if(mv.setPct!=null){f.pct=mv.setPct;f.shakeHud=24;}if(mv.heal){f.pct=Math.max(0,f.pct-mv.heal);f.shakeHud=20;if(f.C.id==='luffy')fx('text',f.x,f.y-160,{txt:'¡JAJAJAJA!',col:'#ffffff'});}if(mv.toMode==='kurama')f.gauge=100;
@@ -2781,6 +2816,7 @@ function resolveDefense(a,t,hb,sc,dir,hx,hy,proj){
  if(proj&&(t.fcOn||modeOf(t).autoFC)&&proj.owner!==t){fullCounter(t,proj,(t.mv&&t.mv.fullCounter&&t.mv.fullCounter.mult)||2);return true;}
  if(!proj&&t.revOn&&a&&a!==t){const dd=(hb.d||0)*(sc||1);t.revStore=(t.revStore||0)+dd;t.pct=Math.min(999,t.pct+dd*.8);t.shakeHud=8;a.hitlag=Math.max(a.hitlag||0,8);
   fx('ring',t.x,t.y-50,{r:40+t.revStore,col:'#ff5a3a',dur:12});fx('text',t.x,t.y-120,{txt:'+'+Math.round(dd),col:'#ff8a6a',dur:24});sfx('shield');return true;}
+ if(hb&&(hb.bypassShield||hb.commandGrab)){if(t.st==='shield'||t.st==='shieldstun')t.st=t.ground?'ground':'air';return false;}
  if(proj&&proj.unblockable||hb&&hb.unblockable){if(t.st==='shield'||t.st==='shieldstun'){t.shield=0;shieldBreak(t);}return false;}
  if(t.infOn){const own=proj?proj.owner:a,dd=(hb.d||0)*(sc||1),big=own&&own.mvKey==='final'||proj&&(proj.sup||proj.t==='genki')||dd>=18;
   if(big&&t.mode==='sinvenda'){t.gauge=0;t.gLock=480;t.infOn=false;t.infCd=90;if(t.st==='attack'){t.mv=null;t.st=t.ground?'ground':'air';}t.intan=Math.max(t.intan||0,45);if(proj){proj.dead=true;fx('ring',proj.x,proj.y,{r:90,col:'#bfe6ff',dur:20});}
@@ -2840,6 +2876,7 @@ function applyHit(a,t,hb,sc,dir,hx,hy,proj){
  const rad=hb.a*D2R,sp=kb*KB_SPEED;
  let vx=Math.cos(rad)*dir*sp,vy=-Math.sin(rad)*sp;
  if(t.ground&&vy>0){vy=-vy*.7;}
+ if(a&&a.mv&&a.mv.headBounce&&!a.ground&&hb&&hb.headBounce){a.vy=-16;a.jumps=Math.max(a.jumps,1);fx('ring',a.x,a.y,{r:35,col:'#f59e0b',dur:12});fx('text',a.x,a.y-100,{txt:'¡REBOTE!',col:'#f59e0b'});sfx('jump');}
  t.lvx=vx;t.lvy=vy;t.vx=vx;t.vy=vy;t.gy=0;t.kb=kb;
  t.hitstun=Math.floor(kb*.42);t.tumble=kb>70;t.st='hitstun';t.sf=0;t.mv=null;t.mvKey=null;t.ff=false;t.counterOn=t.reflectOn=false;
  if(vy<-1||sp>5)t.ground=null;
@@ -2939,7 +2976,14 @@ function stepProjs(){
   if(p.erase)for(const q of G.projs){if(q===p||q.dead||q.owner===p.owner||q.t==='smoke')continue;const qx=q.t==='beam'?q.x+q.dir*q.len*.5:q.x;if(Math.hypot(qx-p.x,q.y-p.y)<(p.hw||p.r||40)*1.1){q.dead=true;fx('ring',qx,q.y,{r:30,col:'#a05aff',dur:12});}}
   if(p.ruin){G.dim=Math.max(G.dim||0,.55);G.shake=Math.max(G.shake,5);if(G.frame%2===0){fx('ember',p.x+rnd(-60,60),p.y+rnd(-60,60),{col:G.frame%4?'#a05aff':'#ffffff',dur:28,vx:-p.vx*.05});}if(G.frame%6===0)rocks(p.x,G.stage.main.y,2,'#6a4a9a');}
   if(p.t==='clone'&&G.frame%3===0)fx('smoke',p.x,p.y-30,{col:'#ffffff'});
-  if(p.t==='pochita'){
+  if(p.t==='shamac'){
+  ctx.save(); ctx.fillStyle = 'rgba(59, 7, 100, 0.45)';
+  ctx.shadowColor = '#9333ea'; ctx.shadowBlur = 24;
+  ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(88, 28, 135, 0.65)';
+  ctx.beginPath(); ctx.arc(p.x + Math.sin(G.frame*0.1)*6, p.y + Math.cos(G.frame*0.1)*6, p.r*0.65, 0, TAU); ctx.fill();
+  ctx.restore();
+} else if(p.t==='pochita'){
    p.vy=Math.min(10,(p.vy||0)+0.58);p.x+=p.vx;p.y+=p.vy;
    const sm=G.stage.main;
    if(p.vy>=0&&p.y>=sm.y&&p.y<=sm.y+24&&p.x>=sm.x1-10&&p.x<=sm.x2+10){p.y=sm.y;p.vy=0;p.ground=true;}
@@ -2987,8 +3031,115 @@ function explode(p){
 /* =========================================================
    KO, REAPARICIÓN, FIN
    ========================================================= */
+
+/* =========================================================
+   RETURN BY DEATH (GLOBAL REWIND ENGINE) - SUBARU NATSUKI
+   ========================================================= */
+function captureSubaruSnapshot(f){
+  return {
+    subaru: {
+      x: f.x, y: f.y, pct: f.pct, face: f.face, ground: f.ground,
+      anim: f.anim, animF: f.animF
+    },
+    fighters: G.fighters.filter(o => o !== f).map(o => ({
+      f: o, x: o.x, y: o.y, vx: o.vx, vy: o.vy, face: o.face, pct: o.pct,
+      st: o.st, ground: o.ground, meter: o.meter || 0,
+      anim: o.anim, animF: o.animF
+    })),
+    projs: G.projs.map(p => ({ ...p }))
+  };
+}
+
+function executeSubaruRewind(f){
+  const snap = G.subaruCheckpoint;
+  if(!snap) return false;
+
+  // 1. Restaurar a Subaru en su checkpoint de tierra
+  f.x = snap.subaru.x;
+  f.y = snap.subaru.y;
+  f.vx = 0; f.vy = 0; f.lvx = 0; f.lvy = 0;
+  f.pct = snap.subaru.pct;
+  f.face = snap.subaru.face;
+  f.ground = snap.subaru.ground;
+  f.st = f.ground ? 'ground' : 'air';
+  f.anim = snap.subaru.anim;
+  f.animF = snap.subaru.animF;
+  f.hitstun = 0; f.tumble = false; f.intan = 25; f.usedUp = false; f.mv = null; f.mvKey = null; f.dead = 0;
+
+  // 2. Restaurar rivales con PENALIZACIÓN DE DEFINITIVA / ULTI
+  for(const rSnap of snap.fighters){
+    const r = rSnap.f;
+    if(!r || r.dead || r.out) continue;
+    r.x = rSnap.x; r.y = rSnap.y; r.vx = rSnap.vx; r.vy = rSnap.vy;
+    r.pct = rSnap.pct; r.face = rSnap.face; r.st = rSnap.st; r.ground = rSnap.ground;
+    r.anim = rSnap.anim; r.animF = rSnap.animF;
+    r.hitstun = 0; r.tumble = false;
+    // Si el rival gastó su ulti durante ese lapso para matar a Subaru, NO se le devuelve!
+    if((r.meter || 0) < (rSnap.meter || 0)){
+      // Conservar medidor actual gastado (castigo por intento fallido)
+    } else {
+      r.meter = rSnap.meter;
+    }
+  }
+
+  // 3. Destruir proyectiles residuales que se hayan creado en el aire
+  G.projs = snap.projs.map(p => ({ ...p }));
+
+  // 4. Reiniciar cola en tierra y activar efectos visuales y sonoros
+  G.subaruHistory = [captureSubaruSnapshot(f)];
+  G.subaruRewindVfx = 45;
+
+  sfx('boom'); sfx('vanish');
+  G.shake = 22;
+  fx('text', f.x, f.y - 120, { txt: '¡RETURN BY DEATH!', col: '#c084fc', dur: 90, big: 1 });
+  fx('ring', f.x, f.y - 40, { r: 140, col: '#9333ea', dur: 35, thick: 2 });
+  return true;
+}
+
+function interceptSubaruDeath(f){
+  if(f.C.id !== 'subaru') return false;
+  let canRevive = false;
+  if(f.hasDefaultRevive){
+    f.hasDefaultRevive = false;
+    canRevive = true;
+  } else if(f.hasMeterRevive || (f.gauge >= 100)){
+    f.hasMeterRevive = false;
+    f.gauge = 0;
+    canRevive = true;
+  }
+  if(canRevive && G.subaruCheckpoint){
+    return executeSubaruRewind(f);
+  }
+  return false;
+}
+
+function updateSubaruGroundedTracking(f){
+  if(f.C.id !== 'subaru' || f.dead || f.out) return;
+  // Estado neutral en suelo: sin hitstun, aturdimiento, tumbado o agarre
+  const isNeutralGrounded = !!f.ground && f.st !== 'hitstun' && !f.hitstun && f.st !== 'tumble' && f.st !== 'grabbed' && f.st !== 'broken';
+  if(isNeutralGrounded){
+    G.subaruHistory = G.subaruHistory || [];
+    G.subaruHistory.push(captureSubaruSnapshot(f));
+    // Cola circular de ultimos 3 frames (~0.05s a 60fps)
+    if(G.subaruHistory.length > 3) G.subaruHistory.shift();
+    G.subaruCheckpoint = G.subaruHistory[0];
+  } else {
+    // Si acaba de despegar en este frame exacto, congelar el snapshot de hace 3 frames
+    if(f.wasGround && !f.ground){
+      if(G.subaruHistory && G.subaruHistory.length > 0){
+        G.subaruCheckpoint = G.subaruHistory[0];
+      } else {
+        G.subaruCheckpoint = captureSubaruSnapshot(f);
+      }
+    }
+  }
+  f.wasGround = !!f.ground;
+  if(f.gauge >= 100) f.hasMeterRevive = true;
+}
+
 function ko(f){
  if(f.dead||f.out)return;
+ if(f.C.id==='subaru'&&interceptSubaruDeath(f))return;
 
  const B=G.stage.blast;
  fx('blast',clamp(f.x,B.l,B.r),clamp(f.y,B.t,B.b),{col:f.col,ang:Math.atan2(f.y-(-200),f.x)});
@@ -3009,7 +3160,7 @@ function ko(f){
  checkEnd();
 }
 function respawnF(f){
- {const Gd=GAUGE[f.C.id]||{};f.gauge=Gd.keep?Math.min(100,(f.gauge||0)+(Gd.onKO||0)):(Gd.start||0);}f.x=0;f.y=-380;f.vx=f.vy=0;f.pct=0;f.st='respawn';f.sf=0;f.intan=2;f.ground=null;f.jumps=1;f.usedUp=false;f.hitstun=0;f.shield=50;f.lastHitBy=null;f.face=1;
+ {const Gd=GAUGE[f.C.id]||{};f.gauge=Gd.keep?Math.min(100,(f.gauge||0)+(Gd.onKO||0)):(Gd.start||0);}f.x=0;f.y=-380;f.vx=f.vy=0;f.pct=0;f.st='respawn';if(f.C.id==='subaru'){f.hasDefaultRevive=true;f.hasMeterRevive=false;f.gauge=0;}f.sf=0;f.intan=2;f.ground=null;f.jumps=1;f.usedUp=false;f.hitstun=0;f.shield=50;f.lastHitBy=null;f.face=1;
  const busy=G.fighters.filter(o=>o!==f&&o.st==='respawn').length;f.x=[-0,-160,160,-300][busy%4];
 }
 function checkEnd(){
@@ -3251,11 +3402,13 @@ function drawHair(L,hx,hy){
  else if(s==='gon')spikes([[-2.2,12,.28],[-1.8,22,.25],[-1.5,26,.22],[-1.2,20,.25],[-.85,12,.3]]);
  else if(s==='deku'){for(let i=0;i<9;i++){const a=-3.1+i*.38;ctx.beginPath();ctx.arc(hx+Math.cos(a)*12,hy+Math.sin(a)*12-1,6.5,0,TAU);ctx.fill();}}
  else if(s==='tanjiro'||s==='luffy'){ctx.beginPath();ctx.arc(hx-1,hy-4,14,Math.PI*1.02,Math.PI*1.98);ctx.fill();for(let i=0;i<5;i++){const a=-2.6+i*.45;ctx.beginPath();ctx.moveTo(hx+Math.cos(a)*12,hy+Math.sin(a)*12);ctx.lineTo(hx+Math.cos(a)*19,hy+Math.sin(a)*19+3);ctx.lineTo(hx+Math.cos(a+.3)*12,hy+Math.sin(a+.3)*12);ctx.fill();}}
+ else if(s==='subaru')spikes([[-2.6,8,.32],[-2.1,12,.3],[-1.6,13,.28],[-1.1,11,.3],[-.65,8,.32]]);
  else if(s==='mob'){if(L.mode==='cien'||(typeof f!=='undefined'&&f&&f.mode==='cien')){spikes([[-2.6,16,.35],[-2.1,20,.35],[-1.6,24,.35],[-1.1,20,.35],[-.6,16,.35],[2.9,14,.35]]);}else{ctx.beginPath();ctx.arc(hx,hy-4,14,Math.PI*.95,Math.PI*2.05);ctx.fill();ctx.beginPath();ctx.ellipse(hx+2,hy-2,13,8,0,0,Math.PI);ctx.fill();}}
 }
 function drawHeadFull(L,hx,hy,eyes=true){
  ctx.fillStyle=L.skin;ctx.beginPath();ctx.arc(hx,hy,13,0,TAU);ctx.fill();
  if(L.style==='gojo'){ctx.fillStyle='#111';ctx.fillRect(hx-6,hy-5,20,7);}
+ else if(L.style==='subaru'){ctx.fillStyle='#f97316';ctx.fillRect(hx-8,hy+8,16,4);ctx.fillStyle='#18181b';ctx.fillRect(hx-6,hy+10,12,3);}
  else if(L.style==='mob'){if(L.mode==='cien'||(typeof f!=='undefined'&&f&&f.mode==='cien')){ctx.fillStyle='#ffffff';ctx.beginPath();ctx.ellipse(hx+5,hy-1,2.5,3.5,0,0,TAU);ctx.ellipse(hx+11,hy-1,2.3,3.2,0,0,TAU);ctx.fill();}else if(eyes){ctx.fillStyle='#111';ctx.beginPath();ctx.arc(hx+6,hy,1.4,0,TAU);ctx.arc(hx+11,hy,1.4,0,TAU);ctx.fill();}}
  else if(eyes){ctx.fillStyle='#1a1a1a';ctx.beginPath();ctx.ellipse(hx+5,hy-1,1.8,2.8,0,0,TAU);ctx.ellipse(hx+11,hy-1,1.6,2.6,0,0,TAU);ctx.fill();}
  if(L.style==='naruto'){ctx.strokeStyle='#5a3a26';ctx.lineWidth=1;for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(hx+4,hy+3+i*2);ctx.lineTo(hx+9,hy+3+i*2);ctx.stroke();}}
@@ -3319,6 +3472,13 @@ function drawSpriteBody(f,S,flash){
   B.x.globalAlpha=sf.t;B.x.drawImage(R2.S.img,R2.fr.sx,R2.fr.sy,R2.fr.w,R2.fr.h,BX-R2.fr.ax,BY-R2.fr.ay,R2.fr.w,R2.fr.h);
   ctx.drawImage(B.c,-BX,-BY);}
  else blitFrame(R);
+ if(f.C.id==='subaru'){
+  ctx.font = `700 ${Math.round(Math.min(h*.13, cardW*.07))}px Ubuntu,sans-serif`;
+  ctx.fillStyle = f.hasDefaultRevive ? '#c084fc' : (f.hasMeterRevive || f.gauge >= 100 ? '#f59e0b' : '#6b7280');
+  ctx.textAlign = 'right';
+  ctx.fillText(f.hasDefaultRevive ? 'RBD: LISTO (★)' : (f.hasMeterRevive || f.gauge >= 100 ? 'RBD: CARGADO (★)' : 'RBD: AGOTADO'), x+cardW-10, y0+h*.45);
+  ctx.textAlign = 'left';
+}
  if(f.mode){const M=MODES[f.C.id][f.mode];const own=typeof sf.ref==='string'&&(sf.ref.startsWith(f.mode+':')||sf.ref.startsWith(f.mode+'-')||!!(M.own&&M.own.some(q=>sf.ref.startsWith(q+':'))));
   if(M.glow&&!own){ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.42;ctx.filter=typeof M.glow==='string'?M.glow:'sepia(1) saturate(5) hue-rotate(5deg) brightness(1.15)';blitFrame(R);ctx.restore();}
   if(G.frame%2===0)fx('ember',f.x+rnd(-20,20),f.y-rnd(4,70),{col:M.aura,dur:22,vx:rnd(-.3,.3)});}
@@ -3608,6 +3768,47 @@ function drawSlashArc(f){
  ctx.restore();
  ctx.restore();
 }
+
+function drawInvisibleProvidence(f){
+  const p = Math.min(1, Math.max(0, (f.mf - 10) / 14));
+  const isAir = !f.ground || f.mvKey === 'ds_air';
+  ctx.save();
+  const ox = f.x + f.face * 10;
+  const oy = f.y - 36;
+  const hx = ox + f.face * (26 + p * 62);
+  const hy = oy + (isAir ? 18 + p * 42 : -6 + p * 22);
+
+  // Aura fantasmal purpura/negra del Factor de la Bruja
+  ctx.shadowColor = '#a855f7';
+  ctx.shadowBlur = 24;
+
+  // Brazo espectral saliendo del pecho
+  ctx.strokeStyle = 'rgba(40, 5, 60, 0.85)';
+  ctx.lineWidth = 14 * (1 - p * 0.3);
+  ctx.beginPath();
+  ctx.moveTo(ox, oy);
+  ctx.quadraticCurveTo(ox + f.face * 20, oy - 20, hx - f.face * 16, hy);
+  ctx.stroke();
+
+  // Mano espectral y garras
+  ctx.fillStyle = 'rgba(24, 2, 38, 0.95)';
+  ctx.strokeStyle = '#c084fc';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.ellipse(hx, hy, 28, 18, f.face * (isAir ? 1.2 : 0.4), 0, TAU);
+  ctx.fill();
+  ctx.stroke();
+
+  // Garras afiladas de sombra
+  for(let i = -2; i <= 2; i++){
+    ctx.beginPath();
+    ctx.moveTo(hx + f.face * 10, hy + i * 5);
+    ctx.lineTo(hx + f.face * (32 + Math.abs(i) * 3), hy + i * 8 + (isAir ? p * 12 : p * 6));
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawFighter(f,ctx2){
  const L=f.C.look,P=pose(f),flash=(f.intan>0&&f.st!=='respawn'&&!(f.st==='attack'&&f.mvKey==='final')&&G.frame%6<3)||f.dead>0;
  const SPok=spriteReady(f.C.id);
@@ -3689,7 +3890,16 @@ function drawProj(p){
  else if(p.t==='sprproj'){const R=fref(p.owner.C.id,p.spr);if(R&&R.S.ready){ctx.translate(Math.round(p.x),Math.round(p.y));if(p.filter)ctx.filter=p.filter;if(p.spin)ctx.rotate(p.age*p.spin*p.dir);if(p.rot)ctx.rotate(p.rot*p.dir);const k=R.sc*(p.vs||1)*(1+.06*Math.sin(G.frame*.8));ctx.scale(p.dir*k,k);ctx.imageSmoothingEnabled=false;const fr=R.fr;ctx.drawImage(R.S.img,fr.sx,fr.sy,fr.w,fr.h,-fr.w/2,-fr.h/2,fr.w,fr.h);}}
  else if(p.t==='genki'&&p.fx&&fxRows(p.owner.C.id,p.fx)){const FR=fxRows(p.owner.C.id,p.fx),lp=FR[1]&&FR[1].length?FR[1]:FR[0];ctx.restore();drawFxFrame(p.owner.C.id,lp[Math.floor(p.age/3)%lp.length],p.x,p.y,p.r*2.6,1);ctx.save();}
  else if(p.t==='genki'){drawGenki(p.x,p.y,p.r);}
-   else if(p.t==='pochita'){
+   else if(p.t==='shamac'){
+  p.vx *= 0.94; p.r = Math.min(75, p.r + 0.4);
+  for(const f of G.fighters){
+    if(f.dead || f.out || f === p.owner) continue;
+    if(Math.hypot(f.x - p.x, (f.y - 35) - p.y) < p.r){
+      f.buff = { dmg: 0.7, spd: 0.45, t: 90, aura: '#581c87' };
+      f.blindT = Math.max(f.blindT || 0, 90); f.vx *= 0.88;
+    }
+  }
+} else if(p.t==='pochita'){
    ctx.save();ctx.translate(Math.round(p.x),Math.round(p.y));ctx.scale(p.dir,1);
    // Pochita pixel-art style body: cute orange dog with handle, tail-cord and chainsaw forehead
    // Shadow on floor
@@ -3877,6 +4087,7 @@ function render(){
  for(const f of G.fighters)if(f.st==='attack'&&f.mv&&f.mv.wheel&&f.mv.charge&&f.mf===f.mv.charge.at&&(f.wheelOpen||0)>6)drawWheel(f);
  if(G.domain)for(const t of G.fighters)if(t!==G.domain.owner&&!t.dead&&!t.out)drawVoidStatic(t);
  for(const f of G.fighters)if(f.whip&&f.st==='attack'&&f.mv&&f.mv.whip&&f.mf<=f.mv.whip.to&&!f.dead)drawWhip(f);
+ for(const f of G.fighters)if(f.C.id==='subaru'&&f.st==='attack'&&/^ds(_|$)/.test(f.mvKey||'')&&!f.dead)drawInvisibleProvidence(f);
  for(const f of G.fighters)if((f.weakT>0||f.st==='attack'&&f.mv&&f.mv.weak&&f.mf>f.mv.f*.55)&&!f.dead)drawWeak(f);
  drawFxWorld();
  for(const f of G.fighters)if(f.genkiR>0&&f.st==='attack')drawGenki(f.x,f.y-260,f.genkiR);
@@ -3888,6 +4099,14 @@ function render(){
  if(G.cutin)drawCutin();
  if(G.mode==='fight')drawHud();
  if(G.specialZoom)drawSpecialZoom();
+ if(G.subaruRewindVfx > 0){
+   G.subaruRewindVfx--;
+   const it = G.subaruRewindVfx / 45;
+   ctx.save(); ctx.fillStyle = `rgba(24, 4, 38, ${0.5 * it})`;
+   ctx.fillRect(0, 0, cw, ch);
+   ctx.strokeStyle = `rgba(168, 85, 247, ${0.85 * it})`; ctx.lineWidth = 10 * it;
+   ctx.strokeRect(0, 0, cw, ch); ctx.restore();
+ }
  if(G.showBoxes&&G.mode==='fight'){ctx.font='700 13px Ubuntu,sans-serif';ctx.fillStyle='#ffd23f';ctx.textAlign='left';ctx.fillText('Hitboxes (H): rojo = golpe · morado = agarre · amarillo = cuerpo',14,ch-130);}
 }
 
@@ -3960,6 +4179,24 @@ function whipShoot(f,W){
  f.whip={x:ox+x*W.range,y:oy+y*W.range,len:W.range,t0:G.frame,miss:1};f.vy=Math.min(f.vy,-9);f.ground=null;
 }
 function drawWhip(f){
+ if(f.mv&&f.mv.whip&&f.mv.whip.style==='subaruWhip'){
+  const W=f.whip,ox=f.x+f.face*18,oy=f.y-48,ex=W.t?W.t.x:W.x,ey=W.t?W.t.y-34:W.y,grow=Math.min(1,(G.frame-W.t0+1)/4);
+  const x2=ox+(ex-ox)*grow,y2=oy+(ey-oy)*grow;
+  ctx.save();
+  ctx.strokeStyle='rgba(147, 51, 234, 0.45)'; ctx.lineWidth=8;
+  ctx.beginPath(); ctx.moveTo(ox,oy); ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.strokeStyle='#271810'; ctx.lineWidth=3.5;
+  ctx.beginPath(); ctx.moveTo(ox,oy);
+  const n=12;
+  for(let i=1;i<=n;i++){
+    const q=i/n, px=ox+(x2-ox)*q, py=oy+(y2-oy)*q;
+    const w=Math.sin(G.frame*0.6 + i*1.2)*5*(1 - Math.abs(0.5-q)*1.3);
+    ctx.lineTo(px + (y2-oy)/((W.len||1))*w, py - (x2-ox)/((W.len||1))*w);
+  }
+  ctx.stroke();
+  ctx.fillStyle='#c084fc'; ctx.beginPath(); ctx.arc(x2, y2, 4, 0, TAU); ctx.fill();
+  ctx.restore(); return;
+ }
  if(f.mv&&f.mv.whip&&f.mv.whip.style==='chain'){
   const W=f.whip,ox=f.x+f.face*20,oy=f.y-45,ex=W.t?W.t.x:W.x,ey=W.t?W.t.y-34:W.y,grow=Math.min(1,(G.frame-W.t0+1)/4);
   const x2=ox+(ex-ox)*grow,y2=oy+(ey-oy)*grow,dl=Math.hypot(x2-ox,y2-oy)||1,dx=(x2-ox)/dl,dy=(y2-oy)/dl;
