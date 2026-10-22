@@ -5,39 +5,42 @@ function __req(id) {
   if (__cache[id]) return __cache[id];
   const exports = {};
   __cache[id] = exports;
+  if (!__mods[id]) throw new Error("Module not found: " + id);
   __mods[id](exports, __req);
   return exports;
 }
 
 __mods['animation/AnimationClip.js'] = function(exports, __req) {
 /**
- * Authentic Head Soccer keyframe animations and easing curves.
- * Fast, dynamic, arcade animations with fluid Chibi character motion.
+ * Authentic Head Soccer Arcade Keyframe Animation Engine.
+ * Features realistic athletic sprint physics, explosive multi-phase kick snaps,
+ * contralateral arm swings, and secondary harmonic follow-through.
  */
 const AnimationClips = {
   idle: {
     name: 'idle',
-    duration: 0.8,
+    duration: 0.85,
     loop: true,
     evaluate: (t) => {
-      // Natural cartoon breathing bounce
+      // Natural athletic striker balance bounce & rhythmic breathing
       const cycle = t * Math.PI * 2;
       const bounce = Math.sin(cycle);
       const squash = Math.cos(cycle);
+      const lag = Math.sin(cycle - 0.45); // Harmonic secondary lag
 
       return {
-        hipY: -32 + bounce * 2.5,
-        torsoRot: bounce * 1.5,
-        headRot: -bounce * 2.0,
-        headScaleX: 1.0 + squash * 0.03,
-        headScaleY: 1.0 - squash * 0.03,
-        hairRot: 35 + bounce * 10,
-        legFrontRot: 195,
-        footFrontRot: -105 + bounce * 2,
-        legBackRot: 165,
-        footBackRot: -75,
-        armFrontRot: 125 + bounce * 6,
-        armBackRot: -145 - bounce * 6,
+        hipY: -32 + bounce * 2.2,
+        torsoRot: bounce * 1.8,
+        headRot: -bounce * 2.2,
+        headScaleX: 1.0 + squash * 0.025,
+        headScaleY: 1.0 - squash * 0.025,
+        hairRot: 35 + lag * 10,
+        legFrontRot: 195 + bounce * 2.5,
+        footFrontRot: -105 + bounce * 3.5,
+        legBackRot: 165 - bounce * 2.0,
+        footBackRot: -75 - bounce * 2.5,
+        armFrontRot: 175 + bounce * 5,
+        armBackRot: 185 - bounce * 5,
         face: 'idle'
       };
     }
@@ -45,28 +48,31 @@ const AnimationClips = {
 
   run: {
     name: 'run',
-    duration: 0.45,
+    duration: 0.38, // Fast, high-energy athletic sprint cadence
     loop: true,
     evaluate: (t) => {
-      // High-energy arcade sprint
+      // High-cadence professional soccer sprint with contralateral arm drive
       const cycle = t * Math.PI * 2;
       const sin = Math.sin(cycle);
       const cos = Math.cos(cycle);
-      const bounce = Math.abs(Math.sin(cycle * 2));
+      const footStrike = Math.abs(Math.sin(cycle)); // dips on each foot contact
+      const doubleStep = Math.sin(cycle * 2);
 
       return {
-        hipY: -32 - bounce * 4.5,
-        torsoRot: -12 + sin * 3, // leaning forward into sprint
-        headRot: -sin * 4,
-        headScaleX: 1.02,
-        headScaleY: 0.98,
-        hairRot: 55 + sin * 18, // hair whips back with wind
-        legFrontRot: 195 + sin * 42, // energetic leg stride
-        footFrontRot: -105 + cos * 25,
-        legBackRot: 195 - sin * 42,
-        footBackRot: -105 - cos * 25,
-        armFrontRot: 125 - sin * 45, // arms pumping
-        armBackRot: -145 + sin * 45,
+        hipY: -32 - footStrike * 5.2,
+        torsoRot: -15 + doubleStep * 2.5, // aggressive aerodynamic forward lean
+        headRot: -sin * 4.5,
+        headScaleX: 1.03,
+        headScaleY: 0.97,
+        hairRot: 65 + sin * 18, // hair whips back in the windstream
+        // High knee lift and deep backward push-off
+        legFrontRot: 195 + sin * 52,
+        footFrontRot: -105 + cos * 38,
+        legBackRot: 195 - sin * 52,
+        footBackRot: -105 - cos * 38,
+        // Contralateral athletic sprint arm pumping (opposite arm to leg)
+        armFrontRot: 180 - sin * 52,
+        armBackRot: 180 + sin * 52,
         face: 'idle'
       };
     }
@@ -74,7 +80,7 @@ const AnimationClips = {
 
   kick: {
     name: 'kick',
-    duration: 0.24, // Ultra-snappy arcade kick
+    duration: 0.22, // Ultra-snappy explosive arcade kick
     loop: false,
     evaluate: (t) => {
       let hipY = -32;
@@ -82,41 +88,44 @@ const AnimationClips = {
       let footAngle = -105;
       let torsoRot = 0;
       let headRot = 0;
-      let armFrontRot = 125;
-      let armBackRot = -145;
+      let armFrontRot = 175;
+      let armBackRot = 185;
       let face = 'strain';
 
-      if (t < 0.25) {
-        // Quick windup & leg pull
-        const p = t / 0.25;
-        legAngle = 195 + p * 35; // 230°
-        footAngle = -105 - p * 20;
-        torsoRot = -p * 12;
-        headRot = p * 6;
-        hipY = -32 - p * 3;
-        armFrontRot = 125 - p * 35;
-        armBackRot = -145 - p * 25;
-      } else if (t < 0.65) {
-        // Explosive snap forward!
-        const p = (t - 0.25) / 0.40;
-        const ease = Math.sin(p * Math.PI * 0.5);
-        legAngle = 230 - ease * 135; // snaps forward to 95°
-        footAngle = -125 + ease * 115;
-        torsoRot = -12 + ease * 22;
-        headRot = 6 - ease * 14;
-        hipY = -35 + ease * 5;
-        armFrontRot = 90 + ease * 65;
-        armBackRot = -170 + ease * 35;
+      if (t < 0.22) {
+        // 1. Deep Anticipation: coiling backswing & hip torque
+        const p = t / 0.22;
+        const ease = p * p;
+        legAngle = 195 + ease * 50; // pulls leg back to 245°
+        footAngle = -105 - ease * 25;
+        torsoRot = -ease * 16;      // torso coils back
+        headRot = ease * 8;
+        hipY = -32 - ease * 4;
+        armFrontRot = 175 + ease * 35; // coils back to 210°
+        armBackRot = 185 - ease * 35;  // counters forward to 150°
+      } else if (t < 0.58) {
+        // 2. Explosive Ball-Striking Whip Snap!
+        const p = (t - 0.22) / 0.36;
+        // Cubic ease-out snap
+        const ease = 1.0 - Math.pow(1.0 - p, 3);
+        legAngle = 245 - ease * 165; // snaps violently through ball to 80°
+        footAngle = -130 + ease * 145; // foot locks into rigid pointed drive
+        torsoRot = -16 + ease * 30;  // chest drives forward over ball
+        headRot = 8 - ease * 18;
+        hipY = -36 + ease * 6;
+        armFrontRot = 210 - ease * 105; // whips forward to 105° (chest drives over ball)
+        armBackRot = 150 + ease * 95;   // whips back to 245°
       } else {
-        // Crisp return
-        const p = (t - 0.65) / 0.35;
-        legAngle = 95 + p * 100;
-        footAngle = -10 - p * 95;
-        torsoRot = 10 - p * 10;
-        headRot = -8 + p * 8;
-        hipY = -30 - p * 2;
-        armFrontRot = 155 - p * 30;
-        armBackRot = -135 - p * 10;
+        // 3. Elastic Recoil & Recovery Ease
+        const p = (t - 0.58) / 0.42;
+        const ease = Math.sin(p * Math.PI * 0.5);
+        legAngle = 80 + ease * 115;
+        footAngle = 15 - ease * 120;
+        torsoRot = 14 - ease * 14;
+        headRot = -10 + ease * 10;
+        hipY = -30 - ease * 2;
+        armFrontRot = 105 + ease * 70;  // settles back to 175°
+        armBackRot = 245 - ease * 60;   // settles back to 185°
         face = 'idle';
       }
 
@@ -124,9 +133,9 @@ const AnimationClips = {
         hipY,
         torsoRot,
         headRot,
-        headScaleX: 1.04,
-        headScaleY: 0.96,
-        hairRot: 35 - torsoRot * 0.8,
+        headScaleX: 1.06,
+        headScaleY: 0.94,
+        hairRot: 40 - torsoRot * 1.2,
         legFrontRot: legAngle,
         footFrontRot: footAngle,
         legBackRot: 165,
@@ -140,24 +149,61 @@ const AnimationClips = {
 
   jump: {
     name: 'jump',
-    duration: 0.55,
+    duration: 0.52,
     loop: false,
     evaluate: (t) => {
-      // Dynamic in-air pose: legs tuck, torso and head prepare for header
-      const cycle = Math.sin(t * Math.PI);
+      // 3-Phase Aerial Athletic Physics: Crouch -> Apex Header Coil -> Touchdown Prep
+      let hipY = -32;
+      let legFront = 195;
+      let footFront = -105;
+      let legBack = 165;
+      let footBack = -75;
+      let torsoRot = 0;
+      let headRot = 0;
+      let armFront = 175;
+      let armBack = 185;
+
+      if (t < 0.40) {
+        // Ascent & Tuck Phase: Knees tuck close to chest, arms elevate for momentum
+        const p = t / 0.40;
+        const arc = Math.sin(p * Math.PI * 0.5);
+        hipY = -32 - arc * 12;
+        torsoRot = arc * 14;
+        headRot = arc * 16;
+        legFront = 195 - arc * 55; // tucked kicking leg
+        footFront = -105 + arc * 42;
+        legBack = 165 - arc * 40;
+        footBack = -75 + arc * 32;
+        armFront = 175 - arc * 65; // arms raised forward-up for aerodynamic balance
+        armBack = 185 + arc * 45;  // arm elevates backward-up
+      } else {
+        // Apex & Descent Phase: Header strike extension and landing preparation
+        const p = (t - 0.40) / 0.60;
+        const arc = Math.sin(p * Math.PI * 0.5);
+        hipY = -44 + arc * 12;
+        torsoRot = 14 - arc * 14;
+        headRot = 16 - arc * 16;
+        legFront = 140 + arc * 55; // legs extending downwards
+        footFront = -63 - arc * 42;
+        legBack = 125 + arc * 40;
+        footBack = -43 - arc * 32;
+        armFront = 110 + arc * 65; // recovers to 175°
+        armBack = 230 - arc * 45;  // recovers to 185°
+      }
+
       return {
-        hipY: -32 - cycle * 8,
-        torsoRot: cycle * 12,
-        headRot: cycle * 14, // lunging forward for header
+        hipY,
+        torsoRot,
+        headRot,
         headScaleX: 1.05,
-        headScaleY: 0.96,
-        hairRot: 35 + cycle * 22,
-        legFrontRot: 195 - cycle * 45, // tucked legs
-        footFrontRot: -105 + cycle * 35,
-        legBackRot: 165 - cycle * 30,
-        footBackRot: -75 + cycle * 25,
-        armFrontRot: 125 - cycle * 55, // arms spread for air balance
-        armBackRot: -145 + cycle * 55,
+        headScaleY: 0.95,
+        hairRot: 55,
+        legFrontRot: legFront,
+        footFrontRot: footFront,
+        legBackRot: legBack,
+        footBackRot: footBack,
+        armFrontRot: armFront,
+        armBackRot: armBack,
         face: 'strain'
       };
     }
@@ -165,27 +211,27 @@ const AnimationClips = {
 
   stun: {
     name: 'stun',
-    duration: 1.2,
+    duration: 1.1,
     loop: true,
     evaluate: (t) => {
-      // Comical arcade dizzy stagger
+      // Comical arcade dizzy stagger with rubbery head wobbling
       const cycle = t * Math.PI * 6;
       const wobble = Math.sin(cycle);
       const sway = Math.cos(cycle * 0.5);
 
       return {
-        hipY: -32 + Math.abs(wobble) * 2,
-        torsoRot: sway * 14,
-        headRot: -sway * 18 + wobble * 6,
-        headScaleX: 1.0 + wobble * 0.04,
-        headScaleY: 1.0 - wobble * 0.04,
-        hairRot: 35 + sway * 15,
-        legFrontRot: 195 + wobble * 10,
+        hipY: -32 + Math.abs(wobble) * 3,
+        torsoRot: sway * 16,
+        headRot: -sway * 22 + wobble * 8,
+        headScaleX: 1.0 + wobble * 0.05,
+        headScaleY: 1.0 - wobble * 0.05,
+        hairRot: 35 + sway * 20,
+        legFrontRot: 195 + wobble * 14,
         footFrontRot: -105,
-        legBackRot: 165 - wobble * 10,
+        legBackRot: 165 - wobble * 14,
         footBackRot: -75,
-        armFrontRot: 125 + sway * 30, // limp floppy arms wobbling
-        armBackRot: -145 - sway * 30,
+        armFrontRot: 175 + sway * 25, // floppy limp arms swinging naturally
+        armBackRot: 185 - sway * 25,
         face: 'ko'
       };
     }
@@ -193,51 +239,52 @@ const AnimationClips = {
 
   super_shot: {
     name: 'super_shot',
-    duration: 0.65, // Fast powerful special move
+    duration: 0.62,
     loop: false,
     evaluate: (t) => {
+      // Dragon Kick Epic Super Move
       let hipY = -32;
       let legAngle = 195;
       let footAngle = -105;
       let headRot = 0;
-      let armFrontRot = 125;
-      let armBackRot = -145;
+      let armFrontRot = 175;
+      let armBackRot = 185;
 
-      if (t < 0.3) {
-        // Instant power windup leap
-        const p = t / 0.3;
-        hipY = -32 - p * 40;
-        legAngle = 195 + p * 45;
-        headRot = -p * 15;
-        armFrontRot = 125 - p * 60;
-        armBackRot = -145 + p * 40;
-      } else if (t < 0.7) {
-        // Devastating Dragon Kick!
-        const p = (t - 0.3) / 0.4;
-        hipY = -72;
-        legAngle = 240 - p * 165;
-        footAngle = -130 + p * 125;
-        headRot = -15 + p * 30;
-        armFrontRot = 65 + p * 110;
-        armBackRot = -105 - p * 40;
+      if (t < 0.28) {
+        // Instant power windup leap into the air
+        const p = t / 0.28;
+        hipY = -32 - p * 45;
+        legAngle = 195 + p * 55;
+        headRot = -p * 18;
+        armFrontRot = 175 - p * 60; // lifts to 115°
+        armBackRot = 185 + p * 45;  // lifts back to 230°
+      } else if (t < 0.68) {
+        // Devastating Dragon Strike snap!
+        const p = (t - 0.28) / 0.40;
+        hipY = -77;
+        legAngle = 250 - p * 180;
+        footAngle = -135 + p * 140;
+        headRot = -18 + p * 34;
+        armFrontRot = 115 - p * 25; // drives forward to 90°
+        armBackRot = 230 + p * 20;  // locks back at 250°
       } else {
-        // Crisp touchdown
-        const p = (t - 0.7) / 0.3;
-        hipY = -72 + p * 40;
-        legAngle = 75 + p * 120;
-        footAngle = -5 - p * 100;
-        headRot = 15 - p * 15;
-        armFrontRot = 175 - p * 50;
-        armBackRot = -145;
+        // Power touchdown
+        const p = (t - 0.68) / 0.32;
+        hipY = -77 + p * 45;
+        legAngle = 70 + p * 125;
+        footAngle = 5 - p * 110;
+        headRot = 16 - p * 16;
+        armFrontRot = 90 + p * 85;  // settles back to 175°
+        armBackRot = 250 - p * 65;  // settles back to 185°
       }
 
       return {
         hipY,
-        torsoRot: headRot * 0.4,
+        torsoRot: headRot * 0.5,
         headRot,
-        headScaleX: 1.08,
-        headScaleY: 0.94,
-        hairRot: 55 + (Math.random() - 0.5) * 35,
+        headScaleX: 1.10,
+        headScaleY: 0.92,
+        hairRot: 65 + (Math.random() - 0.5) * 40,
         legFrontRot: legAngle,
         footFrontRot: footAngle,
         legBackRot: 165,
@@ -252,53 +299,53 @@ const AnimationClips = {
 
   bicycle_kick: {
     name: 'bicycle_kick',
-    duration: 0.45,
+    duration: 0.44,
     loop: false,
     evaluate: (t) => {
-      // Acrobatic overhead backflip bicycle kick!
+      // Acrobatic overhead backflip bicycle kick with full scissor rotation!
       const spinAngle = t * Math.PI * 2;
       const arc = Math.sin(t * Math.PI);
-      const legSnap = t > 0.4 && t < 0.75 ? 1.0 : 0.0;
+      const legSnap = t > 0.35 && t < 0.72 ? 1.0 : 0.0;
 
       return {
-        hipY: -32 - arc * 55,
+        hipY: -32 - arc * 60,
         torsoRot: -180 + t * 360,
-        headRot: -25 + arc * 30,
-        headScaleX: 1.06,
-        headScaleY: 0.94,
-        hairRot: 65 + Math.sin(spinAngle) * 35,
-        legFrontRot: 195 - legSnap * 145 - arc * 35,
-        footFrontRot: -105 + legSnap * 125,
-        legBackRot: 165 + arc * 45,
-        footBackRot: -75 - arc * 25,
-        armFrontRot: 125 + Math.sin(spinAngle) * 75,
-        armBackRot: -145 - Math.sin(spinAngle) * 75,
+        headRot: -28 + arc * 35,
+        headScaleX: 1.08,
+        headScaleY: 0.92,
+        hairRot: 75 + Math.sin(spinAngle) * 45,
+        legFrontRot: 195 - legSnap * 155 - arc * 40,
+        footFrontRot: -105 + legSnap * 135,
+        legBackRot: 165 + arc * 55,
+        footBackRot: -75 - arc * 35,
+        armFrontRot: 180 + Math.sin(spinAngle) * 65,
+        armBackRot: 180 - Math.sin(spinAngle) * 65,
         face: 'strain',
-        aura: t > 0.3 && t < 0.7
+        aura: t > 0.25 && t < 0.75
       };
     }
   },
 
   diving_header: {
     name: 'diving_header',
-    duration: 0.5,
+    duration: 0.48,
     loop: false,
     evaluate: (t) => {
-      // Bullet horizontal dive forward
+      // Bullet horizontal dive forward through the air
       const diveArc = Math.sin(t * Math.PI);
       return {
-        hipY: -32 - diveArc * 35,
-        torsoRot: 78 * diveArc, // prone horizontal flying pose
-        headRot: 35 * diveArc,
-        headScaleX: 1.1,
-        headScaleY: 0.92,
-        hairRot: 75,
-        legFrontRot: 195 - diveArc * 85, // legs trailing behind horizontally
-        footFrontRot: -105 + diveArc * 65,
-        legBackRot: 165 - diveArc * 65,
-        footBackRot: -75 + diveArc * 45,
-        armFrontRot: 125 + diveArc * 95, // arms thrusting forward
-        armBackRot: -145 + diveArc * 85,
+        hipY: -32 - diveArc * 38,
+        torsoRot: 84 * diveArc, // prone horizontal missile pose
+        headRot: 40 * diveArc,
+        headScaleX: 1.12,
+        headScaleY: 0.90,
+        hairRot: 85,
+        legFrontRot: 195 - diveArc * 95,
+        footFrontRot: -105 + diveArc * 75,
+        legBackRot: 165 - diveArc * 75,
+        footBackRot: -75 + diveArc * 55,
+        armFrontRot: 175 + diveArc * 65, // tucked back like aerodynamic wings
+        armBackRot: 185 + diveArc * 55,
         face: 'strain'
       };
     }
@@ -306,50 +353,50 @@ const AnimationClips = {
 
   celebration: {
     name: 'celebration',
-    duration: 1.2,
+    duration: 1.1,
     loop: true,
     evaluate: (t) => {
-      // Euphoric Goal Celebration: pumping fists in the air, jumping with joy!
+      // Euphoric Goal Celebration: double-fist pumping in the air, bouncing with joy!
       const cycle = t * Math.PI * 4;
       const jump = Math.abs(Math.sin(cycle));
       return {
-        hipY: -32 - jump * 22,
-        torsoRot: Math.sin(cycle) * 8,
-        headRot: -18 + Math.cos(cycle) * 12, // looking up at the sky
-        headScaleX: 1.05,
-        headScaleY: 0.95,
-        hairRot: 45 + Math.sin(cycle) * 20,
+        hipY: -32 - jump * 18,
+        torsoRot: Math.sin(cycle * 0.5) * 8,
+        headRot: -12 + Math.cos(cycle) * 8,
+        headScaleX: 1.06,
+        headScaleY: 0.94,
+        hairRot: 45 + Math.sin(cycle) * 15,
         legFrontRot: 195 - jump * 35,
-        footFrontRot: -105 + jump * 20,
-        legBackRot: 165 - jump * 25,
-        footBackRot: -75 + jump * 15,
-        armFrontRot: 35 + Math.sin(cycle) * 30, // hands high in the air!
-        armBackRot: -35 - Math.sin(cycle) * 30,
-        face: 'idle'
+        footFrontRot: -105 + jump * 25,
+        legBackRot: 165 - jump * 35,
+        footBackRot: -75 + jump * 25,
+        armFrontRot: 0 + Math.sin(cycle) * 20, // arms raised triumphantly toward the sky!
+        armBackRot: 0 - Math.sin(cycle) * 20,
+        face: 'power'
       };
     }
   },
 
   defeat: {
     name: 'defeat',
-    duration: 1.5,
+    duration: 1.4,
     loop: true,
     evaluate: (t) => {
-      // Slumped shoulders, head in hands in heartbreak
-      const sob = Math.sin(t * Math.PI * 6) * 2.5;
+      // Heartbroken defeat slouch: head hung low, shoulders slumped
+      const sigh = Math.sin(t * Math.PI * 2);
       return {
-        hipY: -22 + sob,
-        torsoRot: 32, // slumped forward
-        headRot: 45 + sob * 1.5, // head looking down
-        headScaleX: 0.98,
-        headScaleY: 1.02,
-        hairRot: 15,
-        legFrontRot: 180,
-        footFrontRot: -90,
-        legBackRot: 150,
-        footBackRot: -60,
-        armFrontRot: 75,
-        armBackRot: -75,
+        hipY: -30 + sigh * 1.5,
+        torsoRot: -18,
+        headRot: 28 + sigh * 4,
+        headScaleX: 0.96,
+        headScaleY: 1.04,
+        hairRot: 20,
+        legFrontRot: 195,
+        footFrontRot: -105,
+        legBackRot: 165,
+        footBackRot: -75,
+        armFrontRot: 178 + sigh * 4, // arms hanging limply down along body
+        armBackRot: 182 - sigh * 4,
         face: 'ko'
       };
     }
@@ -357,25 +404,25 @@ const AnimationClips = {
 
   super_charge: {
     name: 'super_charge',
-    duration: 0.8,
+    duration: 0.75,
     loop: true,
     evaluate: (t) => {
-      // DBZ-style super Saiyan energy charge vibrating posture
-      const vibrate = (Math.random() - 0.5) * 4;
+      // Super Saiyan power vibration stance
+      const vibrate = (Math.random() - 0.5) * 4.5;
       const breathe = Math.sin(t * Math.PI * 4);
       return {
         hipY: -34 + vibrate,
         torsoRot: -8 + vibrate * 0.5,
-        headRot: -12 + breathe * 4,
-        headScaleX: 1.08 + Math.abs(vibrate) * 0.02,
-        headScaleY: 0.94 - Math.abs(vibrate) * 0.02,
-        hairRot: 55 + vibrate * 5,
-        legFrontRot: 215, // wide grounded athletic stance
-        footFrontRot: -120,
-        legBackRot: 145,
-        footBackRot: -60,
-        armFrontRot: 85 + vibrate * 4, // clenched tensed fists
-        armBackRot: -115 - vibrate * 4,
+        headRot: -14 + breathe * 5,
+        headScaleX: 1.09 + Math.abs(vibrate) * 0.02,
+        headScaleY: 0.93 - Math.abs(vibrate) * 0.02,
+        hairRot: 65 + vibrate * 6,
+        legFrontRot: 218,
+        footFrontRot: -122,
+        legBackRot: 142,
+        footBackRot: -58,
+        armFrontRot: 155 + vibrate * 4,
+        armBackRot: 205 - vibrate * 4,
         face: 'power',
         aura: true
       };
@@ -384,49 +431,57 @@ const AnimationClips = {
 
   rocket_kick: {
     name: 'rocket_kick',
-    duration: 0.28,
+    duration: 0.26,
     loop: false,
     evaluate: (t) => {
-      // Powerful low drive cannon shot with deep windup and explosive follow-through!
+      // Low bullet cannon sweep shot
       let legAngle = 195;
       let footAngle = -105;
       let torsoRot = 0;
       let hipY = -32;
+      let armFrontRot = 175;
+      let armBackRot = 185;
 
-      if (t < 0.25) {
-        const p = t / 0.25;
-        legAngle = 195 + p * 55; // huge backward pull
-        footAngle = -105 - p * 30;
-        torsoRot = -p * 22; // leaning back to coil power
+      if (t < 0.22) {
+        const p = t / 0.22;
+        legAngle = 195 + p * 60;
+        footAngle = -105 - p * 35;
+        torsoRot = -p * 24;
         hipY = -30 + p * 4;
-      } else if (t < 0.65) {
-        const p = (t - 0.25) / 0.4;
+        armFrontRot = 175 + p * 35;
+        armBackRot = 185 - p * 35;
+      } else if (t < 0.62) {
+        const p = (t - 0.22) / 0.40;
         const ease = Math.sin(p * Math.PI * 0.5);
-        legAngle = 250 - ease * 180; // explosive whip to 70°!
-        footAngle = -135 + ease * 145;
-        torsoRot = -22 + ease * 36; // chest driving over ball
+        legAngle = 255 - ease * 190;
+        footAngle = -140 + ease * 155;
+        torsoRot = -24 + ease * 40;
         hipY = -26 - ease * 8;
+        armFrontRot = 210 - ease * 105;
+        armBackRot = 150 + ease * 95;
       } else {
-        const p = (t - 0.65) / 0.35;
-        legAngle = 70 + p * 125;
-        footAngle = 10 - p * 115;
-        torsoRot = 14 - p * 14;
+        const p = (t - 0.62) / 0.38;
+        legAngle = 65 + p * 130;
+        footAngle = 15 - p * 120;
+        torsoRot = 16 - p * 16;
         hipY = -34 + p * 2;
+        armFrontRot = 105 + p * 70;
+        armBackRot = 245 - p * 60;
       }
 
       return {
         hipY,
         torsoRot,
-        headRot: -torsoRot * 0.7,
-        headScaleX: 1.05,
-        headScaleY: 0.95,
-        hairRot: 65,
+        headRot: -torsoRot * 0.75,
+        headScaleX: 1.06,
+        headScaleY: 0.94,
+        hairRot: 70,
         legFrontRot: legAngle,
         footFrontRot: footAngle,
         legBackRot: 145,
         footBackRot: -60,
-        armFrontRot: 165 - (t * 60),
-        armBackRot: -155 + (t * 60),
+        armFrontRot,
+        armBackRot,
         face: 'strain'
       };
     }
@@ -434,25 +489,25 @@ const AnimationClips = {
 
   scorpion_kick: {
     name: 'scorpion_kick',
-    duration: 0.42,
+    duration: 0.40,
     loop: false,
     evaluate: (t) => {
-      // Acrobatic back heel flip over head!
+      // Acrobatic heel strike flicking up behind the back
       const arc = Math.sin(t * Math.PI);
-      const heelSnap = t > 0.35 && t < 0.75 ? 1.0 : 0.0;
+      const heelSnap = t > 0.32 && t < 0.72 ? 1.0 : 0.0;
       return {
-        hipY: -32 - arc * 40,
-        torsoRot: 45 * arc, // chest arched downward
-        headRot: -30 * arc, // looking back over shoulder
-        headScaleX: 1.06,
-        headScaleY: 0.94,
-        hairRot: 25 - arc * 30,
-        legFrontRot: 195 + heelSnap * 95, // heels flipping backward over back!
-        footFrontRot: -105 + heelSnap * 90,
-        legBackRot: 165 + arc * 60,
-        footBackRot: -75 + arc * 45,
-        armFrontRot: 135 - arc * 55,
-        armBackRot: -135 + arc * 55,
+        hipY: -32 - arc * 44,
+        torsoRot: 48 * arc,
+        headRot: -34 * arc,
+        headScaleX: 1.07,
+        headScaleY: 0.93,
+        hairRot: 25 - arc * 35,
+        legFrontRot: 195 + heelSnap * 105,
+        footFrontRot: -105 + heelSnap * 95,
+        legBackRot: 165 + arc * 65,
+        footBackRot: -75 + arc * 50,
+        armFrontRot: 155 - arc * 45,
+        armBackRot: 205 + arc * 45,
         face: 'strain'
       };
     }
@@ -460,24 +515,24 @@ const AnimationClips = {
 
   smash_header: {
     name: 'smash_header',
-    duration: 0.32,
+    duration: 0.30,
     loop: false,
     evaluate: (t) => {
-      // Violent downward spiking header smash!
+      // Downward spike header hammer
       const snap = Math.sin(t * Math.PI);
       return {
-        hipY: -32 - snap * 24,
-        torsoRot: -15 + snap * 45, // powerful torso whip forward
-        headRot: -20 + snap * 55,  // forehead lunging downwards into ball
-        headScaleX: 1.12,
-        headScaleY: 0.9,
-        hairRot: 75,
-        legFrontRot: 195 - snap * 40,
-        footFrontRot: -105 + snap * 30,
-        legBackRot: 165 - snap * 25,
-        footBackRot: -75 + snap * 20,
-        armFrontRot: 125 + snap * 60,
-        armBackRot: -145 - snap * 60,
+        hipY: -32 - snap * 26,
+        torsoRot: -16 + snap * 50,
+        headRot: -22 + snap * 60,
+        headScaleX: 1.14,
+        headScaleY: 0.88,
+        hairRot: 80,
+        legFrontRot: 195 - snap * 45,
+        footFrontRot: -105 + snap * 35,
+        legBackRot: 165 - snap * 30,
+        footBackRot: -75 + snap * 25,
+        armFrontRot: 135 + snap * 45,
+        armBackRot: 225 - snap * 45,
         face: 'strain'
       };
     }
@@ -491,7 +546,9 @@ __mods['animation/AnimationController.js'] = function(exports, __req) {
 const {  AnimationClips  } = __req('animation/AnimationClip.js');
 
 /**
- * State machine and timeline player for character animations.
+ * Advanced State Machine, Timeline Sequencer and Pose Blender for Head Soccer.
+ * Implements smooth cubic cross-fading, procedural look-at ball tracking,
+ * and dynamic elastic squash-and-stretch on athletic jump/landing impacts.
  */
 class AnimationController {
   /**
@@ -504,7 +561,20 @@ class AnimationController {
     this.isPlaying = true;
     this.speed = 1.0;
     this.headScaleMultiplier = 1.0;
-    this.squashFactor = 1.2;
+
+    // Cross-fade blending state (eliminates visual popping between actions)
+    this.blendTimer = 0;
+    this.blendDuration = 0.085; // 85ms snappy arcade transition
+    this.prevPose = null;
+    this.lastEvaluatedState = null;
+
+    // Dynamic Squash & Stretch Spring Physics
+    this.squashX = 0;
+    this.squashY = 0;
+
+    // Procedural Look-At ball tracking
+    this.lookTarget = null; // { x, y }
+    this.currentLookAngle = 0;
 
     this.onStateChangeCallbacks = [];
   }
@@ -513,13 +583,42 @@ class AnimationController {
     this.onStateChangeCallbacks.push(fn);
   }
 
+  setLookTarget(x, y) {
+    if (x === null || x === undefined) {
+      this.lookTarget = null;
+    } else {
+      this.lookTarget = { x, y };
+    }
+  }
+
+  triggerLandingSquash(force = 1.0) {
+    const intensity = Math.min(1.8, Math.max(0.5, force));
+    this.squashX = 0.16 * intensity;
+    this.squashY = -0.18 * intensity;
+  }
+
+  triggerJumpStretch(force = 1.0) {
+    const intensity = Math.min(1.6, Math.max(0.5, force));
+    this.squashX = -0.10 * intensity;
+    this.squashY = 0.14 * intensity;
+  }
+
   play(animName) {
     if (!AnimationClips[animName]) return;
+    
+    // Prevent interrupting non-looping high-priority actions until almost finished
     if (this.currentAnim === animName && !AnimationClips[animName].loop) {
-      if (this.animTime < AnimationClips[animName].duration * 0.95) {
-        return; // Let the action finish completely
+      if (this.animTime < AnimationClips[animName].duration * 0.92) {
+        return;
       }
     }
+
+    // Capture current snapshot for smooth cross-fading
+    if (this.currentAnim !== animName && this.lastEvaluatedState) {
+      this.prevPose = { ...this.lastEvaluatedState };
+      this.blendTimer = this.blendDuration;
+    }
+
     this.currentAnim = animName;
     this.animTime = 0;
     this.onStateChangeCallbacks.forEach(cb => cb(animName));
@@ -544,24 +643,80 @@ class AnimationController {
       }
     }
 
+    // Evaluate current target clip
     const normalizedTime = Math.min(1.0, Math.max(0.0, this.animTime / clip.duration));
-    const state = clip.evaluate(normalizedTime);
+    let rawState = clip.evaluate(normalizedTime);
 
+    // Apply smooth cubic Hermite cross-fading if blending from previous pose
+    let state = rawState;
+    if (this.blendTimer > 0 && this.prevPose) {
+      const p = 1.0 - (this.blendTimer / this.blendDuration);
+      // Smoothstep curve: 3p^2 - 2p^3
+      const t = p * p * (3.0 - 2.0 * p);
+      state = this.blendPoses(this.prevPose, rawState, t);
+      this.blendTimer = Math.max(0, this.blendTimer - dt);
+    }
+
+    // Update elastic squash and stretch decay
+    const decay = Math.exp(-dt * 15.0);
+    this.squashX *= decay;
+    this.squashY *= decay;
+
+    // Procedural Look-At Head Tracking
+    if (this.lookTarget && state.face !== 'ko') {
+      const headBone = this.skeleton.head;
+      const dx = (this.lookTarget.x - headBone.worldX) * (this.skeleton.facing || 1);
+      const dy = this.lookTarget.y - headBone.worldY;
+      const targetAngle = Math.atan2(dy, Math.max(15, dx)) * (180 / Math.PI);
+      const clampedAngle = Math.max(-24, Math.min(26, targetAngle * 0.35));
+      this.currentLookAngle += (clampedAngle - this.currentLookAngle) * Math.min(1.0, dt * 10.0);
+    } else {
+      this.currentLookAngle += (0 - this.currentLookAngle) * Math.min(1.0, dt * 8.0);
+    }
+
+    this.lastEvaluatedState = { ...state };
     this.applyToSkeleton(state);
     return state;
+  }
+
+  blendPoses(a, b, t) {
+    const result = { ...b };
+    const numericKeys = [
+      'hipY', 'torsoRot', 'headRot', 'headScaleX', 'headScaleY', 'hairRot',
+      'legFrontRot', 'footFrontRot', 'legBackRot', 'footBackRot',
+      'armFrontRot', 'armBackRot'
+    ];
+
+    for (const key of numericKeys) {
+      if (a[key] !== undefined && b[key] !== undefined) {
+        result[key] = a[key] + (b[key] - a[key]) * t;
+      }
+    }
+    return result;
   }
 
   applyToSkeleton(state) {
     const { hip, torso, head, hairRibbon, legFront, footFront, legBack, footBack, armFront, armBack } = this.skeleton;
 
-    if (state.hipY !== undefined) hip.y = state.hipY;
+    // Apply Hip with dynamic squash offset
+    if (state.hipY !== undefined) {
+      hip.y = state.hipY + this.squashY * 18.0;
+    }
     if (state.torsoRot !== undefined) torso.rotation = state.torsoRot;
-    if (state.headRot !== undefined) head.rotation = state.headRot;
+    
+    // Apply Head with Look-At tracking and dynamic stretch
+    if (state.headRot !== undefined) {
+      head.rotation = state.headRot + this.currentLookAngle;
+    }
 
-    head.scaleX = (state.headScaleX || 1.0) * this.headScaleMultiplier;
-    head.scaleY = (state.headScaleY || 1.0) * this.headScaleMultiplier;
+    const baseScaleX = (state.headScaleX || 1.0) * this.headScaleMultiplier;
+    const baseScaleY = (state.headScaleY || 1.0) * this.headScaleMultiplier;
+    head.scaleX = baseScaleX * (1.0 + this.squashX);
+    head.scaleY = baseScaleY * (1.0 + this.squashY);
 
-    if (state.hairRot !== undefined) hairRibbon.rotation = state.hairRot;
+    if (state.hairRot !== undefined && hairRibbon) {
+      hairRibbon.rotation = state.hairRot;
+    }
 
     // Legs & Cleats
     if (state.legFrontRot !== undefined) legFront.rotation = state.legFrontRot;
@@ -1248,9 +1403,9 @@ class Skeleton {
     // Headband fluttering ribbons
     this.hairRibbon = new Bone('hair_ribbon', this.head, 24, -20, 16, 35);
 
-    // Arms attached to torso shoulders
-    this.armBack = new Bone('arm_back', this.torso, 20, 18, 12, -145);
-    this.armFront = new Bone('arm_front', this.torso, 20, 18, -12, 125);
+    // Arms attached to torso shoulders (hanging naturally downward along torso)
+    this.armBack = new Bone('arm_back', this.torso, 20, 18, 12, 185);
+    this.armFront = new Bone('arm_front', this.torso, 20, 18, -12, 175);
 
     // Back Support Leg & Boot (ground contact)
     this.legBack = new Bone('leg_back', this.hip, 20, 0, -8, 165);
@@ -1872,6 +2027,7 @@ async function bootstrap() {
         player.isGrounded = false;
         player.canDoubleJump = true;
         animController.play('jump');
+        animController.triggerJumpStretch(1.25);
         soundManager.play('headImpact');
         particleSystem.spawnDust(player.x, player.y, 8);
         uiManager.setActiveAnim('jump');
@@ -1890,6 +2046,7 @@ async function bootstrap() {
         particleSystem.spawnSparks(player.x, player.y - 5, 14, '#00f0ff');
         collisionSystem.addFloatingText('🚀 ¡DOBLE SALTO!', player.x, player.y - 85, '#00f0ff', 20);
         animController.play('jump');
+        animController.triggerJumpStretch(1.0);
         uiManager.setActiveAnim('jump');
       }
       return;
@@ -1993,11 +2150,48 @@ async function bootstrap() {
   inputManager.onAction(triggerAction);
   uiManager.onPlayAction(triggerAction);
 
+  // Player 2 Action Dispatcher
+  const triggerP2Action = (animName, data = null) => {
+    soundManager.init();
+    if (animName === 'jump') {
+      rivalBot.triggerJump();
+    } else if (animName === 'dash') {
+      rivalBot.triggerDash();
+    } else if (animName === 'charged_kick') {
+      rivalBot.triggerKick(ball, player, collisionSystem, data);
+    } else if (animName === 'super_shot') {
+      rivalBot.triggerSuper(ball, player, collisionSystem, superShots);
+    } else if (animName === 'kick' || animName === 'bicycle_kick') {
+      rivalBot.triggerKick(ball, player, collisionSystem);
+    }
+  };
+
+  inputManager.onP2Action(triggerP2Action);
+
+  // 2-Player Local Multiplayer Mode Toggle
+  const toggle2PMode = (enable = null) => {
+    const isNow2P = enable !== null ? !!enable : !inputManager.twoPlayerMode;
+    inputManager.setTwoPlayerMode(isNow2P);
+    rivalBot.setHumanControlled(isNow2P);
+    uiManager.setTwoPlayerMode(isNow2P);
+    if (isNow2P) {
+      soundManager.play('crowdCheer');
+      collisionSystem.addFloatingText('👥 ¡MODO 2 JUGADORES ACTIVADO! 🎮', renderer.stageWidth * 0.5, renderer.groundY - 140, '#00f0ff', 24);
+      collisionSystem.addFloatingText('P1: WASD / Espacio / Shift  |  P2: Flechas / Enter / Shift Der', renderer.stageWidth * 0.5, renderer.groundY - 110, '#ffd700', 16);
+    } else {
+      collisionSystem.addFloatingText('🤖 MODO 1 JUGADOR (VS CPU)', renderer.stageWidth * 0.5, renderer.groundY - 140, '#ffd700', 20);
+    }
+  };
+
+  uiManager.onToggle2P(toggle2PMode);
+  window.toggle2PMode = toggle2PMode;
+
   // Tournament Coordinator Setup
   const tournamentManager = new TournamentManager();
   window.tournamentManager = tournamentManager;
 
   uiManager.onStartTournMatch(() => {
+    if (inputManager.twoPlayerMode) toggle2PMode(false);
     if (!tournamentManager.bracket || tournamentManager.tournamentRound >= 3) {
       tournamentManager.startCopaMundial(player.character.id);
     }
@@ -2012,6 +2206,7 @@ async function bootstrap() {
   });
 
   uiManager.onStartSurvival(() => {
+    if (inputManager.twoPlayerMode) toggle2PMode(false);
     const rival = tournamentManager.startSurvival(player.character.id);
     switchRivalCharacter(rival.id);
     rivalBot.setDifficulty(tournamentManager.getCurrentDifficulty());
@@ -2028,9 +2223,16 @@ async function bootstrap() {
     resetMatch();
   });
 
+  uiManager.onStartLocal2P(() => {
+    toggle2PMode(true);
+    tournamentManager.startLocal2P(player.character.id, rivalBot.character.id);
+    uiManager.updateTournamentPill('1 VS 1 MULTIJUGADOR LOCAL', '👥');
+    resetMatch();
+  });
+
   uiManager.onStartQuickMatch(() => {
     tournamentManager.setQuickMatch();
-    uiManager.updateTournamentPill('AMISTOSO RÁPIDO', '⚽');
+    uiManager.updateTournamentPill(inputManager.twoPlayerMode ? '1 VS 1 MULTIJUGADOR LOCAL' : 'AMISTOSO RÁPIDO', inputManager.twoPlayerMode ? '👥' : '⚽');
     resetMatch();
   });
 
@@ -2043,7 +2245,7 @@ async function bootstrap() {
     });
   }
   window.addEventListener('keydown', (e) => {
-    if ((e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') && !e.repeat) {
+    if ((e.key === 's' || e.key === 'S' || (!inputManager.twoPlayerMode && e.key === 'ArrowDown')) && !e.repeat) {
       triggerDash();
     }
     if (isMatchOver && (e.key === ' ' || e.key === 'Enter') && !e.repeat) {
@@ -2097,6 +2299,7 @@ async function bootstrap() {
       matchSeconds = 60;
     }
     isMatchOver = false;
+    collisionSystem.isMatchOver = false;
     slowMoTimer = 0;
     uiManager.hideMatchOver();
     collisionSystem.playerGoals = 0;
@@ -2123,18 +2326,20 @@ async function bootstrap() {
     player.flipAngle = 0;
     superShots.reset();
     player.animController.play('idle');
+    rivalBot.resetPosition();
     rivalBot.x = Math.floor(renderer.stageWidth * 0.72) || (renderer.stageWidth - 280);
     rivalBot.y = renderer.groundY;
     rivalBot.hp = 100;
-    rivalBot.isStunned = false;
-    rivalBot.isFrozen = false;
-    rivalBot.hasShield = false;
-    rivalBot.isKnockedOut = false;
+    rivalBot.power = 0;
     ball.reset(renderer.stageWidth * 0.5, renderer.groundY - 180);
     powerSystem.power = tournamentManager.currentMode === GAME_MODES.SURVIVAL ? 100 : 0;
     powerUpSystem.reset();
     uiManager.setPlayerHp(player.hp, 100);
     uiManager.setRivalHp(100, 100);
+    uiManager.setRivalPowerMeter(0, false);
+    if (tournamentManager.currentMode === GAME_MODES.LOCAL_2P) {
+      uiManager.updateTournamentPill('1 VS 1 MULTIJUGADOR LOCAL', '👥');
+    }
     soundManager.play('goalWhistle');
   };
 
@@ -2191,8 +2396,11 @@ async function bootstrap() {
   // Goal trigger banner, LED sensor flash & scoreboard update
   collisionSystem.onGoal((playerScore, kicker, ballObj) => {
     uiManager.setScore(playerScore, collisionSystem.rivalGoals);
-    uiManager.showGoalBanner();
+    uiManager.showGoalBanner(inputManager.twoPlayerMode ? 'JUGADOR 1' : '', player.character?.country || '⚽');
     player.animController.play('celebration');
+    if (rivalBot && rivalBot.isHumanControlled) {
+      rivalBot.animController.play('defeat');
+    }
     soundManager.play('crowdCheer');
     renderer.shake(14);
     renderer.flash('#00ffcc');
@@ -2210,7 +2418,11 @@ async function bootstrap() {
 
   collisionSystem.onRivalGoal((rivalScore, kicker, ballObj) => {
     uiManager.setScore(collisionSystem.playerGoals, rivalScore);
+    uiManager.showGoalBanner(inputManager.twoPlayerMode ? 'JUGADOR 2' : '', rivalBot.character?.country || '⚽');
     player.animController.play('defeat');
+    if (rivalBot && rivalBot.isHumanControlled) {
+      rivalBot.animController.play('celebration');
+    }
     renderer.shake(12);
     renderer.flash('#ff3700');
     slowMoTimer = 1.0;
@@ -2232,6 +2444,9 @@ async function bootstrap() {
     const now = performance.now();
     const rawDt = Math.min((now - lastTime) / 1000, 0.1);
     lastTime = now;
+
+    // Poll connected Gamepads (Pad 0 for Player 1, Pad 1 for Player 2)
+    inputManager.pollGamepads();
 
     let dt = rawDt;
     if (hitStopTimer > 0) {
@@ -2279,6 +2494,16 @@ async function bootstrap() {
           player.animController.play('defeat');
           uiManager.showMatchOver('FIN DE LA SUPERVIVENCIA 💀', `Alcanzaste ${outcome.finalStreak} victorias. Récord: ${outcome.bestStreak}`);
           uiManager.updateSurvivalStats(0, outcome.bestStreak);
+        } else if (outcome.status === 'p1_victory') {
+          soundManager.play('crowdCheer');
+          player.animController.play('celebration');
+          if (rivalBot.isHumanControlled) rivalBot.animController.play('defeat');
+          uiManager.showMatchOver('¡VICTORIA DEL JUGADOR 1! 🏆', `${player.character.name} triunfa ${outcome.p1Score} - ${outcome.p2Score}!`);
+        } else if (outcome.status === 'p2_victory') {
+          soundManager.play('crowdCheer');
+          player.animController.play('defeat');
+          if (rivalBot.isHumanControlled) rivalBot.animController.play('celebration');
+          uiManager.showMatchOver('¡VICTORIA DEL JUGADOR 2! 🎮', `${rivalBot.character.name} triunfa ${outcome.p2Score} - ${outcome.p1Score}!`);
         } else if (collisionSystem.playerGoals > collisionSystem.rivalGoals) {
           player.animController.play('celebration');
           soundManager.play('crowdCheer');
@@ -2304,9 +2529,10 @@ async function bootstrap() {
     rivalBot.groundY = renderer.groundY;
     rivalBot.enabled = uiManager.toggles.rival !== false;
 
-    // Update Rival AI with SuperShots launcher
-    const rivalAnimState = rivalBot.update(dt, ball, player, collisionSystem, ragdollSystem, superShots);
+    // Update Rival AI / Player 2 with SuperShots launcher and inputs
+    const rivalAnimState = rivalBot.update(dt, ball, player, collisionSystem, ragdollSystem, superShots, inputManager);
     uiManager.setRivalHp(rivalBot.hp, rivalBot.maxHp);
+    uiManager.setRivalPowerMeter(rivalBot.power / 100, rivalBot.power >= 100);
 
     if (ragdollSystem.isActive) {
       // 1. Floppy Ragdoll Physics active!
@@ -2388,6 +2614,12 @@ async function bootstrap() {
         }
       }
       player.isMoving = isMoving;
+      if (isMoving && player.isGrounded && Math.random() < 0.35) {
+        particleSystem.spawnDust(player.x - player.direction * 18, renderer.groundY, 2);
+      }
+      if (rivalBot && rivalBot.isMoving && rivalBot.isGrounded && Math.random() < 0.35) {
+        particleSystem.spawnDust(rivalBot.x - rivalBot.direction * 18, renderer.groundY, 2);
+      }
 
       // Clamp player to pitch boundaries (full width between edge-aligned goals)
       player.x = Math.max(78, Math.min(player.x, renderer.stageWidth - 78));
@@ -2398,10 +2630,13 @@ async function bootstrap() {
         player.y += player.vy * dt;
 
         if (player.y >= renderer.groundY) {
+          const impact = Math.min(1.6, Math.abs(player.vy) / 450);
           player.y = renderer.groundY;
           player.vy = 0;
           player.isGrounded = true;
           player.canDoubleJump = true;
+          animController.triggerLandingSquash(impact);
+          particleSystem.spawnDust(player.x, renderer.groundY, 7);
           particleSystem.spawnSparks(player.x, renderer.groundY, 8, 'rgba(255,255,255,0.6)');
         }
       } else {
@@ -2430,6 +2665,9 @@ async function bootstrap() {
       // Synchronize Skeleton Root Transform
       skeleton.setPosition(player.x, player.y);
       skeleton.setFacing(player.direction);
+
+      // Procedural Gaze / Look-At tracking towards ball
+      animController.setLookTarget(ball.x, ball.y);
 
       // Update Animation State & Skeleton
       animState = animController.update(player.isFrozen ? 0 : dt);
@@ -2462,9 +2700,26 @@ async function bootstrap() {
       renderer.chargingAura = null;
     }
 
+    // Hold-to-Charge Power Shot Feedback & Aura for Player 2
+    const p2ChargeRatio = inputManager.getP2KickChargeRatio();
+    if (p2ChargeRatio > 0 && rivalBot.isHumanControlled && !rivalBot.isStunned && !rivalBot.isFrozen) {
+      if (Math.random() < 0.28) {
+        soundManager.playChargeHum(p2ChargeRatio);
+      }
+      particleSystem.spawnSparks(rivalBot.x + rivalBot.direction * 15, renderer.groundY - 8, 2, p2ChargeRatio > 0.85 ? '#ffd700' : '#ff3700');
+      renderer.chargingAuraP2 = {
+        x: rivalBot.x,
+        y: renderer.groundY,
+        ratio: p2ChargeRatio,
+        color: p2ChargeRatio > 0.85 ? '#ffd700' : '#ff3700'
+      };
+    } else {
+      renderer.chargingAuraP2 = null;
+    }
+
     // Update Physics, Air Drops & Interactions
     ball.update(dt, renderer.groundY, renderer.stageWidth);
-    collisionSystem.update(player, skeleton, ball, renderer.stageWidth, renderer.groundY, dt, ragdollSystem, powerSystem, rivalBot, inputManager);
+    collisionSystem.update(player, skeleton, ball, renderer.stageWidth, renderer.groundY, dt, ragdollSystem, powerSystem, rivalBot, inputManager, isMatchOver);
     powerUpSystem.update(dt, renderer.stageWidth, renderer.groundY, player, rivalBot, ball, collisionSystem);
     superShots.update(dt, renderer.stageWidth, renderer.groundY, ball, player, rivalBot, collisionSystem);
     particleSystem.update(dt);
@@ -2524,7 +2779,7 @@ const GOAL = {
 };
 
 class Ball {
-  constructor(x = 420, y = 0, radius = 21) {
+  constructor(x = 420, y = 0, radius = 26) {
     this.x = x;
     this.y = y;
     this.vx = 0;
@@ -2655,12 +2910,22 @@ class Ball {
     // 2. Inside the Net Physics (Catching tension, progressive drag, and net bulge)
     this.handleNetPhysics(groundY, stageWidth);
 
-    // Super loses its "danger" once it slows down
+    // Super shot dynamic aerodynamic decay (balances overpowered cross-field shots)
     speed = Math.hypot(this.vx, this.vy);
-    if (this.isSuper && !this.effect && speed < 260) {
-      this.isSuper = false;
-      this.heavy = false;
-      this.shotType = null;
+    if (this.isSuper) {
+      this.superLife = (this.superLife || 0) + dt;
+      if (this.superLife > 0.8) {
+        this.vx *= 0.985;
+        this.vy *= 0.985;
+      }
+      if (this.superLife > 2.2 || (!this.effect && speed < 300)) {
+        this.isSuper = false;
+        this.superLife = 0;
+        this.heavy = false;
+        this.shotType = null;
+      }
+    } else {
+      this.superLife = 0;
     }
 
     // Dynamic motion comet trail for fast balls
@@ -2780,6 +3045,7 @@ class Ball {
     this.vx = powerX;
     this.vy = powerY;
     this.isSuper = isSuper;
+    this.superLife = 0;
     this.shotType = shotType;
     this.spin = spin;
     if (!isSuper) {
@@ -3111,7 +3377,16 @@ class CollisionSystem {
     }
   }
 
-  update(player, skeleton, ball, stageWidth, groundY, dt, ragdollSystem, powerSystem, rivalBot, inputManager = null) {
+  update(player, skeleton, ball, stageWidth, groundY, dt, ragdollSystem, powerSystem, rivalBot, inputManager = null, isMatchOver = false) {
+    this.isMatchOver = isMatchOver;
+    if (this.isMatchOver) {
+      // Smoothly bring the ball to rest after the final whistle
+      ball.vx *= 0.94;
+      ball.vy *= 0.94;
+      ball.spin *= 0.90;
+      ball.isSuper = false;
+    }
+
     if (this.goalCooldown > 0) this.goalCooldown -= dt;
     if (this.damageCooldown > 0) this.damageCooldown -= dt;
     if (this.kickCooldown > 0) this.kickCooldown -= dt;
@@ -3202,6 +3477,34 @@ class CollisionSystem {
     // --- A. KICK FOOT COLLISION ---
     const distFoot = Math.hypot(ball.x - player.kickHitbox.x, ball.y - player.kickHitbox.y);
     if (distFoot < ball.radius + player.kickHitbox.radius) {
+      const isRivalSuper = ball.isSuper && ball.lastKickedBy === 'rival';
+      if (isRivalSuper) {
+        if (isKicking || isJumping) {
+          // CLUTCH PARRY WITH ACTIVE KICK / CLEAT!
+          ball.isSuper = false;
+          ball.lastKickedBy = 'player';
+          ball.vx = 880; // Rocket counter-strike back towards rival!
+          ball.vy = -260;
+          powerSystem?.addPower(25);
+          this.soundManager.playSubBassKick();
+          this.particleSystem.spawnSonicBoom(footTip.x, footTip.y, 1, '#ffd700');
+          this.particleSystem.spawnSparks(ball.x, ball.y, 35, '#00ffff');
+          this.triggerShake(14);
+          this.triggerHitStop(0.065);
+          this.addFloatingText('⚡ ¡PARRY PERFECTO! 🛡️', player.x, player.y - 100, '#00f0ff', 24);
+          return;
+        } else {
+          // UNGUARDED PLAYER STRUCK BY BLAST!
+          this.applyDamage(player, 25, ragdollSystem, -320, -360, true);
+          this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#ff3700');
+          this.soundManager.play('superExplode');
+          ball.isSuper = false;
+          ball.vx = Math.abs(ball.vx) * 0.35 + 80;
+          ball.vy = -Math.abs(ball.vy) * 0.5 - 120;
+          return;
+        }
+      }
+
       const powerMult = (player.character?.stats?.power || 1.0) * (player.activePowerMultiplier || 1.0);
       const dir = player.direction;
 
@@ -3355,13 +3658,32 @@ class CollisionSystem {
       const isViolentRivalShot = ball.lastKickedBy === 'rival' && ball.vx < -550;
 
       if (isRivalSuper) {
-        // RIVAL ULTI BLAST HITS PLAYER!
-        this.applyDamage(player, 35, ragdollSystem, -380, -420, true);
-        this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#ff3700');
-        this.soundManager.play('superExplode');
-        ball.isSuper = false;
-        ball.vx = Math.abs(ball.vx) * 0.35 + 80;
-        ball.vy = -Math.abs(ball.vy) * 0.5 - 120;
+        // Can the player parry / counter the super shot with an active header or kick?
+        const isHeaderAttempt = isJumping || curAnim === 'smash_header' || curAnim === 'diving_header';
+        const isKickAttempt = isKicking;
+
+        if (isHeaderAttempt || isKickAttempt) {
+          // CLUTCH PARRY! Deflect super shot back with high skill!
+          ball.isSuper = false;
+          ball.lastKickedBy = 'player';
+          ball.vx = 820; // Powerful counter-strike back towards rival!
+          ball.vy = -240;
+          powerSystem?.addPower(25); // Reward player with +25% Super Meter!
+          this.soundManager.playSubBassKick();
+          this.particleSystem.spawnSonicBoom(player.headHitbox.x, player.headHitbox.y, 1, '#ffd700');
+          this.particleSystem.spawnSparks(ball.x, ball.y, 35, '#00ffff');
+          this.triggerShake(14);
+          this.triggerHitStop(0.065); // 65ms dramatic hitstop!
+          this.addFloatingText('⚡ ¡PARRY PERFECTO! 🛡️', player.x, player.y - 100, '#00f0ff', 24);
+        } else {
+          // RIVAL ULTI BLAST HITS UNGUARDED PLAYER!
+          this.applyDamage(player, 25, ragdollSystem, -320, -360, true);
+          this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#ff3700');
+          this.soundManager.play('superExplode');
+          ball.isSuper = false;
+          ball.vx = Math.abs(ball.vx) * 0.35 + 80;
+          ball.vy = -Math.abs(ball.vy) * 0.5 - 120;
+        }
       } else if (isViolentRivalShot) {
         // FAST RIVAL SHOT DEFLECTED BY FOREHEAD — REWARDING SOCCER BLOCK, NO DAMAGE, NO STUN!
         ball.vx = Math.abs(ball.vx) * 0.6 + 120;
@@ -3369,7 +3691,7 @@ class CollisionSystem {
         ball.lastKickedBy = 'player';
         this.particleSystem.spawnSparks(ball.x, ball.y, 22, '#ffd700');
         this.soundManager.play('headImpact');
-        powerSystem?.addPower(8);
+        powerSystem?.addPower(12);
         this.addFloatingText('🛡️ ¡CABEZAZO DEFENSIVO!', player.x, player.y - 85, '#ffd700', 18);
       } else {
         // PURE SOCCER HEADER
@@ -3447,6 +3769,33 @@ class CollisionSystem {
     // --- C. TORSO / BODY TRAP COLLISION ---
     const distTorso = Math.hypot(ball.x - player.torsoHitbox.x, ball.y - player.torsoHitbox.y);
     if (distTorso < ball.radius + player.torsoHitbox.radius && distFoot >= ball.radius + player.kickHitbox.radius && distHead >= ball.radius + player.headHitbox.radius) {
+      const isRivalSuper = ball.isSuper && ball.lastKickedBy === 'rival';
+      if (isRivalSuper) {
+        if (isKicking || isJumping) {
+          // CLUTCH CHEST-TRAP PARRY!
+          ball.isSuper = false;
+          ball.lastKickedBy = 'player';
+          ball.vx = 820;
+          ball.vy = -220;
+          powerSystem?.addPower(25);
+          this.soundManager.playSubBassKick();
+          this.particleSystem.spawnSonicBoom(player.torsoHitbox.x, player.torsoHitbox.y, 1, '#ffd700');
+          this.particleSystem.spawnSparks(ball.x, ball.y, 35, '#00ffff');
+          this.triggerShake(14);
+          this.triggerHitStop(0.065);
+          this.addFloatingText('⚡ ¡PARRY CORPORAL! 🛡️', player.x, player.y - 100, '#00f0ff', 24);
+          return;
+        } else {
+          this.applyDamage(player, 25, ragdollSystem, -320, -360, true);
+          this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#ff3700');
+          this.soundManager.play('superExplode');
+          ball.isSuper = false;
+          ball.vx = Math.abs(ball.vx) * 0.35 + 80;
+          ball.vy = -Math.abs(ball.vy) * 0.5 - 120;
+          return;
+        }
+      }
+
       if (this.kickCooldown <= 0) {
         this.kickCooldown = 0.16;
         ball.vx = player.direction * (isMoving ? 190 : 80);
@@ -3467,17 +3816,32 @@ class CollisionSystem {
         this.onRivalDamageCallbacks.forEach(fn => fn(rivalBot.hp));
       }
 
-      // Player Dragon Super Shot ball impacts rival
+      // Player Super Shot ball impacts rival
       if (ball.isSuper && ball.lastKickedBy === 'player') {
         const distBallRival = Math.hypot(ball.x - rivalBot.x, ball.y - (rivalBot.y - 65));
         if (distBallRival < ball.radius + 45) {
-          rivalBot.takeDamage(40, 420, -480, true); // True super shot impact!
-          this.soundManager.play('superExplode');
-          this.particleSystem.spawnSparks(rivalBot.x, rivalBot.y - 60, 45, '#ff3700');
-          this.addFloatingText('🔥 ¡SUPER IMPACTO! 🔥', rivalBot.x, rivalBot.y - 95, '#ff3700', 24);
+          const isRivalGuarding = rivalBot.isJumping || rivalBot.animController.currentAnim === 'kick';
+          if (isRivalGuarding && !rivalBot.isStunned) {
+            // Rival blocks / parries!
+            ball.isSuper = false;
+            ball.lastKickedBy = 'rival';
+            ball.vx = -680;
+            ball.vy = -240;
+            rivalBot.takeDamage(12, 160, -120, false);
+            this.soundManager.play('headImpact');
+            this.particleSystem.spawnSparks(rivalBot.x, rivalBot.y - 60, 25, '#ffd700');
+            this.addFloatingText('🛡️ ¡PARADA DEL RIVAL!', rivalBot.x, rivalBot.y - 95, '#ffd700', 20);
+            this.triggerShake(10);
+            this.triggerHitStop(0.045);
+          } else {
+            rivalBot.takeDamage(32, 380, -420, true);
+            this.soundManager.play('superExplode');
+            this.particleSystem.spawnSparks(rivalBot.x, rivalBot.y - 60, 45, '#ff3700');
+            this.addFloatingText('🔥 ¡SUPER IMPACTO! 🔥', rivalBot.x, rivalBot.y - 95, '#ff3700', 24);
+            ball.isSuper = false;
+            ball.vx = 360;
+          }
           this.onRivalDamageCallbacks.forEach(fn => fn(rivalBot.hp));
-          ball.isSuper = false;
-          ball.vx = 420; // Deflects towards rival goal
         }
       }
     }
@@ -3522,7 +3886,7 @@ class CollisionSystem {
   }
 
   triggerPlayerGoal(stageWidth, groundY, ball, powerSystem, rivalBot) {
-    if (this.goalCooldown > 0) return;
+    if (this.isMatchOver || this.goalCooldown > 0) return;
     this.goalCooldown = 2.5;
     this.playerGoals++;
 
@@ -3543,6 +3907,7 @@ class CollisionSystem {
 
     // Reset ball to center after brief celebration
     setTimeout(() => {
+      if (this.isMatchOver) return;
       ball.x = stageWidth * 0.5;
       ball.y = groundY - 180;
       ball.vx = 0;
@@ -3553,7 +3918,7 @@ class CollisionSystem {
   }
 
   triggerRivalGoal(stageWidth, groundY, ball, rivalBot) {
-    if (this.goalCooldown > 0) return;
+    if (this.isMatchOver || this.goalCooldown > 0) return;
     this.goalCooldown = 2.5;
     this.rivalGoals++;
 
@@ -4430,6 +4795,8 @@ class PowerUpSystem {
   }
 
   render(ctx) {
+    const time = performance.now() * 0.005;
+
     // 1. Render Air Drop Crates
     for (const c of this.crates) {
       ctx.save();
@@ -4438,66 +4805,178 @@ class PowerUpSystem {
       // Parachute if in air
       if (!c.isGrounded) {
         ctx.save();
-        ctx.fillStyle = '#ff3700';
+        const sway = Math.sin(time + c.x * 0.01) * 0.12;
+        ctx.rotate(sway);
+
+        // Parachute suspension rigging cords
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.lineWidth = 1.6;
         ctx.beginPath();
-        ctx.arc(0, -32, 28, Math.PI, 0);
+        ctx.moveTo(-32, -42);
+        ctx.lineTo(-14, -16);
+        ctx.moveTo(32, -42);
+        ctx.lineTo(14, -16);
+        ctx.moveTo(-16, -42);
+        ctx.lineTo(-6, -16);
+        ctx.moveTo(16, -42);
+        ctx.lineTo(6, -16);
+        ctx.stroke();
+
+        // Parachute Canopy Base Dome
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetY = 4;
+
+        // Alternating Striped Silk Canopy
+        const canopyW = 34;
+        const canopyH = 26;
+        const canopyY = -42;
+
+        // Outer Orange Gores
+        ctx.fillStyle = '#ff5500';
+        ctx.beginPath();
+        ctx.moveTo(-canopyW, canopyY);
+        ctx.quadraticCurveTo(-canopyW * 0.85, canopyY - canopyH, 0, canopyY - canopyH);
+        ctx.quadraticCurveTo(canopyW * 0.85, canopyY - canopyH, canopyW, canopyY);
+        ctx.quadraticCurveTo(0, canopyY + 6, -canopyW, canopyY);
         ctx.fill();
 
-        ctx.fillStyle = '#ffffff';
+        // Center White Panel Gore
+        ctx.fillStyle = '#f8fafc';
         ctx.beginPath();
-        ctx.arc(0, -32, 16, Math.PI, 0);
+        ctx.moveTo(-canopyW * 0.42, canopyY);
+        ctx.quadraticCurveTo(-canopyW * 0.25, canopyY - canopyH, 0, canopyY - canopyH);
+        ctx.quadraticCurveTo(canopyW * 0.25, canopyY - canopyH, canopyW * 0.42, canopyY);
+        ctx.quadraticCurveTo(0, canopyY + 4, -canopyW * 0.42, canopyY);
         ctx.fill();
 
-        // Parachute suspension lines
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+        // Inner Shadow / Depth Arc
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(-26, -32);
-        ctx.lineTo(-14, -14);
-        ctx.moveTo(26, -32);
-        ctx.lineTo(14, -14);
-        ctx.moveTo(0, -32);
-        ctx.lineTo(0, -14);
+        ctx.moveTo(-canopyW, canopyY);
+        ctx.quadraticCurveTo(0, canopyY + 6, canopyW, canopyY);
         ctx.stroke();
+
         ctx.restore();
       }
 
-      // Wooden Box with Gold Corner Reinforcements
-      ctx.fillStyle = '#b45309'; // Rich wood brown
-      ctx.fillRect(-18, -18, 36, 36);
+      // Fortified High-Tech Supply Crate
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+      ctx.shadowBlur = 12;
+      ctx.shadowOffsetY = 3;
 
-      ctx.fillStyle = '#78350f';
-      ctx.fillRect(-15, -15, 30, 30);
+      // Dark reinforced metal body
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.roundRect(-18, -18, 36, 36, 5);
+      ctx.fill();
 
-      // Golden band & Question Mark
-      ctx.fillStyle = '#fbbf24';
-      ctx.fillRect(-4, -18, 8, 36);
-      ctx.fillRect(-18, -4, 36, 8);
+      // Industrial hazard gold inner face
+      const crateGrad = ctx.createLinearGradient(-15, -15, 15, 15);
+      crateGrad.addColorStop(0, '#f59e0b');
+      crateGrad.addColorStop(1, '#b45309');
+      ctx.fillStyle = crateGrad;
+      ctx.beginPath();
+      ctx.roundRect(-14, -14, 28, 28, 3);
+      ctx.fill();
 
-      ctx.font = '900 18px "Outfit", sans-serif';
+      // Corner steel bracket reinforcements
+      ctx.fillStyle = '#0f172a';
+      const bSize = 7;
+      ctx.fillRect(-18, -18, bSize, bSize);
+      ctx.fillRect(18 - bSize, -18, bSize, bSize);
+      ctx.fillRect(-18, 18 - bSize, bSize, bSize);
+      ctx.fillRect(18 - bSize, 18 - bSize, bSize, bSize);
+
+      // Steel Rivets
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(-16, -16, 3, 3);
+      ctx.fillRect(13, -16, 3, 3);
+      ctx.fillRect(-16, 13, 3, 3);
+      ctx.fillRect(13, 13, 3, 3);
+
+      // Pulsing Holographic Core & Question Mark
+      const pulse = 0.85 + Math.sin(time * 3) * 0.15;
+      ctx.shadowColor = '#fbbf24';
+      ctx.shadowBlur = 14 * pulse;
       ctx.fillStyle = '#ffffff';
+      ctx.font = '900 20px "Outfit", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.shadowColor = '#000000';
-      ctx.shadowBlur = 4;
       ctx.fillText('?', 0, 1);
 
       ctx.restore();
+      ctx.restore();
     }
 
-    // 2. Render Rocket Boxing Gloves
+    // 2. Render Rocket Boxing Gloves (High-Fidelity Arcade Sprite)
     for (const g of this.gloves) {
       ctx.save();
       ctx.translate(g.x, g.y);
       const dir = Math.sign(g.vx);
-
-      ctx.font = '36px "Segoe UI Emoji", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
       if (dir < 0) {
         ctx.scale(-1, 1);
       }
-      ctx.fillText('🥊', 0, 0);
+
+      // Jet Engine Exhaust Flame
+      const flameFlicker = 1.0 + Math.sin(time * 12) * 0.25;
+      const flameGrad = ctx.createLinearGradient(-14, 0, -42 * flameFlicker, 0);
+      flameGrad.addColorStop(0, '#ffffff');
+      flameGrad.addColorStop(0.2, '#00f0ff');
+      flameGrad.addColorStop(0.6, '#ff5500');
+      flameGrad.addColorStop(1, 'rgba(255, 0, 0, 0)');
+
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 16;
+      ctx.fillStyle = flameGrad;
+      ctx.beginPath();
+      ctx.moveTo(-14, -8);
+      ctx.lineTo(-42 * flameFlicker, 0);
+      ctx.lineTo(-14, 8);
+      ctx.closePath();
+      ctx.fill();
+
+      // Chrome Rocket Thruster Nozzle
+      ctx.shadowColor = 'transparent';
+      ctx.fillStyle = '#475569';
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(-16, -11, 10, 22, 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Boxing Glove Main Leather Fist
+      ctx.fillStyle = '#dc2626';
+      ctx.strokeStyle = '#7f1d1d';
+      ctx.lineWidth = 2.2;
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+      ctx.shadowBlur = 8;
+
+      ctx.beginPath();
+      ctx.moveTo(-6, -16);
+      ctx.quadraticCurveTo(18, -18, 24, -4);
+      ctx.quadraticCurveTo(26, 12, 14, 18);
+      ctx.quadraticCurveTo(0, 18, -6, 12);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Glove Thumb
+      ctx.beginPath();
+      ctx.moveTo(8, -10);
+      ctx.quadraticCurveTo(16, -6, 12, 4);
+      ctx.stroke();
+
+      // Golden Wrist Binding Cuff
+      ctx.fillStyle = '#fbbf24';
+      ctx.strokeStyle = '#b45309';
+      ctx.lineWidth = 1.2;
+      ctx.fillRect(-9, -13, 5, 26);
+      ctx.strokeRect(-9, -13, 5, 26);
+
       ctx.restore();
     }
   }
@@ -4791,11 +5270,29 @@ class RivalBot {
     this.speedMultiplier = 1.0;
     this.giantHeadMultiplier = 1.0;
 
+    this.isHumanControlled = false;
+    this.canDoubleJump = true;
+    this.isDashing = false;
+    this.dashTimer = 0;
+    this.dashVx = 0;
+    this.dashCooldown = 0;
+    this.dashGhosts = [];
+    this.isSpinning = false;
+    this.spinTime = 0;
+    this.spinDuration = 0.36;
+    this.flipAngle = 0;
+    this.isMoving = false;
+    this.activePowerMultiplier = 1.0;
+
     this.kickCooldown = 0;
     this.tackleCooldown = 0;
     this.jumpCooldown = 0;
     this.enabled = true;
     this.difficulty = 'medium';
+  }
+
+  setHumanControlled(isHuman) {
+    this.isHumanControlled = !!isHuman;
   }
 
   setDifficulty(level = 'medium') {
@@ -4838,10 +5335,233 @@ class RivalBot {
     this.freezeTimer = 0;
     this.stunTimer = 0;
     this.direction = -1;
+    this.isDashing = false;
+    this.dashTimer = 0;
+    this.dashVx = 0;
+    this.dashGhosts = [];
+    this.isSpinning = false;
+    this.spinTime = 0;
+    this.flipAngle = 0;
+    this.canDoubleJump = true;
+    this.isMoving = false;
+    this.activePowerMultiplier = 1.0;
     this.animController.play('idle');
   }
 
-  update(dt, ball, player, collisionSystem, ragdollSystem, superShots) {
+  triggerJump() {
+    if (this.isStunned || this.isFrozen || !this.enabled) return;
+    this.soundManager.init();
+
+    if (this.isGrounded) {
+      const jumpMult = this.character?.stats?.jump || 1.0;
+      this.vy = -750 * jumpMult;
+      this.isGrounded = false;
+      this.canDoubleJump = true;
+      this.animController.play('jump');
+      this.animController.triggerJumpStretch(1.25);
+      this.soundManager.play('headImpact');
+      this.particleSystem.spawnDust(this.x, this.y, 8);
+    } else if (this.canDoubleJump) {
+      const jumpMult = this.character?.stats?.jump || 1.0;
+      this.vy = -520 * jumpMult;
+      this.canDoubleJump = false;
+      this.isSpinning = true;
+      this.spinTime = 0;
+      this.spinDuration = 0.36;
+      this.flipAngle = 0;
+      this.soundManager.play('recover');
+      this.particleSystem.spawnAirRing(this.x, this.y - 5, '#ff3700');
+      this.particleSystem.spawnSparks(this.x, this.y - 5, 14, '#ff3700');
+      this.animController.play('jump');
+      this.animController.triggerJumpStretch(1.0);
+    }
+  }
+
+  triggerDash() {
+    if (this.isStunned || this.isFrozen || !this.enabled) return;
+    if (this.dashCooldown > 0) return;
+    this.soundManager.init();
+
+    const dir = this.direction || -1;
+    this.dashCooldown = 0.45;
+    this.isDashing = true;
+    this.dashTimer = 0.16;
+
+    if (!this.isGrounded) {
+      this.dashVx = dir * 960;
+      this.vy = -60;
+      this.soundManager.play('laser');
+      this.particleSystem.spawnAirRing(this.x, this.y - 30, '#ffd700');
+      this.particleSystem.spawnSparks(this.x, this.y - 30, 16, '#ffd700');
+    } else {
+      this.dashVx = dir * 1020;
+      this.soundManager.play('kick');
+      this.particleSystem.spawnAirRing(this.x, this.y - 15, '#ff3700');
+      this.particleSystem.spawnSparks(this.x - dir * 25, this.y - 15, 14, '#ff3700');
+    }
+  }
+
+  triggerKick(ball, player, collisionSystem, chargeRatio = null) {
+    if (this.isStunned || this.isFrozen || !this.enabled) return;
+    this.soundManager.init();
+
+    if (chargeRatio !== null) {
+      const powerMult = this.character?.stats?.power || 1.0;
+      this.activePowerMultiplier = (1.4 + chargeRatio * 0.7) * powerMult;
+
+      this.soundManager.playSubBassKick();
+      this.soundManager.play('kick');
+      this.soundManager.play('chargedBlast');
+
+      this.animController.play('kick');
+      this.particleSystem.spawnSonicBoom(this.x, this.y - 20, this.direction, '#ff3700');
+      this.particleSystem.spawnFlameBurst(this.x, this.y - 20, 24, ['#ff3700', '#ffffff', '#ffd000']);
+      const pct = Math.round(50 + chargeRatio * 50);
+      collisionSystem?.addFloatingText(`⚡ ¡CAÑONAZO P2 ${pct}%! ⚡`, this.x, this.y - 95, '#ff3700', 24);
+      this.performHitCheck(ball, player, collisionSystem, true);
+      return;
+    }
+
+    const powerMult = this.character?.stats?.power || 1.0;
+    this.activePowerMultiplier = 1.25 * powerMult;
+
+    let chosenAnim = 'kick';
+    const dx = (ball.x - this.x) * this.direction;
+    const dy = ball.y - this.y;
+    const dist = Math.hypot(ball.x - this.x, ball.y - this.y);
+
+    if (!this.isGrounded) {
+      if (dy < -35 && dist < 170) {
+        chosenAnim = 'bicycle_kick';
+        this.vy = -380;
+        this.particleSystem.spawnAirRing(this.x, this.y - 30, '#ffd700');
+        this.soundManager.play('chargedBlast');
+      } else if (dy > -20 && dx > 15 && dist < 150) {
+        chosenAnim = 'smash_header';
+        this.particleSystem.spawnAirRing(this.x, this.y - 20, '#ffcc00');
+        this.soundManager.play('headImpact');
+      } else {
+        chosenAnim = 'diving_header';
+        this.vx = this.direction * 320;
+        this.particleSystem.spawnAirRing(this.x, this.y - 20, '#ff5500');
+        this.soundManager.play('kick');
+      }
+    } else {
+      if (dx < -15 && dist < 100) {
+        chosenAnim = 'scorpion_kick';
+        this.soundManager.play('kick');
+      } else if (this.isMoving && dx > 10) {
+        chosenAnim = 'rocket_kick';
+        this.particleSystem.spawnTurfSpray(this.x, this.groundY, this.direction, 14);
+        this.soundManager.play('laser');
+      } else {
+        chosenAnim = 'kick';
+        this.soundManager.play('kick');
+      }
+    }
+
+    this.animController.play(chosenAnim);
+    this.particleSystem.spawnSparks(this.x + 35 * this.direction, this.y - 15, 14, '#ff3700');
+    this.performHitCheck(ball, player, collisionSystem);
+  }
+
+  triggerSuper(ball, player, collisionSystem, superShots) {
+    if (this.isStunned || this.isFrozen || !this.enabled) return;
+    this.soundManager.init();
+
+    if (this.power >= 100) {
+      this.power = 0;
+      const powerMult = this.character?.stats?.power || 1.0;
+      this.activePowerMultiplier = 2.4 * powerMult;
+      this.animController.play('super_shot');
+      this.soundManager.play('superPower');
+      this.soundManager.play('chargedBlast');
+
+      const superColors = this.character?.super?.colors || ['#ff3700', '#ffd000'];
+      this.particleSystem.spawnFlameAura(this.x, this.y - 65, superColors);
+
+      if (superShots) {
+        superShots.launch(ball, this.character, this.direction, 'rival', { player, rivalBot: this });
+      } else {
+        ball.kick(this.direction * 980, -320, true, 'rival');
+      }
+      collisionSystem?.addFloatingText(`🔥 ¡${this.character?.super?.name || 'SUPER TIRO P2'}! 🔥`, this.x, this.y - 95, superColors[0] || '#ff3700', 24);
+    } else {
+      this.triggerKick(ball, player, collisionSystem);
+      collisionSystem?.addFloatingText('⚡ POWER INSUFICIENTE P2', this.x, this.y - 95, '#ff5500', 16);
+    }
+  }
+
+  performHitCheck(ball, player, collisionSystem, forceHit = false) {
+    const footTip = this.skeleton.footFront.getWorldTip();
+    const footOffsetX = Math.abs(footTip.x - this.skeleton.root.x);
+    this.kickHitbox.x = this.x + this.direction * footOffsetX;
+    this.kickHitbox.y = footTip.y;
+
+    const distFootBall = Math.hypot(ball.x - this.kickHitbox.x, ball.y - this.kickHitbox.y);
+    const reach = forceHit ? ball.radius + this.kickHitbox.radius + 36 : ball.radius + this.kickHitbox.radius + 18;
+
+    if (distFootBall <= reach) {
+      this.kickCooldown = 0.28;
+      const powerMult = (this.character?.stats?.power || 1.0) * (this.activePowerMultiplier || 1.0);
+      const cur = this.animController.currentAnim;
+      const dir = this.direction;
+
+      if (cur === 'bicycle_kick') {
+        ball.kick(dir * (1160 + Math.random() * 80) * powerMult, -280 * powerMult, false, 'rival', 'bicycle', dir * 3.6);
+        this.power = Math.min(100, this.power + 22);
+        this.particleSystem.spawnSonicBoom(ball.x, ball.y, dir, '#ffd700');
+        this.particleSystem.spawnKickImpact(ball.x, ball.y, dir, '#ffd700', 30);
+        this.soundManager.play('chargedBlast');
+        this.soundManager.play('kick');
+        collisionSystem?.triggerShake(13);
+        collisionSystem?.addFloatingText('🤸 ¡CHILENA P2!', this.x, this.y - 95, '#ffd700', 22);
+      } else if (cur === 'rocket_kick') {
+        ball.kick(dir * (1120 + Math.random() * 70) * powerMult, -85 * powerMult, false, 'rival', 'rocket', dir * 1.4);
+        this.power = Math.min(100, this.power + 20);
+        this.particleSystem.spawnTurfSpray(ball.x, this.groundY, dir, 20);
+        this.particleSystem.spawnSonicBoom(ball.x, ball.y, dir, '#ff5500');
+        this.particleSystem.spawnKickImpact(ball.x, ball.y, dir, '#ff5500', 26);
+        this.soundManager.play('laser');
+        this.soundManager.play('kick');
+        collisionSystem?.triggerShake(11);
+        collisionSystem?.addFloatingText('🚀 ¡CAÑONAZO P2!', this.x, this.y - 95, '#ff5500', 22);
+      } else if (cur === 'diving_header') {
+        ball.kick(dir * (1040 + Math.random() * 60) * powerMult, -170 * powerMult, false, 'rival', 'palomita', dir * 2.0);
+        this.power = Math.min(100, this.power + 18);
+        this.particleSystem.spawnKickImpact(ball.x, ball.y, dir, '#ff9900', 22);
+        this.soundManager.play('headImpact');
+        collisionSystem?.addFloatingText('⚡ ¡PALOMITA P2!', this.x, this.y - 95, '#ff9900', 20);
+      } else if (cur === 'scorpion_kick') {
+        ball.kick(dir * (960 + Math.random() * 60) * powerMult, -440 * powerMult, false, 'rival', 'scorpion', -dir * 3.4);
+        this.power = Math.min(100, this.power + 18);
+        this.particleSystem.spawnKickImpact(ball.x, ball.y, dir, '#ff00aa', 22);
+        this.soundManager.play('kick');
+        collisionSystem?.addFloatingText('🦂 ¡TIRO ESCORPIÓN P2!', this.x, this.y - 95, '#ff00aa', 20);
+      } else if (cur === 'smash_header') {
+        ball.kick(dir * (880 + Math.random() * 60) * powerMult, 360 * powerMult, false, 'rival', 'smash', dir * 2.6);
+        this.power = Math.min(100, this.power + 18);
+        this.particleSystem.spawnTurfSpray(ball.x, this.groundY, dir, 18);
+        this.particleSystem.spawnKickImpact(ball.x, ball.y, dir, '#ffd700', 24);
+        this.soundManager.play('headImpact');
+        collisionSystem?.addFloatingText('💥 ¡MARTILLAZO P2!', this.x, this.y - 95, '#ffd700', 20);
+      } else {
+        const isCharged = this.activePowerMultiplier > 1.35;
+        ball.kick(
+          dir * (780 + Math.random() * 80) * powerMult,
+          (-340 - Math.random() * 80) * powerMult,
+          false,
+          'rival',
+          isCharged ? 'rocket' : 'drive'
+        );
+        this.power = Math.min(100, this.power + (isCharged ? 22 : 14));
+        this.particleSystem.spawnKickImpact(footTip.x, footTip.y, dir, isCharged ? '#ffd700' : '#ff9900', isCharged ? 28 : 18);
+        this.soundManager.play('kick');
+      }
+    }
+  }
+
+  update(dt, ball, player, collisionSystem, ragdollSystem, superShots, inputManager = null) {
     if (!this.enabled) return { face: 'idle' };
 
     if (this.kickCooldown > 0) this.kickCooldown -= dt;
@@ -4861,9 +5581,9 @@ class RivalBot {
       return { face: 'ko', squashY: 1.0, stretchX: 1.0, aura: false };
     }
 
-    // Passive power meter build-up (ready for super shots)
+    // Passive power meter build-up (balanced arcade rate)
     if (this.power < 100) {
-      this.power = Math.min(100, this.power + dt * 9.5);
+      this.power = Math.min(100, this.power + dt * 6.0);
     }
 
     // Stun recovery
@@ -4879,6 +5599,174 @@ class RivalBot {
       this.skeleton.setPosition(this.x, this.y);
       this.skeleton.setFacing(this.direction);
       return this.animController.update(dt);
+    }
+
+    // === PLAYER 2 HUMAN CONTROLLED BRANCH ===
+    if (this.isHumanControlled) {
+      // Dash Cooldown decrement
+      if (this.dashCooldown > 0) {
+        this.dashCooldown = Math.max(0, this.dashCooldown - dt);
+      }
+
+      // Smooth Physics Dash with Continuous Velocity Deceleration & Afterimages
+      if (this.isDashing) {
+        this.dashTimer -= dt;
+        this.x += this.dashVx * dt;
+        this.dashVx *= 0.92;
+
+        if (!this.dashGhosts) this.dashGhosts = [];
+        this.dashGhosts.push({
+          x: this.x,
+          y: this.y,
+          direction: this.direction || -1,
+          alpha: 0.65,
+          color: this.character?.super?.colors?.[0] || 'rgba(255, 55, 0, 0.45)'
+        });
+
+        if (this.dashTimer <= 0) {
+          this.isDashing = false;
+          this.dashVx = 0;
+        }
+      }
+
+      // Fade dash ghost afterimages
+      if (this.dashGhosts && this.dashGhosts.length > 0) {
+        for (let i = this.dashGhosts.length - 1; i >= 0; i--) {
+          this.dashGhosts[i].alpha -= dt * 4.2;
+          if (this.dashGhosts[i].alpha <= 0) {
+            this.dashGhosts.splice(i, 1);
+          }
+        }
+      }
+
+      // Athletic Double Jump 360 Flip / Spin
+      if (this.isSpinning) {
+        this.spinTime += dt;
+        const progress = Math.min(1.0, this.spinTime / this.spinDuration);
+        this.flipAngle = progress * Math.PI * 2 * (this.direction || -1);
+        if (progress >= 1.0) {
+          this.isSpinning = false;
+          this.flipAngle = 0;
+        }
+      }
+
+      const speedMult = (this.character?.stats?.speed || 1.0) * (this.speedMultiplier || 1.0);
+      const moveSpeed = 360 * speedMult;
+      let isMoving = false;
+
+      if (!this.isStunned && !this.isFrozen && !this.isDashing && inputManager) {
+        if (inputManager.isP2KeyDown('left')) {
+          this.x -= moveSpeed * dt;
+          this.direction = -1;
+          isMoving = true;
+        }
+        if (inputManager.isP2KeyDown('right')) {
+          this.x += moveSpeed * dt;
+          this.direction = 1;
+          isMoving = true;
+        }
+      }
+      this.isMoving = isMoving;
+
+      // Clamp to pitch boundaries
+      this.x = Math.max(78, Math.min(this.x, this.stageWidth - 78));
+
+      // Vertical gravity & platform physics
+      if (!this.isGrounded) {
+        this.vy += 1580 * dt;
+        this.y += this.vy * dt;
+
+        if (this.y >= this.groundY) {
+          const impact = Math.min(1.6, Math.abs(this.vy) / 450);
+          this.y = this.groundY;
+          this.vy = 0;
+          this.isGrounded = true;
+          this.canDoubleJump = true;
+          this.animController.triggerLandingSquash(impact);
+          this.particleSystem.spawnDust(this.x, this.groundY, 7);
+          this.particleSystem.spawnSparks(this.x, this.groundY, 8, 'rgba(255,255,255,0.6)');
+        }
+      } else {
+        this.y = this.groundY;
+        this.vy = 0;
+        this.canDoubleJump = true;
+      }
+
+      // Hitboxes updates
+      const footTip = this.skeleton.footFront.getWorldTip();
+      const footOffsetX = Math.abs(footTip.x - this.skeleton.root.x);
+      this.kickHitbox.x = this.x + this.direction * footOffsetX;
+      this.kickHitbox.y = footTip.y;
+
+      this.headHitbox.x = this.skeleton.head.worldX + this.direction * 12;
+      this.headHitbox.y = this.skeleton.head.worldY - 32;
+
+      this.torsoHitbox.x = this.skeleton.torso.worldX;
+      this.torsoHitbox.y = this.skeleton.torso.worldY - 14;
+
+      // Continuous collision check if kick animation is active
+      const curAnim = this.animController.currentAnim;
+      const isOneShotKick = ['kick', 'rocket_kick', 'bicycle_kick', 'diving_header', 'scorpion_kick', 'smash_header'].includes(curAnim);
+      const distFootBall = Math.hypot(ball.x - this.kickHitbox.x, ball.y - this.kickHitbox.y);
+      if (isOneShotKick && this.kickCooldown <= 0 && distFootBall < ball.radius + this.kickHitbox.radius) {
+        this.performHitCheck(ball, player, collisionSystem);
+      }
+
+      // Header collision check
+      const distHeadBall = Math.hypot(ball.x - this.headHitbox.x, ball.y - this.headHitbox.y);
+      if (this.kickCooldown <= 0 && distHeadBall < ball.radius + this.headHitbox.radius) {
+        this.kickCooldown = 0.22;
+        const powerMult = (this.character?.stats?.power || 1.0) * (this.activePowerMultiplier || 1.0);
+        const dir = this.direction;
+
+        if (!this.isGrounded && curAnim === 'smash_header') {
+          ball.kick(dir * (880 + Math.random() * 60) * powerMult, 360 * powerMult, false, 'rival', 'smash', dir * 2.6);
+          this.particleSystem.spawnTurfSpray(ball.x, this.groundY, dir, 16);
+          this.particleSystem.spawnKickImpact(ball.x, ball.y, dir, '#ffd700', 22);
+          this.soundManager.play('headImpact');
+          collisionSystem?.addFloatingText('💥 ¡MARTILLAZO P2!', this.x, this.y - 95, '#ffd700', 20);
+        } else if (!this.isGrounded) {
+          ball.kick(dir * (680 + Math.random() * 80) * powerMult, -Math.abs(ball.vy) * 0.75 - 240, false, 'rival', 'header');
+          this.particleSystem.spawnKickImpact(ball.x, ball.y, dir, '#ffd700', 20);
+          this.soundManager.play('headImpact');
+        } else if (isMoving) {
+          ball.kick(dir * 420 * powerMult, -Math.abs(ball.vy) * 0.6 - 160, false, 'rival');
+          this.soundManager.play('headImpact');
+        } else {
+          ball.vx = dir * 135;
+          ball.vy = -Math.abs(ball.vy) * 0.55 - 90;
+          ball.lastKickedBy = 'rival';
+          this.soundManager.play('bounce');
+        }
+      }
+
+      // State machine
+      const isOneShot = ['kick', 'rocket_kick', 'bicycle_kick', 'diving_header', 'scorpion_kick', 'smash_header', 'super_shot'].includes(curAnim);
+      const isFinished = isOneShot && (this.animController.animTime >= this.animController.getClip().duration * 0.95);
+
+      if (this.isStunned) {
+        if (curAnim !== 'stun') this.animController.play('stun');
+      } else if (!isOneShot || isFinished) {
+        if (!this.isGrounded) {
+          if (curAnim !== 'jump') this.animController.play('jump');
+        } else if (isMoving) {
+          if (curAnim !== 'run') this.animController.play('run');
+        } else {
+          if (curAnim !== 'idle') this.animController.play('idle');
+        }
+      }
+
+      this.skeleton.setPosition(this.x, this.y);
+      this.skeleton.setFacing(this.direction);
+      this.animController.setLookTarget(ball.x, ball.y);
+      const animState = this.animController.update(this.isFrozen ? 0 : dt);
+
+      if (animState.aura || curAnim === 'super_shot') {
+        const colors = this.character?.super?.colors || ['#ff3700', '#ffd000'];
+        this.particleSystem.spawnFlameAura(this.x, this.y - 75, colors);
+      }
+
+      return animState;
     }
 
     // 1. Positioning AI: Defend right goal or press the ball
@@ -4920,6 +5808,7 @@ class RivalBot {
       this.isGrounded = false;
       this.jumpCooldown = 1.1;
       this.animController.play('jump');
+      this.animController.triggerJumpStretch(1.2);
       this.soundManager.play('headImpact');
     }
 
@@ -4928,9 +5817,11 @@ class RivalBot {
       this.vy += 1580 * dt;
       this.y += this.vy * dt;
       if (this.y >= this.groundY) {
+        const impact = Math.min(1.5, Math.abs(this.vy) / 450);
         this.y = this.groundY;
         this.vy = 0;
         this.isGrounded = true;
+        this.animController.triggerLandingSquash(impact);
       }
     } else {
       this.y = this.groundY;
@@ -4948,10 +5839,11 @@ class RivalBot {
     this.torsoHitbox.y = this.skeleton.torso.worldY - 14;
 
     // Remote / Ranged Super Ability cast:
-    // If RivalBot has full power (100) and ball is in play, unleash special ability from anywhere!
-    if (this.power >= 100 && this.kickCooldown <= 0 && ball.x < this.x && Math.random() < 0.018) {
+    // If RivalBot has full power (100) and ball is in attacking half, unleash special ability with telegraph!
+    const ballInAttackZone = ball.x > this.stageWidth * 0.28 && ball.x < this.x;
+    if (this.power >= 100 && this.kickCooldown <= 0 && ballInAttackZone && Math.random() < 0.006) {
       this.power = 0;
-      this.kickCooldown = 1.1;
+      this.kickCooldown = 1.2;
       this.animController.play('super_shot');
       this.soundManager.play('superPower');
       this.soundManager.play('chargedBlast');
@@ -4961,7 +5853,8 @@ class RivalBot {
       if (superShots) {
         superShots.launch(ball, this.character, -1, 'rival', { player, rivalBot: this });
       }
-      collisionSystem.addFloatingText(`🔥 ¡${this.character?.super?.name || 'TIRO RIVAL'}! 🔥`, this.x, this.y - 95, colors[0] || '#ff3700', 22);
+      collisionSystem.addFloatingText('⚠️ ¡SUPER TIRO RIVAL! ⚠️', this.x, this.y - 120, '#ff1744', 22);
+      collisionSystem.addFloatingText(`🔥 ¡${this.character?.super?.name || 'TIRO RIVAL'}! 🔥`, this.x, this.y - 95, colors[0] || '#ff3700', 20);
     }
 
     const distFootBall = Math.hypot(ball.x - this.kickHitbox.x, ball.y - this.kickHitbox.y);
@@ -5077,6 +5970,7 @@ class RivalBot {
 
     this.skeleton.setPosition(this.x, this.y);
     this.skeleton.setFacing(this.direction);
+    this.animController.setLookTarget(ball.x, ball.y);
     const animState = this.animController.update(dt);
 
     if (animState.aura || cur === 'super_shot') {
@@ -6360,7 +7254,7 @@ class AssetLoader {
         console.warn(`[AssetLoader] Failed to load ${item.src}`);
         resolve();
       };
-      img.src = item.src;
+      img.src = `${item.src}?v=sprites_hd_v32`;
       this.sprites[item.key] = img;
     }))).then(() => {
       this.loaded = true;
@@ -6437,14 +7331,16 @@ class CharacterRenderer {
     }
 
     if (showSkin) {
-      this.drawArm(ctx, skeleton.armBack, false, kit);
       this.drawBoot(ctx, skeleton.footBack, false);
+      this.drawLeg(ctx, skeleton.legBack, false, kit);
+      this.drawArm(ctx, skeleton.armBack, false, kit);
       this.drawJersey(ctx, skeleton.torso, kit, character, facing);
+      this.drawLeg(ctx, skeleton.legFront, true, kit);
       this.drawBoot(ctx, skeleton.footFront, true);
+      this.drawArm(ctx, skeleton.armFront, true, kit);
       if (animState?.face === 'strain' || animState?.face === 'power' || animState?.face === 'dragon') {
         this.drawKickSwoosh(ctx, skeleton.footFront, character);
       }
-      this.drawArm(ctx, skeleton.armFront, true, kit);
     }
     this.drawHead(ctx, skeleton.head, animState, headScale, showSkin, showMesh, character, options.hp);
 
@@ -6599,32 +7495,33 @@ class CharacterRenderer {
     ctx.rotate((bone.worldRotation + 90) * Math.PI / 180);
     if (kit && kit !== 'none') ctx.filter = kit;
 
-    const w = 72;
+    // Torso calibrated to 2:1 Chibi bobblehead proportion (width 64)
+    const w = 64;
     const h = (torsoImg.height / torsoImg.width) * w;
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-    ctx.shadowBlur = 10;
-    // Pivot centered on chest, slightly higher so shorts end above boots
-    ctx.drawImage(torsoImg, -w * 0.50, -h * 0.58, w, h);
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+    ctx.shadowBlur = 8;
+    // Pivot centered on chest, neck collar sits right under head chin
+    ctx.drawImage(torsoImg, -w * 0.50, -h * 0.36, w, h);
 
-    // Reset filter for layered uniform detailing (number and collar)
+    // Reset filter for layered uniform detailing (number)
     ctx.filter = 'none';
 
-    // Detailed Gold Collar Line
-    ctx.strokeStyle = 'rgba(255, 215, 0, 0.85)';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.arc(0, -h * 0.44, 9, 0, Math.PI);
-    ctx.stroke();
-
-    // Detailed Team Number badge on jersey chest
-    const num = facing > 0 ? '10' : '7';
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
-    ctx.shadowBlur = 4;
-    ctx.font = 'bold 13px "Outfit", sans-serif';
+    // Detailed Team Number badge on jersey chest (NEVER mirrored backwards)
+    const num = (character?.id === 'kenta' || !character) ? '10' : (character?.id === 'luchador' ? '7' : (character?.number || '9'));
+    ctx.save();
+    ctx.translate(0, -h * 0.04);
+    if (facing < 0) {
+      ctx.scale(-1, 1); // Un-mirror so number is never backwards
+    }
+    ctx.font = '900 12px "Outfit", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(num, 0, -h * 0.22);
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 3;
+    ctx.strokeText(num, 0, 0);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(num, 0, 0);
+    ctx.restore();
 
     ctx.restore();
   }
@@ -6635,34 +7532,17 @@ class CharacterRenderer {
 
     ctx.save();
     ctx.translate(bone.worldX, bone.worldY);
-    ctx.rotate(bone.worldRotation * Math.PI / 180);
+    // Align vertical arm sprite (sleeve top to fist bottom) along bone direction
+    ctx.rotate((bone.worldRotation - 90) * Math.PI / 180);
 
-    const w = isFront ? 26 : 22;
+    const w = isFront ? 22 : 18;
     const h = (armImg.height / armImg.width) * w;
     const filters = [];
     if (kit && kit !== 'none') filters.push(kit);
-    if (!isFront) filters.push('brightness(0.68) saturate(0.9)');
+    if (!isFront) filters.push('brightness(0.72) saturate(0.9)');
     if (filters.length) ctx.filter = filters.join(' ');
-    // Shoulder pivot at top center
-    ctx.drawImage(armImg, -w * 0.45, -h * 0.12, w, h);
-
-    // Captain's Armband on Front Arm!
-    if (isFront) {
-      ctx.filter = 'none';
-      ctx.fillStyle = '#ffd700';
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 1;
-      const bandY = h * 0.35;
-      ctx.fillRect(-w * 0.42, bandY, w * 0.84, 9);
-      ctx.strokeRect(-w * 0.42, bandY, w * 0.84, 9);
-
-      // Captain "C"
-      ctx.fillStyle = '#000000';
-      ctx.font = 'bold 8px "Outfit", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('C', 0, bandY + 4.5);
-    }
+    // Shoulder sleeve pivot at top center
+    ctx.drawImage(armImg, -w * 0.50, -h * 0.12, w, h);
 
     ctx.restore();
   }
@@ -6673,21 +7553,29 @@ class CharacterRenderer {
     // Head bone points upward (-90°); +90° compensation aligns head upright
     ctx.rotate((bone.worldRotation + 90) * Math.PI / 180);
 
-    const sX = headScaleMultiplier * (animState.headScaleX || 1.0);
-    const sY = headScaleMultiplier * (animState.headScaleY || 1.0);
+    // Natural living arcade blink (140ms duration every ~3.8s)
+    const nowSec = performance.now() * 0.001;
+    const charSeed = character ? character.id.charCodeAt(0) * 0.6 : 0;
+    const blinkCycle = (nowSec + charSeed) % 4.2;
+    const isBlinking = blinkCycle > 4.06 && (animState.face === 'idle' || !animState.face);
+
+    // Apply authentic 1.25x Chibi caricature multiplier so head is 2x wider than torso
+    const blinkSquash = isBlinking ? 0.86 : 1.0;
+    const sX = 1.25 * headScaleMultiplier * (animState.headScaleX || 1.0) * (isBlinking ? 1.04 : 1.0);
+    const sY = 1.25 * headScaleMultiplier * (animState.headScaleY || 1.0) * blinkSquash;
     ctx.scale(sX, sY);
 
     if (showSkin) {
       const headImg = this.pickHead(character, animState.face);
       if (this.isReady(headImg)) {
-        const cfg = character?.head || { width: 106, pivotX: 0.48, pivotY: 0.86 };
+        const cfg = character?.head || { width: 104, pivotX: 0.50, pivotY: 0.88 };
         const w = cfg.width;
         const h = (headImg.height / headImg.width) * w;
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
-        ctx.shadowBlur = 14;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.40)';
+        ctx.shadowBlur = 12;
         ctx.shadowOffsetY = 4;
-        // Neck pivot sits at bone origin (jersey collar)
-        ctx.drawImage(headImg, -w * cfg.pivotX, -h * cfg.pivotY, w, h);
+        // Chin sits cleanly right above the jersey collar
+        ctx.drawImage(headImg, -w * (cfg.pivotX ?? 0.50), -h * (cfg.pivotY ?? 0.88), w, h);
         ctx.shadowColor = 'transparent';
 
         // Expressive low-HP sweat droplets
@@ -6845,26 +7733,88 @@ class CharacterRenderer {
     ctx.translate(bone.worldX, bone.worldY);
     ctx.rotate(bone.worldRotation * Math.PI / 180);
 
-    const w = isFront ? 50 : 44;
+    const w = isFront ? 48 : 42;
     const h = (bootImg.height / bootImg.width) * w;
-    if (!isFront) ctx.filter = 'brightness(0.68) saturate(0.9)';
-    // Ankle/heel pivot
-    ctx.drawImage(bootImg, -w * 0.28, -h * 0.52, w, h);
+    if (!isFront) ctx.filter = 'brightness(0.72) saturate(0.9)';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+    ctx.shadowBlur = 6;
+    // Ankle collar pivot: sits right at ankle joint, cleat sole touches ground
+    ctx.drawImage(bootImg, -w * 0.35, -h * 0.38, w, h);
 
-    // Athletic Speed Swoosh / Stripe on boot
-    ctx.filter = 'none';
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2.2;
+    ctx.restore();
+  }
+
+  drawLeg(ctx, bone, isFront, kit) {
+    if (!bone) return;
+    ctx.save();
+    ctx.translate(bone.worldX, bone.worldY);
+    ctx.rotate(bone.worldRotation * Math.PI / 180);
+
+    const len = bone.length || 20;
+    const w = isFront ? 14 : 12;
+
+    const filters = [];
+    if (kit && kit !== 'none') filters.push(kit);
+    if (!isFront) filters.push('brightness(0.72) saturate(0.9)');
+    if (filters.length) ctx.filter = filters.join(' ');
+
+    // Athletic soccer sock (matching kit shorts, e.g. blue or dark)
+    // Connecting shorts socket (x: 0) to boot collar (x: len)
+    ctx.fillStyle = '#1e3a8a'; // Deep athletic navy/blue matching uniform shorts
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 1.6;
+
     ctx.beginPath();
-    ctx.moveTo(-w * 0.12, -h * 0.15);
-    ctx.quadraticCurveTo(0, -h * 0.05, w * 0.35, -h * 0.2);
+    // Tapered muscular soccer calf shape
+    ctx.moveTo(0, -w * 0.55);
+    ctx.lineTo(len + 2, -w * 0.42);
+    ctx.lineTo(len + 2, w * 0.42);
+    ctx.lineTo(0, w * 0.55);
+    ctx.closePath();
+    ctx.fill();
     ctx.stroke();
 
-    // Cleat Sole Studs underneath
-    ctx.fillStyle = '#111111';
-    for (let s = 0; s < 3; s++) {
-      ctx.fillRect(-w * 0.15 + s * 14, h * 0.44, 4, 3);
-    }
+    // Twin Championship White Accent Stripes on the sock
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(len * 0.35, -w * 0.48, 2.5, w * 0.96);
+    ctx.fillRect(len * 0.60, -w * 0.45, 2.5, w * 0.90);
+
+    ctx.restore();
+  }
+
+  drawHeadbandRibbon(ctx, bone) {
+    if (!bone) return;
+    ctx.save();
+    ctx.translate(bone.worldX, bone.worldY);
+    ctx.rotate(bone.worldRotation * Math.PI / 180);
+
+    const time = performance.now() * 0.008;
+    const wave1 = Math.sin(time) * 4;
+    const wave2 = Math.cos(time * 1.2) * 5;
+
+    // Ribbon 1 (Main Red Banner)
+    ctx.fillStyle = '#dc2626';
+    ctx.strokeStyle = '#7f1d1d';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(0, -4);
+    ctx.quadraticCurveTo(-14, -8 + wave1, -28, -12 + wave1 * 1.5);
+    ctx.lineTo(-24, -4 + wave1);
+    ctx.quadraticCurveTo(-12, 0, 0, 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Ribbon 2 (Secondary lower tail)
+    ctx.fillStyle = '#b91c1c';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(-12, 6 + wave2, -26, 8 + wave2 * 1.3);
+    ctx.lineTo(-22, 14 + wave2);
+    ctx.quadraticCurveTo(-10, 8, 0, 5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
 
     ctx.restore();
   }
@@ -7031,21 +7981,54 @@ class GameRenderer {
     // 3. Ground Pitch Line & Center Arc
     this.stadiumRenderer.renderPitchLine(ctx, this.stageWidth, this.groundY);
 
-    // 4. Character Shadows
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
+    // 4. Dynamic Character & Ball Ground Shadows with Realistic Elevation Scaling
+    // Player 1 Ground Shadow
+    const p1Elev = Math.max(0, this.groundY - player.y);
+    const p1Scale = Math.max(0.35, 1.0 - (p1Elev / 280) * 0.65);
+    const p1Alpha = Math.max(0.10, 0.42 - (p1Elev / 280) * 0.30);
+    ctx.fillStyle = `rgba(0, 0, 0, ${p1Alpha.toFixed(3)})`;
     ctx.beginPath();
-    ctx.ellipse(player.x, this.groundY + 3, 44, 11, 0, 0, Math.PI * 2);
+    ctx.ellipse(player.x, this.groundY + 3, 46 * p1Scale, 11 * p1Scale, 0, 0, Math.PI * 2);
     ctx.fill();
 
+    // CPU Rival Ground Shadow
     if (sceneState.rivalBot && sceneState.rivalBot.enabled) {
+      const cpu = sceneState.rivalBot;
+      const cpuElev = Math.max(0, this.groundY - cpu.y);
+      const cpuScale = Math.max(0.35, 1.0 - (cpuElev / 280) * 0.65);
+      const cpuAlpha = Math.max(0.10, 0.42 - (cpuElev / 280) * 0.30);
+      ctx.fillStyle = `rgba(0, 0, 0, ${cpuAlpha.toFixed(3)})`;
       ctx.beginPath();
-      ctx.ellipse(sceneState.rivalBot.x, this.groundY + 3, 44, 11, 0, 0, Math.PI * 2);
+      ctx.ellipse(cpu.x, this.groundY + 3, 46 * cpuScale, 11 * cpuScale, 0, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // 4b. Hold-to-Charge Glowing Power Aura on Turf
-    if (this.chargingAura) {
-      const { x, y, ratio, color } = this.chargingAura;
+    // Ball Ground Shadow (Crucial 3D depth cue for judging aerial passes and headers)
+    const ballElev = Math.max(0, this.groundY - ball.y);
+    const ballScale = Math.max(0.32, 1.0 - (ballElev / 320) * 0.68);
+    const ballAlpha = Math.max(0.10, 0.48 - (ballElev / 320) * 0.34);
+    ctx.fillStyle = `rgba(0, 0, 0, ${ballAlpha.toFixed(3)})`;
+    ctx.beginPath();
+    ctx.ellipse(ball.x, this.groundY + 3, Math.max(8, ball.radius * 1.35 * ballScale), Math.max(3, 7 * ballScale), 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Supply Crates Ground Shadow (shows landing zone while parachute is falling)
+    if (sceneState.powerUpSystem && sceneState.powerUpSystem.crates) {
+      for (const crate of sceneState.powerUpSystem.crates) {
+        const crateElev = Math.max(0, this.groundY - crate.y);
+        const crateScale = Math.max(0.30, 1.0 - (crateElev / 340) * 0.70);
+        const crateAlpha = Math.max(0.08, 0.38 - (crateElev / 340) * 0.28);
+        ctx.fillStyle = `rgba(0, 0, 0, ${crateAlpha.toFixed(3)})`;
+        ctx.beginPath();
+        ctx.ellipse(crate.x, this.groundY + 3, 22 * crateScale, 6 * crateScale, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // 4b. Hold-to-Charge Glowing Power Aura on Turf (P1 & P2)
+    const drawAura = (aura) => {
+      if (!aura) return;
+      const { x, y, ratio, color } = aura;
       ctx.save();
       ctx.strokeStyle = color;
       ctx.lineWidth = 3.5;
@@ -7066,14 +8049,10 @@ class GameRenderer {
       ctx.ellipse(x, y + 2, 46 + ratio * 16, 12 + ratio * 4, 0, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * ratio);
       ctx.stroke();
       ctx.restore();
-    }
+    };
 
-    // 5. Ball Shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
-    const shadowScale = Math.max(0.2, 1 - (this.groundY - ball.y) / 400);
-    ctx.beginPath();
-    ctx.ellipse(ball.x, this.groundY + 3, ball.radius * shadowScale, (ball.radius * 0.38) * shadowScale, 0, 0, Math.PI * 2);
-    ctx.fill();
+    if (this.chargingAura) drawAura(this.chargingAura);
+    if (this.chargingAuraP2) drawAura(this.chargingAuraP2);
 
     // 5b. High-Speed Action Speed Lines (Anime/Arcade Rush)
     this.drawSpeedLines(ctx, ball);
@@ -7103,7 +8082,7 @@ class GameRenderer {
       ctx.restore();
     }
 
-    // 6b. Dash Ghost Afterimages (Motion Blur Rocket Trails)
+    // 6b. Dash Ghost Afterimages (Motion Blur Rocket Trails - P1 & P2)
     if (player.dashGhosts && player.dashGhosts.length > 0) {
       for (const ghost of player.dashGhosts) {
         ctx.save();
@@ -7111,6 +8090,20 @@ class GameRenderer {
         ctx.translate(ghost.x, ghost.y);
         ctx.scale(ghost.direction, 1);
         ctx.fillStyle = ghost.color || 'rgba(0, 240, 255, 0.4)';
+        ctx.beginPath();
+        ctx.ellipse(0, -45, 26, 44, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    if (sceneState.rivalBot && sceneState.rivalBot.dashGhosts && sceneState.rivalBot.dashGhosts.length > 0) {
+      for (const ghost of sceneState.rivalBot.dashGhosts) {
+        ctx.save();
+        ctx.globalAlpha = ghost.alpha;
+        ctx.translate(ghost.x, ghost.y);
+        ctx.scale(ghost.direction, 1);
+        ctx.fillStyle = ghost.color || 'rgba(255, 55, 0, 0.4)';
         ctx.beginPath();
         ctx.ellipse(0, -45, 26, 44, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -7136,8 +8129,14 @@ class GameRenderer {
     });
     ctx.restore();
 
-    // 7b. Rival Opponent Skins & Mesh (CPU Striker)
+    // 7b. Rival Opponent Skins & Mesh (P2 / CPU Striker)
     if (sceneState.rivalBot && sceneState.rivalBot.enabled) {
+      ctx.save();
+      if (sceneState.rivalBot.isSpinning && sceneState.rivalBot.flipAngle) {
+        ctx.translate(sceneState.rivalBot.x, sceneState.rivalBot.y - 45);
+        ctx.rotate(sceneState.rivalBot.flipAngle);
+        ctx.translate(-sceneState.rivalBot.x, -(sceneState.rivalBot.y - 45));
+      }
       this.characterRenderer.render(ctx, sceneState.rivalBot.skeleton, sceneState.rivalAnimState || { face: 'idle' }, {
         showSkin: options.showSkin,
         showMesh: options.showMesh,
@@ -7147,6 +8146,7 @@ class GameRenderer {
         hp: sceneState.rivalBot.hp,
         isSuperReady: sceneState.rivalBot.power >= 100
       });
+      ctx.restore();
 
       if (sceneState.rivalBot.isStunned) {
         this.drawStunStars(ctx, sceneState.rivalBot.skeleton.head);
@@ -7206,6 +8206,9 @@ class GameRenderer {
 
     // 13. Particles & Sparks
     particleSystem.render(ctx);
+
+    // 13b. Celebratory Confetti Cannons
+    this.stadiumRenderer.renderConfetti(ctx);
 
     // 14. Floating Comic Damage Numbers
     if (sceneState.collisionSystem) {
@@ -7673,6 +8676,9 @@ class StadiumRenderer {
     this.flagTime = 0;
     this.leftFlagBend = 0;
     this.rightFlagBend = 0;
+
+    // Celebratory Stadium Confetti Cannons
+    this.confetti = [];
   }
 
   setGoalProps(newProps = {}) {
@@ -7766,6 +8772,29 @@ class StadiumRenderer {
         }
       }
     }
+
+    // Explosive Confetti Cannon blast across arena!
+    const colors = ['#ffd700', '#ff0055', '#00f0ff', '#22c55e', '#a855f7', '#ff9100', '#ffffff'];
+    const startX = isRightGoal ? (this.lastStageWidth - 78) : 78;
+    for (let i = 0; i < 140; i++) {
+      const angle = isRightGoal ? (-Math.PI * 0.5 - Math.random() * 0.95) : (-Math.PI * 0.5 + Math.random() * 0.95);
+      const speed = Math.random() * 540 + 260;
+      this.confetti.push({
+        x: startX + (Math.random() - 0.5) * 50,
+        y: (this.lastGroundY || 600) - (130 + Math.random() * 80),
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        width: Math.random() * 9 + 5,
+        height: Math.random() * 6 + 4,
+        rot: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 14,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        life: 1.0,
+        decay: Math.random() * 0.28 + 0.20,
+        flutterFreq: Math.random() * 8 + 4,
+        flutterAmp: Math.random() * 65 + 30
+      });
+    }
   }
 
   update(dt, ball = null, soundManager = null) {
@@ -7793,6 +8822,36 @@ class StadiumRenderer {
     // Corner flag elastic recovery
     this.leftFlagBend *= 0.93;
     this.rightFlagBend *= 0.93;
+
+    // Confetti Physics simulation
+    for (let i = this.confetti.length - 1; i >= 0; i--) {
+      const c = this.confetti[i];
+      c.vy += 380 * dt; // gravity
+      c.vx *= 0.965; // air drag
+      c.x += (c.vx + Math.sin(this.flagTime * c.flutterFreq) * c.flutterAmp) * dt;
+      c.y += c.vy * dt;
+      c.rot += c.rotSpeed * dt;
+      c.life -= c.decay * dt;
+      if (c.life <= 0 || c.y > (this.lastGroundY || 700) + 20) {
+        this.confetti.splice(i, 1);
+      }
+    }
+  }
+
+  renderConfetti(ctx) {
+    if (!this.confetti || this.confetti.length === 0) return;
+    ctx.save();
+    for (const c of this.confetti) {
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.rotate(c.rot);
+      ctx.scale(Math.cos(c.rot * 1.5), 1.0); // 3D ribbon flip
+      ctx.fillStyle = c.color;
+      ctx.globalAlpha = Math.max(0, Math.min(1, c.life * 1.8));
+      ctx.fillRect(-c.width * 0.5, -c.height * 0.5, c.width, c.height);
+      ctx.restore();
+    }
+    ctx.restore();
   }
 
   renderBackdrop(ctx, stageWidth, stageHeight, groundY) {
@@ -8107,7 +9166,8 @@ const GAME_MODES = {
   QUICK: 'quick',
   TOURNAMENT: 'tournament',
   SURVIVAL: 'survival',
-  GOLDEN_GOAL: 'golden_goal'
+  GOLDEN_GOAL: 'golden_goal',
+  LOCAL_2P: 'local_2p'
 };
 
 /**
@@ -8210,6 +9270,17 @@ class TournamentManager {
    */
   startGoldenGoal(playerCharId, rivalCharId) {
     this.currentMode = GAME_MODES.GOLDEN_GOAL;
+    this.active = true;
+    this.playerChar = getCharacter(playerCharId);
+    this.notify();
+    return getCharacter(rivalCharId);
+  }
+
+  /**
+   * Starts 1 vs 1 Local Multiplayer
+   */
+  startLocal2P(playerCharId, rivalCharId) {
+    this.currentMode = GAME_MODES.LOCAL_2P;
     this.active = true;
     this.playerChar = getCharacter(playerCharId);
     this.notify();
@@ -8346,6 +9417,16 @@ class TournamentManager {
       }
     }
 
+    if (this.currentMode === GAME_MODES.LOCAL_2P) {
+      if (playerScore > rivalScore) {
+        return { status: 'p1_victory', winner: 'P1', p1Score: playerScore, p2Score: rivalScore };
+      } else if (rivalScore > playerScore) {
+        return { status: 'p2_victory', winner: 'P2', p1Score: playerScore, p2Score: rivalScore };
+      } else {
+        return { status: 'draw', winner: null, p1Score: playerScore, p2Score: rivalScore };
+      }
+    }
+
     return { status: playerWon ? 'victory' : 'defeat', nextRival: null };
   }
 
@@ -8385,7 +9466,16 @@ class InputManager {
     this.isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     this.kickPressTime = 0;
     this.isKickHolding = false;
+    this.twoPlayerMode = false;
+    this.onP2ActionCallbacks = [];
+    this.isP2KickHolding = false;
+    this.p2KickPressTime = 0;
+    this.gamepadPrev = [{}, {}];
     this.setupListeners();
+  }
+
+  setTwoPlayerMode(enabled) {
+    this.twoPlayerMode = !!enabled;
   }
 
   startKickCharge() {
@@ -8421,17 +9511,78 @@ class InputManager {
     return Math.min(1.0, (elapsed - 0.18) / 0.45);
   }
 
+  startP2KickCharge() {
+    if (!this.isP2KickHolding) {
+      this.soundManager.init();
+      this.isP2KickHolding = true;
+      this.p2KickPressTime = performance.now();
+      this.vibrate(15);
+    }
+  }
+
+  releaseP2KickCharge() {
+    if (this.isP2KickHolding) {
+      const duration = (performance.now() - this.p2KickPressTime) / 1000;
+      this.isP2KickHolding = false;
+
+      if (duration >= 0.22) {
+        const chargeRatio = Math.min(1.0, (duration - 0.22) / 0.45);
+        this.vibrate(35);
+        this.emitP2Action('charged_kick', chargeRatio);
+      } else {
+        this.vibrate(20);
+        this.emitP2Action('kick');
+      }
+    }
+  }
+
+  getP2KickChargeRatio() {
+    if (!this.isP2KickHolding) return 0;
+    const elapsed = (performance.now() - this.p2KickPressTime) / 1000;
+    if (elapsed < 0.18) return 0;
+    return Math.min(1.0, (elapsed - 0.18) / 0.45);
+  }
+
   onAction(fn) {
     this.onActionCallbacks.push(fn);
   }
 
+  onP2Action(fn) {
+    this.onP2ActionCallbacks.push(fn);
+  }
+
   isKeyDown(key) {
     const k = key.toLowerCase();
+    if (this.twoPlayerMode) {
+      // In 2P mode, Arrow keys strictly belong to Player 2!
+      if (k === 'a') return !!this.keys['a'] || !!this.keys['keya'] || this.touchMoves.left;
+      if (k === 'd') return !!this.keys['d'] || !!this.keys['keyd'] || this.touchMoves.right;
+      return !!this.keys[k];
+    }
+
+    // In 1P mode, both WASD and Arrow Keys control Player 1
     if (k === 'a' || k === 'arrowleft') {
-      return !!this.keys[k] || this.touchMoves.left;
+      return !!this.keys['a'] || !!this.keys['keya'] || !!this.keys['arrowleft'] || this.touchMoves.left;
     }
     if (k === 'd' || k === 'arrowright') {
-      return !!this.keys[k] || this.touchMoves.right;
+      return !!this.keys['d'] || !!this.keys['keyd'] || !!this.keys['arrowright'] || this.touchMoves.right;
+    }
+    return !!this.keys[k];
+  }
+
+  isP2KeyDown(key) {
+    const k = key.toLowerCase();
+    if (k === 'left' || k === 'arrowleft') {
+      return !!this.keys['arrowleft'] || !!this.keys['numpad4'];
+    }
+    if (k === 'right' || k === 'arrowright') {
+      return !!this.keys['arrowright'] || !!this.keys['numpad6'];
+    }
+    if (k === 'up' || k === 'arrowup') {
+      return !!this.keys['arrowup'] || !!this.keys['numpad8'];
+    }
+    if (k === 'down' || k === 'arrowdown') {
+      return !!this.keys['arrowdown'] || !!this.keys['numpad2'];
     }
     return !!this.keys[k];
   }
@@ -8442,6 +9593,77 @@ class InputManager {
         navigator.vibrate(ms);
       }
     } catch (_) {}
+  }
+
+  pollGamepads() {
+    if (!navigator.getGamepads) return;
+    const gamepads = navigator.getGamepads();
+
+    const handlePad = (gp, isP1) => {
+      if (!gp || !gp.connected) return;
+      const prev = this.gamepadPrev[isP1 ? 0 : 1] || {};
+
+      // D-Pad or Left Stick Horizontal
+      const stickX = gp.axes[0] || 0;
+      const dpadLeft = gp.buttons[14]?.pressed || stickX < -0.35;
+      const dpadRight = gp.buttons[15]?.pressed || stickX > 0.35;
+      const dpadUp = gp.buttons[12]?.pressed || (gp.axes[1] && gp.axes[1] < -0.45);
+      const dpadDown = gp.buttons[13]?.pressed || (gp.axes[1] && gp.axes[1] > 0.45);
+
+      if (isP1) {
+        if (dpadLeft) this.keys['a'] = true;
+        else if (this.keys['a'] && !this.keys['keya']) this.keys['a'] = false;
+
+        if (dpadRight) this.keys['d'] = true;
+        else if (this.keys['d'] && !this.keys['keyd']) this.keys['d'] = false;
+      } else {
+        if (dpadLeft) this.keys['arrowleft'] = true;
+        else this.keys['arrowleft'] = false;
+
+        if (dpadRight) this.keys['arrowright'] = true;
+        else this.keys['arrowright'] = false;
+      }
+
+      // Button 0 (A / Cross): Jump
+      const btnJump = gp.buttons[0]?.pressed;
+      if (btnJump && !prev.btnJump) {
+        if (isP1) this.emitAction('jump');
+        else this.emitP2Action('jump');
+      }
+
+      // Button 1 (B / Circle) or Button 2 (X / Square): Kick / Charge
+      const btnKick = gp.buttons[1]?.pressed || gp.buttons[2]?.pressed;
+      if (btnKick && !prev.btnKick) {
+        if (isP1) this.startKickCharge();
+        else this.startP2KickCharge();
+      } else if (!btnKick && prev.btnKick) {
+        if (isP1) this.releaseKickCharge();
+        else this.releaseP2KickCharge();
+      }
+
+      // Button 3 (Y / Triangle) or Button 5 (RB / R1): Super Shot
+      const btnSuper = gp.buttons[3]?.pressed || gp.buttons[5]?.pressed;
+      if (btnSuper && !prev.btnSuper) {
+        if (isP1) this.emitAction('super_shot');
+        else this.emitP2Action('super_shot');
+      }
+
+      // Button 4 (LB / L1) or Dpad Down: Dash
+      if (dpadDown && !prev.dpadDown) {
+        if (isP1) this.emitAction('dash');
+        else this.emitP2Action('dash');
+      }
+
+      this.gamepadPrev[isP1 ? 0 : 1] = {
+        btnJump,
+        btnKick,
+        btnSuper,
+        dpadDown
+      };
+    };
+
+    if (gamepads[0]) handlePad(gamepads[0], true);
+    if (gamepads[1]) handlePad(gamepads[1], false);
   }
 
   setupListeners() {
@@ -8459,6 +9681,39 @@ class InputManager {
       // Ignore browser auto-repeat for actions
       if (e.repeat) return;
 
+      // === PLAYER 2 DEDICATED CONTROLS ===
+      if (this.twoPlayerMode) {
+        if (e.code === 'Enter' || e.code === 'Numpad0' || e.code === 'KeyL' || e.code === 'Period') {
+          e.preventDefault();
+          this.startP2KickCharge();
+          return;
+        } else if (e.code === 'ArrowUp' || e.code === 'Numpad8') {
+          e.preventDefault();
+          this.vibrate(15);
+          this.emitP2Action('jump');
+          return;
+        } else if (e.code === 'ArrowDown' || e.code === 'Numpad2') {
+          e.preventDefault();
+          this.vibrate(20);
+          this.emitP2Action('dash');
+          return;
+        } else if (e.code === 'ShiftRight' || e.code === 'KeyP' || e.code === 'Numpad1' || e.code === 'KeyO') {
+          e.preventDefault();
+          this.vibrate(35);
+          this.emitP2Action('super_shot');
+          return;
+        } else if (e.code === 'KeyI') {
+          e.preventDefault();
+          this.emitP2Action('bicycle_kick');
+          return;
+        } else if (e.code === 'KeyU') {
+          e.preventDefault();
+          this.emitP2Action('diving_header');
+          return;
+        }
+      }
+
+      // === PLAYER 1 CONTROLS ===
       if (e.code === 'Space' || e.code === 'KeyJ' || e.code === 'KeyX') {
         e.preventDefault();
         this.startKickCharge();
@@ -8478,15 +9733,15 @@ class InputManager {
         e.preventDefault();
         this.vibrate(25);
         this.emitAction('scorpion_kick');
-      } else if (e.code === 'KeyW' || e.code === 'ArrowUp') {
+      } else if (e.code === 'KeyW' || (!this.twoPlayerMode && e.code === 'ArrowUp')) {
         e.preventDefault();
         this.vibrate(15);
         this.emitAction('jump');
-      } else if (e.code === 'KeyS' || e.code === 'ArrowDown' || e.code === 'KeyC') {
+      } else if (e.code === 'KeyS' || (!this.twoPlayerMode && e.code === 'ArrowDown') || e.code === 'KeyC') {
         e.preventDefault();
         this.vibrate(20);
         this.emitAction('dash');
-      } else if (e.code === 'KeyF' || e.code === 'KeyK' || e.code === 'KeyZ' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+      } else if (e.code === 'KeyF' || e.code === 'KeyK' || e.code === 'KeyZ' || e.code === 'ShiftLeft' || (!this.twoPlayerMode && e.code === 'ShiftRight')) {
         e.preventDefault();
         this.vibrate(35);
         this.emitAction('super_shot');
@@ -8499,6 +9754,12 @@ class InputManager {
       const k = e.key.toLowerCase();
       this.keys[k] = false;
       this.keys[e.code] = false;
+
+      if (this.twoPlayerMode && (e.code === 'Enter' || e.code === 'Numpad0' || e.code === 'KeyL' || e.code === 'Period')) {
+        e.preventDefault();
+        this.releaseP2KickCharge();
+        return;
+      }
 
       if (e.code === 'Space' || e.code === 'KeyJ' || e.code === 'KeyX') {
         e.preventDefault();
@@ -8568,8 +9829,12 @@ class InputManager {
     });
   }
 
-  emitAction(actionName) {
-    this.onActionCallbacks.forEach(fn => fn(actionName));
+  emitAction(actionName, data = null) {
+    this.onActionCallbacks.forEach(fn => fn(actionName, data));
+  }
+
+  emitP2Action(actionName, data = null) {
+    this.onP2ActionCallbacks.forEach(fn => fn(actionName, data));
   }
 }
 
@@ -8602,8 +9867,11 @@ class UIManager {
     this.onStartSurvivalCallbacks = [];
     this.onStartGoldenGoalCallbacks = [];
     this.onStartQuickMatchCallbacks = [];
+    this.onStartLocal2PCallbacks = [];
+    this.onToggle2PCallbacks = [];
 
     this.isMobileMode = ('ontouchstart' in window) || (window.innerWidth <= 900);
+    this.isTwoPlayerMode = false;
     this.currentP1Char = CHARACTERS[0]; // Kenta 🇯🇵
     this.currentRivalChar = CHARACTERS[1]; // El Toro 🇲🇽
 
@@ -8633,6 +9901,33 @@ class UIManager {
 
   onStartQuickMatch(fn) {
     this.onStartQuickMatchCallbacks.push(fn);
+  }
+
+  onStartLocal2P(fn) {
+    this.onStartLocal2PCallbacks.push(fn);
+  }
+
+  onToggle2P(fn) {
+    this.onToggle2PCallbacks.push(fn);
+  }
+
+  setTwoPlayerMode(enabled) {
+    this.isTwoPlayerMode = !!enabled;
+    const btn2P = document.getElementById('btnToggle2P');
+    if (btn2P) {
+      if (this.isTwoPlayerMode) {
+        btn2P.textContent = '👥 2P Local: ON';
+        btn2P.style.background = 'linear-gradient(135deg, rgba(0, 240, 255, 0.25), rgba(255, 55, 0, 0.25))';
+        btn2P.style.borderColor = '#00f0ff';
+        btn2P.style.boxShadow = '0 0 14px rgba(0, 240, 255, 0.55)';
+      } else {
+        btn2P.textContent = '👥 2P Local: OFF';
+        btn2P.style.background = '';
+        btn2P.style.borderColor = 'rgba(0, 240, 255, 0.6)';
+        btn2P.style.boxShadow = '';
+      }
+    }
+    this.setRivalInfo(this.currentRivalChar);
   }
 
   onPlayAction(fn) {
@@ -8802,6 +10097,21 @@ class UIManager {
       });
     }
 
+    const btnStartLocal2P = document.getElementById('btnStartLocal2P');
+    if (btnStartLocal2P) {
+      btnStartLocal2P.addEventListener('click', () => {
+        if (tournModal) tournModal.classList.remove('open');
+        this.onStartLocal2PCallbacks.forEach(fn => fn());
+      });
+    }
+
+    const btnToggle2P = document.getElementById('btnToggle2P');
+    if (btnToggle2P) {
+      btnToggle2P.addEventListener('click', () => {
+        this.onToggle2PCallbacks.forEach(fn => fn());
+      });
+    }
+
     // Trophy Claim Button
     const btnClaim = document.getElementById('btnClaimTrophy');
     if (btnClaim) {
@@ -8967,7 +10277,8 @@ class UIManager {
     const nameEl = document.getElementById('rivalName');
     const flagEl = document.getElementById('rivalFlag');
 
-    if (nameEl) nameEl.textContent = `${char.name.toUpperCase()} #7`;
+    const prefix = this.isTwoPlayerMode ? '🎮 P2: ' : '';
+    if (nameEl) nameEl.textContent = `${prefix}${char.name.toUpperCase()} #7`;
     if (flagEl) flagEl.textContent = char.country;
 
     this.renderModalRoster();
@@ -9170,7 +10481,7 @@ class UIManager {
             ${isP1 ? '⭐ P1' : 'Elegir P1'}
           </button>
           <button class="btn-card-choose rival${isRival ? ' active' : ''}">
-            ${isRival ? '🤖 CPU' : 'Elegir CPU'}
+            ${this.isTwoPlayerMode ? (isRival ? '🎮 P2' : 'Elegir P2') : (isRival ? '🤖 CPU' : 'Elegir CPU')}
           </button>
         </div>
       `;

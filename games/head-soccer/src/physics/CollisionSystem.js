@@ -148,7 +148,16 @@ export class CollisionSystem {
     }
   }
 
-  update(player, skeleton, ball, stageWidth, groundY, dt, ragdollSystem, powerSystem, rivalBot, inputManager = null) {
+  update(player, skeleton, ball, stageWidth, groundY, dt, ragdollSystem, powerSystem, rivalBot, inputManager = null, isMatchOver = false) {
+    this.isMatchOver = isMatchOver;
+    if (this.isMatchOver) {
+      // Smoothly bring the ball to rest after the final whistle
+      ball.vx *= 0.94;
+      ball.vy *= 0.94;
+      ball.spin *= 0.90;
+      ball.isSuper = false;
+    }
+
     if (this.goalCooldown > 0) this.goalCooldown -= dt;
     if (this.damageCooldown > 0) this.damageCooldown -= dt;
     if (this.kickCooldown > 0) this.kickCooldown -= dt;
@@ -239,6 +248,34 @@ export class CollisionSystem {
     // --- A. KICK FOOT COLLISION ---
     const distFoot = Math.hypot(ball.x - player.kickHitbox.x, ball.y - player.kickHitbox.y);
     if (distFoot < ball.radius + player.kickHitbox.radius) {
+      const isRivalSuper = ball.isSuper && ball.lastKickedBy === 'rival';
+      if (isRivalSuper) {
+        if (isKicking || isJumping) {
+          // CLUTCH PARRY WITH ACTIVE KICK / CLEAT!
+          ball.isSuper = false;
+          ball.lastKickedBy = 'player';
+          ball.vx = 880; // Rocket counter-strike back towards rival!
+          ball.vy = -260;
+          powerSystem?.addPower(25);
+          this.soundManager.playSubBassKick();
+          this.particleSystem.spawnSonicBoom(footTip.x, footTip.y, 1, '#ffd700');
+          this.particleSystem.spawnSparks(ball.x, ball.y, 35, '#00ffff');
+          this.triggerShake(14);
+          this.triggerHitStop(0.065);
+          this.addFloatingText('⚡ ¡PARRY PERFECTO! 🛡️', player.x, player.y - 100, '#00f0ff', 24);
+          return;
+        } else {
+          // UNGUARDED PLAYER STRUCK BY BLAST!
+          this.applyDamage(player, 25, ragdollSystem, -320, -360, true);
+          this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#ff3700');
+          this.soundManager.play('superExplode');
+          ball.isSuper = false;
+          ball.vx = Math.abs(ball.vx) * 0.35 + 80;
+          ball.vy = -Math.abs(ball.vy) * 0.5 - 120;
+          return;
+        }
+      }
+
       const powerMult = (player.character?.stats?.power || 1.0) * (player.activePowerMultiplier || 1.0);
       const dir = player.direction;
 
@@ -392,13 +429,32 @@ export class CollisionSystem {
       const isViolentRivalShot = ball.lastKickedBy === 'rival' && ball.vx < -550;
 
       if (isRivalSuper) {
-        // RIVAL ULTI BLAST HITS PLAYER!
-        this.applyDamage(player, 35, ragdollSystem, -380, -420, true);
-        this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#ff3700');
-        this.soundManager.play('superExplode');
-        ball.isSuper = false;
-        ball.vx = Math.abs(ball.vx) * 0.35 + 80;
-        ball.vy = -Math.abs(ball.vy) * 0.5 - 120;
+        // Can the player parry / counter the super shot with an active header or kick?
+        const isHeaderAttempt = isJumping || curAnim === 'smash_header' || curAnim === 'diving_header';
+        const isKickAttempt = isKicking;
+
+        if (isHeaderAttempt || isKickAttempt) {
+          // CLUTCH PARRY! Deflect super shot back with high skill!
+          ball.isSuper = false;
+          ball.lastKickedBy = 'player';
+          ball.vx = 820; // Powerful counter-strike back towards rival!
+          ball.vy = -240;
+          powerSystem?.addPower(25); // Reward player with +25% Super Meter!
+          this.soundManager.playSubBassKick();
+          this.particleSystem.spawnSonicBoom(player.headHitbox.x, player.headHitbox.y, 1, '#ffd700');
+          this.particleSystem.spawnSparks(ball.x, ball.y, 35, '#00ffff');
+          this.triggerShake(14);
+          this.triggerHitStop(0.065); // 65ms dramatic hitstop!
+          this.addFloatingText('⚡ ¡PARRY PERFECTO! 🛡️', player.x, player.y - 100, '#00f0ff', 24);
+        } else {
+          // RIVAL ULTI BLAST HITS UNGUARDED PLAYER!
+          this.applyDamage(player, 25, ragdollSystem, -320, -360, true);
+          this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#ff3700');
+          this.soundManager.play('superExplode');
+          ball.isSuper = false;
+          ball.vx = Math.abs(ball.vx) * 0.35 + 80;
+          ball.vy = -Math.abs(ball.vy) * 0.5 - 120;
+        }
       } else if (isViolentRivalShot) {
         // FAST RIVAL SHOT DEFLECTED BY FOREHEAD — REWARDING SOCCER BLOCK, NO DAMAGE, NO STUN!
         ball.vx = Math.abs(ball.vx) * 0.6 + 120;
@@ -406,7 +462,7 @@ export class CollisionSystem {
         ball.lastKickedBy = 'player';
         this.particleSystem.spawnSparks(ball.x, ball.y, 22, '#ffd700');
         this.soundManager.play('headImpact');
-        powerSystem?.addPower(8);
+        powerSystem?.addPower(12);
         this.addFloatingText('🛡️ ¡CABEZAZO DEFENSIVO!', player.x, player.y - 85, '#ffd700', 18);
       } else {
         // PURE SOCCER HEADER
@@ -484,6 +540,33 @@ export class CollisionSystem {
     // --- C. TORSO / BODY TRAP COLLISION ---
     const distTorso = Math.hypot(ball.x - player.torsoHitbox.x, ball.y - player.torsoHitbox.y);
     if (distTorso < ball.radius + player.torsoHitbox.radius && distFoot >= ball.radius + player.kickHitbox.radius && distHead >= ball.radius + player.headHitbox.radius) {
+      const isRivalSuper = ball.isSuper && ball.lastKickedBy === 'rival';
+      if (isRivalSuper) {
+        if (isKicking || isJumping) {
+          // CLUTCH CHEST-TRAP PARRY!
+          ball.isSuper = false;
+          ball.lastKickedBy = 'player';
+          ball.vx = 820;
+          ball.vy = -220;
+          powerSystem?.addPower(25);
+          this.soundManager.playSubBassKick();
+          this.particleSystem.spawnSonicBoom(player.torsoHitbox.x, player.torsoHitbox.y, 1, '#ffd700');
+          this.particleSystem.spawnSparks(ball.x, ball.y, 35, '#00ffff');
+          this.triggerShake(14);
+          this.triggerHitStop(0.065);
+          this.addFloatingText('⚡ ¡PARRY CORPORAL! 🛡️', player.x, player.y - 100, '#00f0ff', 24);
+          return;
+        } else {
+          this.applyDamage(player, 25, ragdollSystem, -320, -360, true);
+          this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#ff3700');
+          this.soundManager.play('superExplode');
+          ball.isSuper = false;
+          ball.vx = Math.abs(ball.vx) * 0.35 + 80;
+          ball.vy = -Math.abs(ball.vy) * 0.5 - 120;
+          return;
+        }
+      }
+
       if (this.kickCooldown <= 0) {
         this.kickCooldown = 0.16;
         ball.vx = player.direction * (isMoving ? 190 : 80);
@@ -504,17 +587,32 @@ export class CollisionSystem {
         this.onRivalDamageCallbacks.forEach(fn => fn(rivalBot.hp));
       }
 
-      // Player Dragon Super Shot ball impacts rival
+      // Player Super Shot ball impacts rival
       if (ball.isSuper && ball.lastKickedBy === 'player') {
         const distBallRival = Math.hypot(ball.x - rivalBot.x, ball.y - (rivalBot.y - 65));
         if (distBallRival < ball.radius + 45) {
-          rivalBot.takeDamage(40, 420, -480, true); // True super shot impact!
-          this.soundManager.play('superExplode');
-          this.particleSystem.spawnSparks(rivalBot.x, rivalBot.y - 60, 45, '#ff3700');
-          this.addFloatingText('🔥 ¡SUPER IMPACTO! 🔥', rivalBot.x, rivalBot.y - 95, '#ff3700', 24);
+          const isRivalGuarding = rivalBot.isJumping || rivalBot.animController.currentAnim === 'kick';
+          if (isRivalGuarding && !rivalBot.isStunned) {
+            // Rival blocks / parries!
+            ball.isSuper = false;
+            ball.lastKickedBy = 'rival';
+            ball.vx = -680;
+            ball.vy = -240;
+            rivalBot.takeDamage(12, 160, -120, false);
+            this.soundManager.play('headImpact');
+            this.particleSystem.spawnSparks(rivalBot.x, rivalBot.y - 60, 25, '#ffd700');
+            this.addFloatingText('🛡️ ¡PARADA DEL RIVAL!', rivalBot.x, rivalBot.y - 95, '#ffd700', 20);
+            this.triggerShake(10);
+            this.triggerHitStop(0.045);
+          } else {
+            rivalBot.takeDamage(32, 380, -420, true);
+            this.soundManager.play('superExplode');
+            this.particleSystem.spawnSparks(rivalBot.x, rivalBot.y - 60, 45, '#ff3700');
+            this.addFloatingText('🔥 ¡SUPER IMPACTO! 🔥', rivalBot.x, rivalBot.y - 95, '#ff3700', 24);
+            ball.isSuper = false;
+            ball.vx = 360;
+          }
           this.onRivalDamageCallbacks.forEach(fn => fn(rivalBot.hp));
-          ball.isSuper = false;
-          ball.vx = 420; // Deflects towards rival goal
         }
       }
     }
@@ -559,7 +657,7 @@ export class CollisionSystem {
   }
 
   triggerPlayerGoal(stageWidth, groundY, ball, powerSystem, rivalBot) {
-    if (this.goalCooldown > 0) return;
+    if (this.isMatchOver || this.goalCooldown > 0) return;
     this.goalCooldown = 2.5;
     this.playerGoals++;
 
@@ -580,6 +678,7 @@ export class CollisionSystem {
 
     // Reset ball to center after brief celebration
     setTimeout(() => {
+      if (this.isMatchOver) return;
       ball.x = stageWidth * 0.5;
       ball.y = groundY - 180;
       ball.vx = 0;
@@ -590,7 +689,7 @@ export class CollisionSystem {
   }
 
   triggerRivalGoal(stageWidth, groundY, ball, rivalBot) {
-    if (this.goalCooldown > 0) return;
+    if (this.isMatchOver || this.goalCooldown > 0) return;
     this.goalCooldown = 2.5;
     this.rivalGoals++;
 

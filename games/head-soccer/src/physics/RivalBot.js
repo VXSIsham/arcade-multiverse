@@ -1,6 +1,6 @@
 import { Skeleton } from '../core/Skeleton.js';
-import { AnimationController } from '../animation/AnimationController.js';
-import { getCharacter } from '../data/Characters.js';
+import { AnimationController } from '../animation/AnimationController.js?v=anim_hd_v31';
+import { getCharacter } from '../data/Characters.js?v=anim_hd_v31';
 
 /**
  * Autonomous CPU Rival Opponent for 1v1 Head Soccer.
@@ -46,11 +46,29 @@ export class RivalBot {
     this.speedMultiplier = 1.0;
     this.giantHeadMultiplier = 1.0;
 
+    this.isHumanControlled = false;
+    this.canDoubleJump = true;
+    this.isDashing = false;
+    this.dashTimer = 0;
+    this.dashVx = 0;
+    this.dashCooldown = 0;
+    this.dashGhosts = [];
+    this.isSpinning = false;
+    this.spinTime = 0;
+    this.spinDuration = 0.36;
+    this.flipAngle = 0;
+    this.isMoving = false;
+    this.activePowerMultiplier = 1.0;
+
     this.kickCooldown = 0;
     this.tackleCooldown = 0;
     this.jumpCooldown = 0;
     this.enabled = true;
     this.difficulty = 'medium';
+  }
+
+  setHumanControlled(isHuman) {
+    this.isHumanControlled = !!isHuman;
   }
 
   setDifficulty(level = 'medium') {
@@ -93,10 +111,233 @@ export class RivalBot {
     this.freezeTimer = 0;
     this.stunTimer = 0;
     this.direction = -1;
+    this.isDashing = false;
+    this.dashTimer = 0;
+    this.dashVx = 0;
+    this.dashGhosts = [];
+    this.isSpinning = false;
+    this.spinTime = 0;
+    this.flipAngle = 0;
+    this.canDoubleJump = true;
+    this.isMoving = false;
+    this.activePowerMultiplier = 1.0;
     this.animController.play('idle');
   }
 
-  update(dt, ball, player, collisionSystem, ragdollSystem, superShots) {
+  triggerJump() {
+    if (this.isStunned || this.isFrozen || !this.enabled) return;
+    this.soundManager.init();
+
+    if (this.isGrounded) {
+      const jumpMult = this.character?.stats?.jump || 1.0;
+      this.vy = -750 * jumpMult;
+      this.isGrounded = false;
+      this.canDoubleJump = true;
+      this.animController.play('jump');
+      this.animController.triggerJumpStretch(1.25);
+      this.soundManager.play('headImpact');
+      this.particleSystem.spawnDust(this.x, this.y, 8);
+    } else if (this.canDoubleJump) {
+      const jumpMult = this.character?.stats?.jump || 1.0;
+      this.vy = -520 * jumpMult;
+      this.canDoubleJump = false;
+      this.isSpinning = true;
+      this.spinTime = 0;
+      this.spinDuration = 0.36;
+      this.flipAngle = 0;
+      this.soundManager.play('recover');
+      this.particleSystem.spawnAirRing(this.x, this.y - 5, '#ff3700');
+      this.particleSystem.spawnSparks(this.x, this.y - 5, 14, '#ff3700');
+      this.animController.play('jump');
+      this.animController.triggerJumpStretch(1.0);
+    }
+  }
+
+  triggerDash() {
+    if (this.isStunned || this.isFrozen || !this.enabled) return;
+    if (this.dashCooldown > 0) return;
+    this.soundManager.init();
+
+    const dir = this.direction || -1;
+    this.dashCooldown = 0.45;
+    this.isDashing = true;
+    this.dashTimer = 0.16;
+
+    if (!this.isGrounded) {
+      this.dashVx = dir * 960;
+      this.vy = -60;
+      this.soundManager.play('laser');
+      this.particleSystem.spawnAirRing(this.x, this.y - 30, '#ffd700');
+      this.particleSystem.spawnSparks(this.x, this.y - 30, 16, '#ffd700');
+    } else {
+      this.dashVx = dir * 1020;
+      this.soundManager.play('kick');
+      this.particleSystem.spawnAirRing(this.x, this.y - 15, '#ff3700');
+      this.particleSystem.spawnSparks(this.x - dir * 25, this.y - 15, 14, '#ff3700');
+    }
+  }
+
+  triggerKick(ball, player, collisionSystem, chargeRatio = null) {
+    if (this.isStunned || this.isFrozen || !this.enabled) return;
+    this.soundManager.init();
+
+    if (chargeRatio !== null) {
+      const powerMult = this.character?.stats?.power || 1.0;
+      this.activePowerMultiplier = (1.4 + chargeRatio * 0.7) * powerMult;
+
+      this.soundManager.playSubBassKick();
+      this.soundManager.play('kick');
+      this.soundManager.play('chargedBlast');
+
+      this.animController.play('kick');
+      this.particleSystem.spawnSonicBoom(this.x, this.y - 20, this.direction, '#ff3700');
+      this.particleSystem.spawnFlameBurst(this.x, this.y - 20, 24, ['#ff3700', '#ffffff', '#ffd000']);
+      const pct = Math.round(50 + chargeRatio * 50);
+      collisionSystem?.addFloatingText(`⚡ ¡CAÑONAZO P2 ${pct}%! ⚡`, this.x, this.y - 95, '#ff3700', 24);
+      this.performHitCheck(ball, player, collisionSystem, true);
+      return;
+    }
+
+    const powerMult = this.character?.stats?.power || 1.0;
+    this.activePowerMultiplier = 1.25 * powerMult;
+
+    let chosenAnim = 'kick';
+    const dx = (ball.x - this.x) * this.direction;
+    const dy = ball.y - this.y;
+    const dist = Math.hypot(ball.x - this.x, ball.y - this.y);
+
+    if (!this.isGrounded) {
+      if (dy < -35 && dist < 170) {
+        chosenAnim = 'bicycle_kick';
+        this.vy = -380;
+        this.particleSystem.spawnAirRing(this.x, this.y - 30, '#ffd700');
+        this.soundManager.play('chargedBlast');
+      } else if (dy > -20 && dx > 15 && dist < 150) {
+        chosenAnim = 'smash_header';
+        this.particleSystem.spawnAirRing(this.x, this.y - 20, '#ffcc00');
+        this.soundManager.play('headImpact');
+      } else {
+        chosenAnim = 'diving_header';
+        this.vx = this.direction * 320;
+        this.particleSystem.spawnAirRing(this.x, this.y - 20, '#ff5500');
+        this.soundManager.play('kick');
+      }
+    } else {
+      if (dx < -15 && dist < 100) {
+        chosenAnim = 'scorpion_kick';
+        this.soundManager.play('kick');
+      } else if (this.isMoving && dx > 10) {
+        chosenAnim = 'rocket_kick';
+        this.particleSystem.spawnTurfSpray(this.x, this.groundY, this.direction, 14);
+        this.soundManager.play('laser');
+      } else {
+        chosenAnim = 'kick';
+        this.soundManager.play('kick');
+      }
+    }
+
+    this.animController.play(chosenAnim);
+    this.particleSystem.spawnSparks(this.x + 35 * this.direction, this.y - 15, 14, '#ff3700');
+    this.performHitCheck(ball, player, collisionSystem);
+  }
+
+  triggerSuper(ball, player, collisionSystem, superShots) {
+    if (this.isStunned || this.isFrozen || !this.enabled) return;
+    this.soundManager.init();
+
+    if (this.power >= 100) {
+      this.power = 0;
+      const powerMult = this.character?.stats?.power || 1.0;
+      this.activePowerMultiplier = 2.4 * powerMult;
+      this.animController.play('super_shot');
+      this.soundManager.play('superPower');
+      this.soundManager.play('chargedBlast');
+
+      const superColors = this.character?.super?.colors || ['#ff3700', '#ffd000'];
+      this.particleSystem.spawnFlameAura(this.x, this.y - 65, superColors);
+
+      if (superShots) {
+        superShots.launch(ball, this.character, this.direction, 'rival', { player, rivalBot: this });
+      } else {
+        ball.kick(this.direction * 980, -320, true, 'rival');
+      }
+      collisionSystem?.addFloatingText(`🔥 ¡${this.character?.super?.name || 'SUPER TIRO P2'}! 🔥`, this.x, this.y - 95, superColors[0] || '#ff3700', 24);
+    } else {
+      this.triggerKick(ball, player, collisionSystem);
+      collisionSystem?.addFloatingText('⚡ POWER INSUFICIENTE P2', this.x, this.y - 95, '#ff5500', 16);
+    }
+  }
+
+  performHitCheck(ball, player, collisionSystem, forceHit = false) {
+    const footTip = this.skeleton.footFront.getWorldTip();
+    const footOffsetX = Math.abs(footTip.x - this.skeleton.root.x);
+    this.kickHitbox.x = this.x + this.direction * footOffsetX;
+    this.kickHitbox.y = footTip.y;
+
+    const distFootBall = Math.hypot(ball.x - this.kickHitbox.x, ball.y - this.kickHitbox.y);
+    const reach = forceHit ? ball.radius + this.kickHitbox.radius + 36 : ball.radius + this.kickHitbox.radius + 18;
+
+    if (distFootBall <= reach) {
+      this.kickCooldown = 0.28;
+      const powerMult = (this.character?.stats?.power || 1.0) * (this.activePowerMultiplier || 1.0);
+      const cur = this.animController.currentAnim;
+      const dir = this.direction;
+
+      if (cur === 'bicycle_kick') {
+        ball.kick(dir * (1160 + Math.random() * 80) * powerMult, -280 * powerMult, false, 'rival', 'bicycle', dir * 3.6);
+        this.power = Math.min(100, this.power + 22);
+        this.particleSystem.spawnSonicBoom(ball.x, ball.y, dir, '#ffd700');
+        this.particleSystem.spawnKickImpact(ball.x, ball.y, dir, '#ffd700', 30);
+        this.soundManager.play('chargedBlast');
+        this.soundManager.play('kick');
+        collisionSystem?.triggerShake(13);
+        collisionSystem?.addFloatingText('🤸 ¡CHILENA P2!', this.x, this.y - 95, '#ffd700', 22);
+      } else if (cur === 'rocket_kick') {
+        ball.kick(dir * (1120 + Math.random() * 70) * powerMult, -85 * powerMult, false, 'rival', 'rocket', dir * 1.4);
+        this.power = Math.min(100, this.power + 20);
+        this.particleSystem.spawnTurfSpray(ball.x, this.groundY, dir, 20);
+        this.particleSystem.spawnSonicBoom(ball.x, ball.y, dir, '#ff5500');
+        this.particleSystem.spawnKickImpact(ball.x, ball.y, dir, '#ff5500', 26);
+        this.soundManager.play('laser');
+        this.soundManager.play('kick');
+        collisionSystem?.triggerShake(11);
+        collisionSystem?.addFloatingText('🚀 ¡CAÑONAZO P2!', this.x, this.y - 95, '#ff5500', 22);
+      } else if (cur === 'diving_header') {
+        ball.kick(dir * (1040 + Math.random() * 60) * powerMult, -170 * powerMult, false, 'rival', 'palomita', dir * 2.0);
+        this.power = Math.min(100, this.power + 18);
+        this.particleSystem.spawnKickImpact(ball.x, ball.y, dir, '#ff9900', 22);
+        this.soundManager.play('headImpact');
+        collisionSystem?.addFloatingText('⚡ ¡PALOMITA P2!', this.x, this.y - 95, '#ff9900', 20);
+      } else if (cur === 'scorpion_kick') {
+        ball.kick(dir * (960 + Math.random() * 60) * powerMult, -440 * powerMult, false, 'rival', 'scorpion', -dir * 3.4);
+        this.power = Math.min(100, this.power + 18);
+        this.particleSystem.spawnKickImpact(ball.x, ball.y, dir, '#ff00aa', 22);
+        this.soundManager.play('kick');
+        collisionSystem?.addFloatingText('🦂 ¡TIRO ESCORPIÓN P2!', this.x, this.y - 95, '#ff00aa', 20);
+      } else if (cur === 'smash_header') {
+        ball.kick(dir * (880 + Math.random() * 60) * powerMult, 360 * powerMult, false, 'rival', 'smash', dir * 2.6);
+        this.power = Math.min(100, this.power + 18);
+        this.particleSystem.spawnTurfSpray(ball.x, this.groundY, dir, 18);
+        this.particleSystem.spawnKickImpact(ball.x, ball.y, dir, '#ffd700', 24);
+        this.soundManager.play('headImpact');
+        collisionSystem?.addFloatingText('💥 ¡MARTILLAZO P2!', this.x, this.y - 95, '#ffd700', 20);
+      } else {
+        const isCharged = this.activePowerMultiplier > 1.35;
+        ball.kick(
+          dir * (780 + Math.random() * 80) * powerMult,
+          (-340 - Math.random() * 80) * powerMult,
+          false,
+          'rival',
+          isCharged ? 'rocket' : 'drive'
+        );
+        this.power = Math.min(100, this.power + (isCharged ? 22 : 14));
+        this.particleSystem.spawnKickImpact(footTip.x, footTip.y, dir, isCharged ? '#ffd700' : '#ff9900', isCharged ? 28 : 18);
+        this.soundManager.play('kick');
+      }
+    }
+  }
+
+  update(dt, ball, player, collisionSystem, ragdollSystem, superShots, inputManager = null) {
     if (!this.enabled) return { face: 'idle' };
 
     if (this.kickCooldown > 0) this.kickCooldown -= dt;
@@ -116,9 +357,9 @@ export class RivalBot {
       return { face: 'ko', squashY: 1.0, stretchX: 1.0, aura: false };
     }
 
-    // Passive power meter build-up (ready for super shots)
+    // Passive power meter build-up (balanced arcade rate)
     if (this.power < 100) {
-      this.power = Math.min(100, this.power + dt * 9.5);
+      this.power = Math.min(100, this.power + dt * 6.0);
     }
 
     // Stun recovery
@@ -134,6 +375,174 @@ export class RivalBot {
       this.skeleton.setPosition(this.x, this.y);
       this.skeleton.setFacing(this.direction);
       return this.animController.update(dt);
+    }
+
+    // === PLAYER 2 HUMAN CONTROLLED BRANCH ===
+    if (this.isHumanControlled) {
+      // Dash Cooldown decrement
+      if (this.dashCooldown > 0) {
+        this.dashCooldown = Math.max(0, this.dashCooldown - dt);
+      }
+
+      // Smooth Physics Dash with Continuous Velocity Deceleration & Afterimages
+      if (this.isDashing) {
+        this.dashTimer -= dt;
+        this.x += this.dashVx * dt;
+        this.dashVx *= 0.92;
+
+        if (!this.dashGhosts) this.dashGhosts = [];
+        this.dashGhosts.push({
+          x: this.x,
+          y: this.y,
+          direction: this.direction || -1,
+          alpha: 0.65,
+          color: this.character?.super?.colors?.[0] || 'rgba(255, 55, 0, 0.45)'
+        });
+
+        if (this.dashTimer <= 0) {
+          this.isDashing = false;
+          this.dashVx = 0;
+        }
+      }
+
+      // Fade dash ghost afterimages
+      if (this.dashGhosts && this.dashGhosts.length > 0) {
+        for (let i = this.dashGhosts.length - 1; i >= 0; i--) {
+          this.dashGhosts[i].alpha -= dt * 4.2;
+          if (this.dashGhosts[i].alpha <= 0) {
+            this.dashGhosts.splice(i, 1);
+          }
+        }
+      }
+
+      // Athletic Double Jump 360 Flip / Spin
+      if (this.isSpinning) {
+        this.spinTime += dt;
+        const progress = Math.min(1.0, this.spinTime / this.spinDuration);
+        this.flipAngle = progress * Math.PI * 2 * (this.direction || -1);
+        if (progress >= 1.0) {
+          this.isSpinning = false;
+          this.flipAngle = 0;
+        }
+      }
+
+      const speedMult = (this.character?.stats?.speed || 1.0) * (this.speedMultiplier || 1.0);
+      const moveSpeed = 360 * speedMult;
+      let isMoving = false;
+
+      if (!this.isStunned && !this.isFrozen && !this.isDashing && inputManager) {
+        if (inputManager.isP2KeyDown('left')) {
+          this.x -= moveSpeed * dt;
+          this.direction = -1;
+          isMoving = true;
+        }
+        if (inputManager.isP2KeyDown('right')) {
+          this.x += moveSpeed * dt;
+          this.direction = 1;
+          isMoving = true;
+        }
+      }
+      this.isMoving = isMoving;
+
+      // Clamp to pitch boundaries
+      this.x = Math.max(78, Math.min(this.x, this.stageWidth - 78));
+
+      // Vertical gravity & platform physics
+      if (!this.isGrounded) {
+        this.vy += 1580 * dt;
+        this.y += this.vy * dt;
+
+        if (this.y >= this.groundY) {
+          const impact = Math.min(1.6, Math.abs(this.vy) / 450);
+          this.y = this.groundY;
+          this.vy = 0;
+          this.isGrounded = true;
+          this.canDoubleJump = true;
+          this.animController.triggerLandingSquash(impact);
+          this.particleSystem.spawnDust(this.x, this.groundY, 7);
+          this.particleSystem.spawnSparks(this.x, this.groundY, 8, 'rgba(255,255,255,0.6)');
+        }
+      } else {
+        this.y = this.groundY;
+        this.vy = 0;
+        this.canDoubleJump = true;
+      }
+
+      // Hitboxes updates
+      const footTip = this.skeleton.footFront.getWorldTip();
+      const footOffsetX = Math.abs(footTip.x - this.skeleton.root.x);
+      this.kickHitbox.x = this.x + this.direction * footOffsetX;
+      this.kickHitbox.y = footTip.y;
+
+      this.headHitbox.x = this.skeleton.head.worldX + this.direction * 12;
+      this.headHitbox.y = this.skeleton.head.worldY - 32;
+
+      this.torsoHitbox.x = this.skeleton.torso.worldX;
+      this.torsoHitbox.y = this.skeleton.torso.worldY - 14;
+
+      // Continuous collision check if kick animation is active
+      const curAnim = this.animController.currentAnim;
+      const isOneShotKick = ['kick', 'rocket_kick', 'bicycle_kick', 'diving_header', 'scorpion_kick', 'smash_header'].includes(curAnim);
+      const distFootBall = Math.hypot(ball.x - this.kickHitbox.x, ball.y - this.kickHitbox.y);
+      if (isOneShotKick && this.kickCooldown <= 0 && distFootBall < ball.radius + this.kickHitbox.radius) {
+        this.performHitCheck(ball, player, collisionSystem);
+      }
+
+      // Header collision check
+      const distHeadBall = Math.hypot(ball.x - this.headHitbox.x, ball.y - this.headHitbox.y);
+      if (this.kickCooldown <= 0 && distHeadBall < ball.radius + this.headHitbox.radius) {
+        this.kickCooldown = 0.22;
+        const powerMult = (this.character?.stats?.power || 1.0) * (this.activePowerMultiplier || 1.0);
+        const dir = this.direction;
+
+        if (!this.isGrounded && curAnim === 'smash_header') {
+          ball.kick(dir * (880 + Math.random() * 60) * powerMult, 360 * powerMult, false, 'rival', 'smash', dir * 2.6);
+          this.particleSystem.spawnTurfSpray(ball.x, this.groundY, dir, 16);
+          this.particleSystem.spawnKickImpact(ball.x, ball.y, dir, '#ffd700', 22);
+          this.soundManager.play('headImpact');
+          collisionSystem?.addFloatingText('💥 ¡MARTILLAZO P2!', this.x, this.y - 95, '#ffd700', 20);
+        } else if (!this.isGrounded) {
+          ball.kick(dir * (680 + Math.random() * 80) * powerMult, -Math.abs(ball.vy) * 0.75 - 240, false, 'rival', 'header');
+          this.particleSystem.spawnKickImpact(ball.x, ball.y, dir, '#ffd700', 20);
+          this.soundManager.play('headImpact');
+        } else if (isMoving) {
+          ball.kick(dir * 420 * powerMult, -Math.abs(ball.vy) * 0.6 - 160, false, 'rival');
+          this.soundManager.play('headImpact');
+        } else {
+          ball.vx = dir * 135;
+          ball.vy = -Math.abs(ball.vy) * 0.55 - 90;
+          ball.lastKickedBy = 'rival';
+          this.soundManager.play('bounce');
+        }
+      }
+
+      // State machine
+      const isOneShot = ['kick', 'rocket_kick', 'bicycle_kick', 'diving_header', 'scorpion_kick', 'smash_header', 'super_shot'].includes(curAnim);
+      const isFinished = isOneShot && (this.animController.animTime >= this.animController.getClip().duration * 0.95);
+
+      if (this.isStunned) {
+        if (curAnim !== 'stun') this.animController.play('stun');
+      } else if (!isOneShot || isFinished) {
+        if (!this.isGrounded) {
+          if (curAnim !== 'jump') this.animController.play('jump');
+        } else if (isMoving) {
+          if (curAnim !== 'run') this.animController.play('run');
+        } else {
+          if (curAnim !== 'idle') this.animController.play('idle');
+        }
+      }
+
+      this.skeleton.setPosition(this.x, this.y);
+      this.skeleton.setFacing(this.direction);
+      this.animController.setLookTarget(ball.x, ball.y);
+      const animState = this.animController.update(this.isFrozen ? 0 : dt);
+
+      if (animState.aura || curAnim === 'super_shot') {
+        const colors = this.character?.super?.colors || ['#ff3700', '#ffd000'];
+        this.particleSystem.spawnFlameAura(this.x, this.y - 75, colors);
+      }
+
+      return animState;
     }
 
     // 1. Positioning AI: Defend right goal or press the ball
@@ -175,6 +584,7 @@ export class RivalBot {
       this.isGrounded = false;
       this.jumpCooldown = 1.1;
       this.animController.play('jump');
+      this.animController.triggerJumpStretch(1.2);
       this.soundManager.play('headImpact');
     }
 
@@ -183,9 +593,11 @@ export class RivalBot {
       this.vy += 1580 * dt;
       this.y += this.vy * dt;
       if (this.y >= this.groundY) {
+        const impact = Math.min(1.5, Math.abs(this.vy) / 450);
         this.y = this.groundY;
         this.vy = 0;
         this.isGrounded = true;
+        this.animController.triggerLandingSquash(impact);
       }
     } else {
       this.y = this.groundY;
@@ -203,10 +615,11 @@ export class RivalBot {
     this.torsoHitbox.y = this.skeleton.torso.worldY - 14;
 
     // Remote / Ranged Super Ability cast:
-    // If RivalBot has full power (100) and ball is in play, unleash special ability from anywhere!
-    if (this.power >= 100 && this.kickCooldown <= 0 && ball.x < this.x && Math.random() < 0.018) {
+    // If RivalBot has full power (100) and ball is in attacking half, unleash special ability with telegraph!
+    const ballInAttackZone = ball.x > this.stageWidth * 0.28 && ball.x < this.x;
+    if (this.power >= 100 && this.kickCooldown <= 0 && ballInAttackZone && Math.random() < 0.006) {
       this.power = 0;
-      this.kickCooldown = 1.1;
+      this.kickCooldown = 1.2;
       this.animController.play('super_shot');
       this.soundManager.play('superPower');
       this.soundManager.play('chargedBlast');
@@ -216,7 +629,8 @@ export class RivalBot {
       if (superShots) {
         superShots.launch(ball, this.character, -1, 'rival', { player, rivalBot: this });
       }
-      collisionSystem.addFloatingText(`🔥 ¡${this.character?.super?.name || 'TIRO RIVAL'}! 🔥`, this.x, this.y - 95, colors[0] || '#ff3700', 22);
+      collisionSystem.addFloatingText('⚠️ ¡SUPER TIRO RIVAL! ⚠️', this.x, this.y - 120, '#ff1744', 22);
+      collisionSystem.addFloatingText(`🔥 ¡${this.character?.super?.name || 'TIRO RIVAL'}! 🔥`, this.x, this.y - 95, colors[0] || '#ff3700', 20);
     }
 
     const distFootBall = Math.hypot(ball.x - this.kickHitbox.x, ball.y - this.kickHitbox.y);
@@ -332,6 +746,7 @@ export class RivalBot {
 
     this.skeleton.setPosition(this.x, this.y);
     this.skeleton.setFacing(this.direction);
+    this.animController.setLookTarget(ball.x, ball.y);
     const animState = this.animController.update(dt);
 
     if (animState.aura || cur === 'super_shot') {

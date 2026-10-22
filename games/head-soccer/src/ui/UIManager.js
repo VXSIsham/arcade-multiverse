@@ -23,8 +23,11 @@ export class UIManager {
     this.onStartSurvivalCallbacks = [];
     this.onStartGoldenGoalCallbacks = [];
     this.onStartQuickMatchCallbacks = [];
+    this.onStartLocal2PCallbacks = [];
+    this.onToggle2PCallbacks = [];
 
     this.isMobileMode = ('ontouchstart' in window) || (window.innerWidth <= 900);
+    this.isTwoPlayerMode = false;
     this.currentP1Char = CHARACTERS[0]; // Kenta 🇯🇵
     this.currentRivalChar = CHARACTERS[1]; // El Toro 🇲🇽
 
@@ -54,6 +57,33 @@ export class UIManager {
 
   onStartQuickMatch(fn) {
     this.onStartQuickMatchCallbacks.push(fn);
+  }
+
+  onStartLocal2P(fn) {
+    this.onStartLocal2PCallbacks.push(fn);
+  }
+
+  onToggle2P(fn) {
+    this.onToggle2PCallbacks.push(fn);
+  }
+
+  setTwoPlayerMode(enabled) {
+    this.isTwoPlayerMode = !!enabled;
+    const btn2P = document.getElementById('btnToggle2P');
+    if (btn2P) {
+      if (this.isTwoPlayerMode) {
+        btn2P.textContent = '👥 2P Local: ON';
+        btn2P.style.background = 'linear-gradient(135deg, rgba(0, 240, 255, 0.25), rgba(255, 55, 0, 0.25))';
+        btn2P.style.borderColor = '#00f0ff';
+        btn2P.style.boxShadow = '0 0 14px rgba(0, 240, 255, 0.55)';
+      } else {
+        btn2P.textContent = '👥 2P Local: OFF';
+        btn2P.style.background = '';
+        btn2P.style.borderColor = 'rgba(0, 240, 255, 0.6)';
+        btn2P.style.boxShadow = '';
+      }
+    }
+    this.setRivalInfo(this.currentRivalChar);
   }
 
   onPlayAction(fn) {
@@ -223,6 +253,21 @@ export class UIManager {
       });
     }
 
+    const btnStartLocal2P = document.getElementById('btnStartLocal2P');
+    if (btnStartLocal2P) {
+      btnStartLocal2P.addEventListener('click', () => {
+        if (tournModal) tournModal.classList.remove('open');
+        this.onStartLocal2PCallbacks.forEach(fn => fn());
+      });
+    }
+
+    const btnToggle2P = document.getElementById('btnToggle2P');
+    if (btnToggle2P) {
+      btnToggle2P.addEventListener('click', () => {
+        this.onToggle2PCallbacks.forEach(fn => fn());
+      });
+    }
+
     // Trophy Claim Button
     const btnClaim = document.getElementById('btnClaimTrophy');
     if (btnClaim) {
@@ -388,7 +433,8 @@ export class UIManager {
     const nameEl = document.getElementById('rivalName');
     const flagEl = document.getElementById('rivalFlag');
 
-    if (nameEl) nameEl.textContent = `${char.name.toUpperCase()} #7`;
+    const prefix = this.isTwoPlayerMode ? '🎮 P2: ' : '';
+    if (nameEl) nameEl.textContent = `${prefix}${char.name.toUpperCase()} #7`;
     if (flagEl) flagEl.textContent = char.country;
 
     this.renderModalRoster();
@@ -591,7 +637,7 @@ export class UIManager {
             ${isP1 ? '⭐ P1' : 'Elegir P1'}
           </button>
           <button class="btn-card-choose rival${isRival ? ' active' : ''}">
-            ${isRival ? '🤖 CPU' : 'Elegir CPU'}
+            ${this.isTwoPlayerMode ? (isRival ? '🎮 P2' : 'Elegir P2') : (isRival ? '🤖 CPU' : 'Elegir CPU')}
           </button>
         </div>
       `;

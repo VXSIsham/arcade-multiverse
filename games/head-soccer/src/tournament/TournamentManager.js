@@ -4,7 +4,8 @@ export const GAME_MODES = {
   QUICK: 'quick',
   TOURNAMENT: 'tournament',
   SURVIVAL: 'survival',
-  GOLDEN_GOAL: 'golden_goal'
+  GOLDEN_GOAL: 'golden_goal',
+  LOCAL_2P: 'local_2p'
 };
 
 /**
@@ -107,6 +108,17 @@ export class TournamentManager {
    */
   startGoldenGoal(playerCharId, rivalCharId) {
     this.currentMode = GAME_MODES.GOLDEN_GOAL;
+    this.active = true;
+    this.playerChar = getCharacter(playerCharId);
+    this.notify();
+    return getCharacter(rivalCharId);
+  }
+
+  /**
+   * Starts 1 vs 1 Local Multiplayer
+   */
+  startLocal2P(playerCharId, rivalCharId) {
+    this.currentMode = GAME_MODES.LOCAL_2P;
     this.active = true;
     this.playerChar = getCharacter(playerCharId);
     this.notify();
@@ -240,6 +252,16 @@ export class TournamentManager {
         this.survivalStreak = 0;
         this.notify();
         return { status: 'game_over', finalStreak, bestStreak: this.bestSurvivalStreak };
+      }
+    }
+
+    if (this.currentMode === GAME_MODES.LOCAL_2P) {
+      if (playerScore > rivalScore) {
+        return { status: 'p1_victory', winner: 'P1', p1Score: playerScore, p2Score: rivalScore };
+      } else if (rivalScore > playerScore) {
+        return { status: 'p2_victory', winner: 'P2', p1Score: playerScore, p2Score: rivalScore };
+      } else {
+        return { status: 'draw', winner: null, p1Score: playerScore, p2Score: rivalScore };
       }
     }
 

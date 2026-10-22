@@ -254,6 +254,8 @@ export class PowerUpSystem {
   }
 
   render(ctx) {
+    const time = performance.now() * 0.005;
+
     // 1. Render Air Drop Crates
     for (const c of this.crates) {
       ctx.save();
@@ -262,66 +264,178 @@ export class PowerUpSystem {
       // Parachute if in air
       if (!c.isGrounded) {
         ctx.save();
-        ctx.fillStyle = '#ff3700';
+        const sway = Math.sin(time + c.x * 0.01) * 0.12;
+        ctx.rotate(sway);
+
+        // Parachute suspension rigging cords
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.lineWidth = 1.6;
         ctx.beginPath();
-        ctx.arc(0, -32, 28, Math.PI, 0);
+        ctx.moveTo(-32, -42);
+        ctx.lineTo(-14, -16);
+        ctx.moveTo(32, -42);
+        ctx.lineTo(14, -16);
+        ctx.moveTo(-16, -42);
+        ctx.lineTo(-6, -16);
+        ctx.moveTo(16, -42);
+        ctx.lineTo(6, -16);
+        ctx.stroke();
+
+        // Parachute Canopy Base Dome
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetY = 4;
+
+        // Alternating Striped Silk Canopy
+        const canopyW = 34;
+        const canopyH = 26;
+        const canopyY = -42;
+
+        // Outer Orange Gores
+        ctx.fillStyle = '#ff5500';
+        ctx.beginPath();
+        ctx.moveTo(-canopyW, canopyY);
+        ctx.quadraticCurveTo(-canopyW * 0.85, canopyY - canopyH, 0, canopyY - canopyH);
+        ctx.quadraticCurveTo(canopyW * 0.85, canopyY - canopyH, canopyW, canopyY);
+        ctx.quadraticCurveTo(0, canopyY + 6, -canopyW, canopyY);
         ctx.fill();
 
-        ctx.fillStyle = '#ffffff';
+        // Center White Panel Gore
+        ctx.fillStyle = '#f8fafc';
         ctx.beginPath();
-        ctx.arc(0, -32, 16, Math.PI, 0);
+        ctx.moveTo(-canopyW * 0.42, canopyY);
+        ctx.quadraticCurveTo(-canopyW * 0.25, canopyY - canopyH, 0, canopyY - canopyH);
+        ctx.quadraticCurveTo(canopyW * 0.25, canopyY - canopyH, canopyW * 0.42, canopyY);
+        ctx.quadraticCurveTo(0, canopyY + 4, -canopyW * 0.42, canopyY);
         ctx.fill();
 
-        // Parachute suspension lines
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+        // Inner Shadow / Depth Arc
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(-26, -32);
-        ctx.lineTo(-14, -14);
-        ctx.moveTo(26, -32);
-        ctx.lineTo(14, -14);
-        ctx.moveTo(0, -32);
-        ctx.lineTo(0, -14);
+        ctx.moveTo(-canopyW, canopyY);
+        ctx.quadraticCurveTo(0, canopyY + 6, canopyW, canopyY);
         ctx.stroke();
+
         ctx.restore();
       }
 
-      // Wooden Box with Gold Corner Reinforcements
-      ctx.fillStyle = '#b45309'; // Rich wood brown
-      ctx.fillRect(-18, -18, 36, 36);
+      // Fortified High-Tech Supply Crate
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+      ctx.shadowBlur = 12;
+      ctx.shadowOffsetY = 3;
 
-      ctx.fillStyle = '#78350f';
-      ctx.fillRect(-15, -15, 30, 30);
+      // Dark reinforced metal body
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.roundRect(-18, -18, 36, 36, 5);
+      ctx.fill();
 
-      // Golden band & Question Mark
-      ctx.fillStyle = '#fbbf24';
-      ctx.fillRect(-4, -18, 8, 36);
-      ctx.fillRect(-18, -4, 36, 8);
+      // Industrial hazard gold inner face
+      const crateGrad = ctx.createLinearGradient(-15, -15, 15, 15);
+      crateGrad.addColorStop(0, '#f59e0b');
+      crateGrad.addColorStop(1, '#b45309');
+      ctx.fillStyle = crateGrad;
+      ctx.beginPath();
+      ctx.roundRect(-14, -14, 28, 28, 3);
+      ctx.fill();
 
-      ctx.font = '900 18px "Outfit", sans-serif';
+      // Corner steel bracket reinforcements
+      ctx.fillStyle = '#0f172a';
+      const bSize = 7;
+      ctx.fillRect(-18, -18, bSize, bSize);
+      ctx.fillRect(18 - bSize, -18, bSize, bSize);
+      ctx.fillRect(-18, 18 - bSize, bSize, bSize);
+      ctx.fillRect(18 - bSize, 18 - bSize, bSize, bSize);
+
+      // Steel Rivets
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(-16, -16, 3, 3);
+      ctx.fillRect(13, -16, 3, 3);
+      ctx.fillRect(-16, 13, 3, 3);
+      ctx.fillRect(13, 13, 3, 3);
+
+      // Pulsing Holographic Core & Question Mark
+      const pulse = 0.85 + Math.sin(time * 3) * 0.15;
+      ctx.shadowColor = '#fbbf24';
+      ctx.shadowBlur = 14 * pulse;
       ctx.fillStyle = '#ffffff';
+      ctx.font = '900 20px "Outfit", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.shadowColor = '#000000';
-      ctx.shadowBlur = 4;
       ctx.fillText('?', 0, 1);
 
       ctx.restore();
+      ctx.restore();
     }
 
-    // 2. Render Rocket Boxing Gloves
+    // 2. Render Rocket Boxing Gloves (High-Fidelity Arcade Sprite)
     for (const g of this.gloves) {
       ctx.save();
       ctx.translate(g.x, g.y);
       const dir = Math.sign(g.vx);
-
-      ctx.font = '36px "Segoe UI Emoji", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
       if (dir < 0) {
         ctx.scale(-1, 1);
       }
-      ctx.fillText('🥊', 0, 0);
+
+      // Jet Engine Exhaust Flame
+      const flameFlicker = 1.0 + Math.sin(time * 12) * 0.25;
+      const flameGrad = ctx.createLinearGradient(-14, 0, -42 * flameFlicker, 0);
+      flameGrad.addColorStop(0, '#ffffff');
+      flameGrad.addColorStop(0.2, '#00f0ff');
+      flameGrad.addColorStop(0.6, '#ff5500');
+      flameGrad.addColorStop(1, 'rgba(255, 0, 0, 0)');
+
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 16;
+      ctx.fillStyle = flameGrad;
+      ctx.beginPath();
+      ctx.moveTo(-14, -8);
+      ctx.lineTo(-42 * flameFlicker, 0);
+      ctx.lineTo(-14, 8);
+      ctx.closePath();
+      ctx.fill();
+
+      // Chrome Rocket Thruster Nozzle
+      ctx.shadowColor = 'transparent';
+      ctx.fillStyle = '#475569';
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(-16, -11, 10, 22, 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Boxing Glove Main Leather Fist
+      ctx.fillStyle = '#dc2626';
+      ctx.strokeStyle = '#7f1d1d';
+      ctx.lineWidth = 2.2;
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+      ctx.shadowBlur = 8;
+
+      ctx.beginPath();
+      ctx.moveTo(-6, -16);
+      ctx.quadraticCurveTo(18, -18, 24, -4);
+      ctx.quadraticCurveTo(26, 12, 14, 18);
+      ctx.quadraticCurveTo(0, 18, -6, 12);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Glove Thumb
+      ctx.beginPath();
+      ctx.moveTo(8, -10);
+      ctx.quadraticCurveTo(16, -6, 12, 4);
+      ctx.stroke();
+
+      // Golden Wrist Binding Cuff
+      ctx.fillStyle = '#fbbf24';
+      ctx.strokeStyle = '#b45309';
+      ctx.lineWidth = 1.2;
+      ctx.fillRect(-9, -13, 5, 26);
+      ctx.strokeRect(-9, -13, 5, 26);
+
       ctx.restore();
     }
   }

@@ -1,21 +1,21 @@
-import { Skeleton } from './core/Skeleton.js';
-import { AnimationController } from './animation/AnimationController.js';
-import { Ball } from './physics/Ball.js?v=goal_rework18';
-import { CollisionSystem } from './physics/CollisionSystem.js?v=fixed_kick17';
-import { ParticleSystem } from './physics/ParticleSystem.js';
-import { RagdollSystem } from './physics/RagdollSystem.js';
-import { PowerSystem } from './physics/PowerSystem.js';
-import { PowerUpSystem } from './physics/PowerUpSystem.js';
-import { RivalBot } from './physics/RivalBot.js?v=phys15';
-import { SuperShots } from './physics/SuperShots.js?v=phys15';
-import { CHARACTERS, getCharacter } from './data/Characters.js?v=phys15';
-import { SoundManager } from './audio/SoundManager.js?v=phys15';
-import { AssetLoader } from './renderer/AssetLoader.js';
-import { GameRenderer } from './renderer/GameRenderer.js?v=goal_rework18';
-import { SpineExporter } from './export/SpineExporter.js';
-import { InputManager } from './ui/InputManager.js?v=phys15';
-import { UIManager } from './ui/UIManager.js?v=phys15';
-import { TournamentManager, GAME_MODES } from './tournament/TournamentManager.js?v=phys15';
+import { Skeleton } from './core/Skeleton.js?v=anim_hd_v33';
+import { AnimationController } from './animation/AnimationController.js?v=anim_hd_v33';
+import { Ball } from './physics/Ball.js?v=anim_hd_v33';
+import { CollisionSystem } from './physics/CollisionSystem.js?v=anim_hd_v33';
+import { ParticleSystem } from './physics/ParticleSystem.js?v=anim_hd_v33';
+import { RagdollSystem } from './physics/RagdollSystem.js?v=anim_hd_v33';
+import { PowerSystem } from './physics/PowerSystem.js?v=anim_hd_v33';
+import { PowerUpSystem } from './physics/PowerUpSystem.js?v=anim_hd_v33';
+import { RivalBot } from './physics/RivalBot.js?v=anim_hd_v33';
+import { SuperShots } from './physics/SuperShots.js?v=anim_hd_v33';
+import { CHARACTERS, getCharacter } from './data/Characters.js?v=anim_hd_v33';
+import { SoundManager } from './audio/SoundManager.js?v=anim_hd_v33';
+import { AssetLoader } from './renderer/AssetLoader.js?v=anim_hd_v33';
+import { GameRenderer } from './renderer/GameRenderer.js?v=anim_hd_v33';
+import { SpineExporter } from './export/SpineExporter.js?v=anim_hd_v33';
+import { InputManager } from './ui/InputManager.js?v=anim_hd_v33';
+import { UIManager } from './ui/UIManager.js?v=anim_hd_v33';
+import { TournamentManager, GAME_MODES } from './tournament/TournamentManager.js?v=anim_hd_v33';
 
 /**
  * Head Soccer 2D — Skeletal Rig, Ragdoll Stun, Multi-Character Roster & Super Power Engine
@@ -234,6 +234,7 @@ async function bootstrap() {
         player.isGrounded = false;
         player.canDoubleJump = true;
         animController.play('jump');
+        animController.triggerJumpStretch(1.25);
         soundManager.play('headImpact');
         particleSystem.spawnDust(player.x, player.y, 8);
         uiManager.setActiveAnim('jump');
@@ -252,6 +253,7 @@ async function bootstrap() {
         particleSystem.spawnSparks(player.x, player.y - 5, 14, '#00f0ff');
         collisionSystem.addFloatingText('🚀 ¡DOBLE SALTO!', player.x, player.y - 85, '#00f0ff', 20);
         animController.play('jump');
+        animController.triggerJumpStretch(1.0);
         uiManager.setActiveAnim('jump');
       }
       return;
@@ -355,11 +357,48 @@ async function bootstrap() {
   inputManager.onAction(triggerAction);
   uiManager.onPlayAction(triggerAction);
 
+  // Player 2 Action Dispatcher
+  const triggerP2Action = (animName, data = null) => {
+    soundManager.init();
+    if (animName === 'jump') {
+      rivalBot.triggerJump();
+    } else if (animName === 'dash') {
+      rivalBot.triggerDash();
+    } else if (animName === 'charged_kick') {
+      rivalBot.triggerKick(ball, player, collisionSystem, data);
+    } else if (animName === 'super_shot') {
+      rivalBot.triggerSuper(ball, player, collisionSystem, superShots);
+    } else if (animName === 'kick' || animName === 'bicycle_kick') {
+      rivalBot.triggerKick(ball, player, collisionSystem);
+    }
+  };
+
+  inputManager.onP2Action(triggerP2Action);
+
+  // 2-Player Local Multiplayer Mode Toggle
+  const toggle2PMode = (enable = null) => {
+    const isNow2P = enable !== null ? !!enable : !inputManager.twoPlayerMode;
+    inputManager.setTwoPlayerMode(isNow2P);
+    rivalBot.setHumanControlled(isNow2P);
+    uiManager.setTwoPlayerMode(isNow2P);
+    if (isNow2P) {
+      soundManager.play('crowdCheer');
+      collisionSystem.addFloatingText('👥 ¡MODO 2 JUGADORES ACTIVADO! 🎮', renderer.stageWidth * 0.5, renderer.groundY - 140, '#00f0ff', 24);
+      collisionSystem.addFloatingText('P1: WASD / Espacio / Shift  |  P2: Flechas / Enter / Shift Der', renderer.stageWidth * 0.5, renderer.groundY - 110, '#ffd700', 16);
+    } else {
+      collisionSystem.addFloatingText('🤖 MODO 1 JUGADOR (VS CPU)', renderer.stageWidth * 0.5, renderer.groundY - 140, '#ffd700', 20);
+    }
+  };
+
+  uiManager.onToggle2P(toggle2PMode);
+  window.toggle2PMode = toggle2PMode;
+
   // Tournament Coordinator Setup
   const tournamentManager = new TournamentManager();
   window.tournamentManager = tournamentManager;
 
   uiManager.onStartTournMatch(() => {
+    if (inputManager.twoPlayerMode) toggle2PMode(false);
     if (!tournamentManager.bracket || tournamentManager.tournamentRound >= 3) {
       tournamentManager.startCopaMundial(player.character.id);
     }
@@ -374,6 +413,7 @@ async function bootstrap() {
   });
 
   uiManager.onStartSurvival(() => {
+    if (inputManager.twoPlayerMode) toggle2PMode(false);
     const rival = tournamentManager.startSurvival(player.character.id);
     switchRivalCharacter(rival.id);
     rivalBot.setDifficulty(tournamentManager.getCurrentDifficulty());
@@ -390,9 +430,16 @@ async function bootstrap() {
     resetMatch();
   });
 
+  uiManager.onStartLocal2P(() => {
+    toggle2PMode(true);
+    tournamentManager.startLocal2P(player.character.id, rivalBot.character.id);
+    uiManager.updateTournamentPill('1 VS 1 MULTIJUGADOR LOCAL', '👥');
+    resetMatch();
+  });
+
   uiManager.onStartQuickMatch(() => {
     tournamentManager.setQuickMatch();
-    uiManager.updateTournamentPill('AMISTOSO RÁPIDO', '⚽');
+    uiManager.updateTournamentPill(inputManager.twoPlayerMode ? '1 VS 1 MULTIJUGADOR LOCAL' : 'AMISTOSO RÁPIDO', inputManager.twoPlayerMode ? '👥' : '⚽');
     resetMatch();
   });
 
@@ -405,7 +452,7 @@ async function bootstrap() {
     });
   }
   window.addEventListener('keydown', (e) => {
-    if ((e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') && !e.repeat) {
+    if ((e.key === 's' || e.key === 'S' || (!inputManager.twoPlayerMode && e.key === 'ArrowDown')) && !e.repeat) {
       triggerDash();
     }
     if (isMatchOver && (e.key === ' ' || e.key === 'Enter') && !e.repeat) {
@@ -459,6 +506,7 @@ async function bootstrap() {
       matchSeconds = 60;
     }
     isMatchOver = false;
+    collisionSystem.isMatchOver = false;
     slowMoTimer = 0;
     uiManager.hideMatchOver();
     collisionSystem.playerGoals = 0;
@@ -485,18 +533,20 @@ async function bootstrap() {
     player.flipAngle = 0;
     superShots.reset();
     player.animController.play('idle');
+    rivalBot.resetPosition();
     rivalBot.x = Math.floor(renderer.stageWidth * 0.72) || (renderer.stageWidth - 280);
     rivalBot.y = renderer.groundY;
     rivalBot.hp = 100;
-    rivalBot.isStunned = false;
-    rivalBot.isFrozen = false;
-    rivalBot.hasShield = false;
-    rivalBot.isKnockedOut = false;
+    rivalBot.power = 0;
     ball.reset(renderer.stageWidth * 0.5, renderer.groundY - 180);
     powerSystem.power = tournamentManager.currentMode === GAME_MODES.SURVIVAL ? 100 : 0;
     powerUpSystem.reset();
     uiManager.setPlayerHp(player.hp, 100);
     uiManager.setRivalHp(100, 100);
+    uiManager.setRivalPowerMeter(0, false);
+    if (tournamentManager.currentMode === GAME_MODES.LOCAL_2P) {
+      uiManager.updateTournamentPill('1 VS 1 MULTIJUGADOR LOCAL', '👥');
+    }
     soundManager.play('goalWhistle');
   };
 
@@ -553,8 +603,11 @@ async function bootstrap() {
   // Goal trigger banner, LED sensor flash & scoreboard update
   collisionSystem.onGoal((playerScore, kicker, ballObj) => {
     uiManager.setScore(playerScore, collisionSystem.rivalGoals);
-    uiManager.showGoalBanner();
+    uiManager.showGoalBanner(inputManager.twoPlayerMode ? 'JUGADOR 1' : '', player.character?.country || '⚽');
     player.animController.play('celebration');
+    if (rivalBot && rivalBot.isHumanControlled) {
+      rivalBot.animController.play('defeat');
+    }
     soundManager.play('crowdCheer');
     renderer.shake(14);
     renderer.flash('#00ffcc');
@@ -572,7 +625,11 @@ async function bootstrap() {
 
   collisionSystem.onRivalGoal((rivalScore, kicker, ballObj) => {
     uiManager.setScore(collisionSystem.playerGoals, rivalScore);
+    uiManager.showGoalBanner(inputManager.twoPlayerMode ? 'JUGADOR 2' : '', rivalBot.character?.country || '⚽');
     player.animController.play('defeat');
+    if (rivalBot && rivalBot.isHumanControlled) {
+      rivalBot.animController.play('celebration');
+    }
     renderer.shake(12);
     renderer.flash('#ff3700');
     slowMoTimer = 1.0;
@@ -594,6 +651,9 @@ async function bootstrap() {
     const now = performance.now();
     const rawDt = Math.min((now - lastTime) / 1000, 0.1);
     lastTime = now;
+
+    // Poll connected Gamepads (Pad 0 for Player 1, Pad 1 for Player 2)
+    inputManager.pollGamepads();
 
     let dt = rawDt;
     if (hitStopTimer > 0) {
@@ -641,6 +701,16 @@ async function bootstrap() {
           player.animController.play('defeat');
           uiManager.showMatchOver('FIN DE LA SUPERVIVENCIA 💀', `Alcanzaste ${outcome.finalStreak} victorias. Récord: ${outcome.bestStreak}`);
           uiManager.updateSurvivalStats(0, outcome.bestStreak);
+        } else if (outcome.status === 'p1_victory') {
+          soundManager.play('crowdCheer');
+          player.animController.play('celebration');
+          if (rivalBot.isHumanControlled) rivalBot.animController.play('defeat');
+          uiManager.showMatchOver('¡VICTORIA DEL JUGADOR 1! 🏆', `${player.character.name} triunfa ${outcome.p1Score} - ${outcome.p2Score}!`);
+        } else if (outcome.status === 'p2_victory') {
+          soundManager.play('crowdCheer');
+          player.animController.play('defeat');
+          if (rivalBot.isHumanControlled) rivalBot.animController.play('celebration');
+          uiManager.showMatchOver('¡VICTORIA DEL JUGADOR 2! 🎮', `${rivalBot.character.name} triunfa ${outcome.p2Score} - ${outcome.p1Score}!`);
         } else if (collisionSystem.playerGoals > collisionSystem.rivalGoals) {
           player.animController.play('celebration');
           soundManager.play('crowdCheer');
@@ -666,9 +736,10 @@ async function bootstrap() {
     rivalBot.groundY = renderer.groundY;
     rivalBot.enabled = uiManager.toggles.rival !== false;
 
-    // Update Rival AI with SuperShots launcher
-    const rivalAnimState = rivalBot.update(dt, ball, player, collisionSystem, ragdollSystem, superShots);
+    // Update Rival AI / Player 2 with SuperShots launcher and inputs
+    const rivalAnimState = rivalBot.update(dt, ball, player, collisionSystem, ragdollSystem, superShots, inputManager);
     uiManager.setRivalHp(rivalBot.hp, rivalBot.maxHp);
+    uiManager.setRivalPowerMeter(rivalBot.power / 100, rivalBot.power >= 100);
 
     if (ragdollSystem.isActive) {
       // 1. Floppy Ragdoll Physics active!
@@ -750,6 +821,12 @@ async function bootstrap() {
         }
       }
       player.isMoving = isMoving;
+      if (isMoving && player.isGrounded && Math.random() < 0.35) {
+        particleSystem.spawnDust(player.x - player.direction * 18, renderer.groundY, 2);
+      }
+      if (rivalBot && rivalBot.isMoving && rivalBot.isGrounded && Math.random() < 0.35) {
+        particleSystem.spawnDust(rivalBot.x - rivalBot.direction * 18, renderer.groundY, 2);
+      }
 
       // Clamp player to pitch boundaries (full width between edge-aligned goals)
       player.x = Math.max(78, Math.min(player.x, renderer.stageWidth - 78));
@@ -760,10 +837,13 @@ async function bootstrap() {
         player.y += player.vy * dt;
 
         if (player.y >= renderer.groundY) {
+          const impact = Math.min(1.6, Math.abs(player.vy) / 450);
           player.y = renderer.groundY;
           player.vy = 0;
           player.isGrounded = true;
           player.canDoubleJump = true;
+          animController.triggerLandingSquash(impact);
+          particleSystem.spawnDust(player.x, renderer.groundY, 7);
           particleSystem.spawnSparks(player.x, renderer.groundY, 8, 'rgba(255,255,255,0.6)');
         }
       } else {
@@ -792,6 +872,9 @@ async function bootstrap() {
       // Synchronize Skeleton Root Transform
       skeleton.setPosition(player.x, player.y);
       skeleton.setFacing(player.direction);
+
+      // Procedural Gaze / Look-At tracking towards ball
+      animController.setLookTarget(ball.x, ball.y);
 
       // Update Animation State & Skeleton
       animState = animController.update(player.isFrozen ? 0 : dt);
@@ -824,9 +907,26 @@ async function bootstrap() {
       renderer.chargingAura = null;
     }
 
+    // Hold-to-Charge Power Shot Feedback & Aura for Player 2
+    const p2ChargeRatio = inputManager.getP2KickChargeRatio();
+    if (p2ChargeRatio > 0 && rivalBot.isHumanControlled && !rivalBot.isStunned && !rivalBot.isFrozen) {
+      if (Math.random() < 0.28) {
+        soundManager.playChargeHum(p2ChargeRatio);
+      }
+      particleSystem.spawnSparks(rivalBot.x + rivalBot.direction * 15, renderer.groundY - 8, 2, p2ChargeRatio > 0.85 ? '#ffd700' : '#ff3700');
+      renderer.chargingAuraP2 = {
+        x: rivalBot.x,
+        y: renderer.groundY,
+        ratio: p2ChargeRatio,
+        color: p2ChargeRatio > 0.85 ? '#ffd700' : '#ff3700'
+      };
+    } else {
+      renderer.chargingAuraP2 = null;
+    }
+
     // Update Physics, Air Drops & Interactions
     ball.update(dt, renderer.groundY, renderer.stageWidth);
-    collisionSystem.update(player, skeleton, ball, renderer.stageWidth, renderer.groundY, dt, ragdollSystem, powerSystem, rivalBot, inputManager);
+    collisionSystem.update(player, skeleton, ball, renderer.stageWidth, renderer.groundY, dt, ragdollSystem, powerSystem, rivalBot, inputManager, isMatchOver);
     powerUpSystem.update(dt, renderer.stageWidth, renderer.groundY, player, rivalBot, ball, collisionSystem);
     superShots.update(dt, renderer.stageWidth, renderer.groundY, ball, player, rivalBot, collisionSystem);
     particleSystem.update(dt);

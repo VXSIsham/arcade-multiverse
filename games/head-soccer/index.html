@@ -31,6 +31,7 @@
 
     <div class="header-actions">
       <button class="header-btn" id="btnGoArcadeHub" style="background:linear-gradient(135deg,#ff3b6b,#7c3aed);color:#fff;border-color:#ffd700;">🕹️ Arcade</button>
+      <button class="header-btn" id="btnToggle2P" style="border-color: rgba(0, 240, 255, 0.6); color: #00f0ff; font-weight: 800;">👥 2P Local: OFF</button>
       <button class="header-btn highlight" id="btnOpenTournaments">🏆 Torneos</button>
       <button class="header-btn" id="btnOpenRoster">👥 Personajes</button>
       <button class="header-btn" id="btnToggleMobile">📱 Móvil: OFF</button>
@@ -302,6 +303,7 @@
       <!-- Mode Selection Tabs -->
       <div class="tourn-tabs-bar">
         <button class="tourn-tab-btn active" data-tab="copa">🏆 Copa Mundial</button>
+        <button class="tourn-tab-btn" data-tab="local2p">👥 1 vs 1 Local</button>
         <button class="tourn-tab-btn" data-tab="survival">🔥 Supervivencia</button>
         <button class="tourn-tab-btn" data-tab="golden">⚡ Gol de Oro</button>
         <button class="tourn-tab-btn" data-tab="quick">⚽ Partido Rápido</button>
@@ -322,7 +324,42 @@
         </div>
       </div>
 
-      <!-- Tab 2: Supervivencia (Gauntlet) -->
+      <!-- Tab 2: 1 vs 1 Local Multiplayer -->
+      <div class="tourn-tab-content" id="tabContentLocal2p">
+        <div class="survival-view-card">
+          <div class="survival-badge-large" style="background: linear-gradient(135deg, #00f0ff, #ff0077);">👥 1 VS 1 MULTIJUGADOR LOCAL</div>
+          <p class="survival-desc">¡Enfréntate a un amigo en el mismo teclado o con 2 mandos / gamepads de consola (Xbox / PlayStation)!</p>
+          
+          <div class="two-player-controls-guide" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 18px 0; text-align: left;">
+            <div style="background: rgba(0, 240, 255, 0.08); border: 1px solid rgba(0, 240, 255, 0.35); border-radius: 12px; padding: 14px;">
+              <div style="color: #00f0ff; font-weight: 800; font-size: 15px; margin-bottom: 8px;">⭐ JUGADOR 1 (Izquierda)</div>
+              <div style="font-size: 13px; color: #ddd; line-height: 1.6;">
+                • <b>Moverse</b>: <kbd style="background: #222; border: 1px solid #555; padding: 2px 6px; border-radius: 4px;">A</kbd> / <kbd style="background: #222; border: 1px solid #555; padding: 2px 6px; border-radius: 4px;">D</kbd><br>
+                • <b>Salto / Cabeza</b>: <kbd style="background: #222; border: 1px solid #555; padding: 2px 6px; border-radius: 4px;">W</kbd><br>
+                • <b>Dash / Deslizar</b>: <kbd style="background: #222; border: 1px solid #555; padding: 2px 6px; border-radius: 4px;">S</kbd><br>
+                • <b>Tiro / Carga</b>: <kbd style="background: #222; border: 1px solid #555; padding: 2px 6px; border-radius: 4px;">Espacio</kbd> / <kbd style="background: #222; border: 1px solid #555; padding: 2px 6px; border-radius: 4px;">J</kbd><br>
+                • <b>Súper Tiro</b>: <kbd style="background: #222; border: 1px solid #555; padding: 2px 6px; border-radius: 4px;">Shift Izq</kbd> / <kbd style="background: #222; border: 1px solid #555; padding: 2px 6px; border-radius: 4px;">F</kbd><br>
+                • <b>Gamepad</b>: Mando 1 (Stick / D-pad + A / B / Y)
+              </div>
+            </div>
+            <div style="background: rgba(255, 55, 0, 0.08); border: 1px solid rgba(255, 55, 0, 0.35); border-radius: 12px; padding: 14px;">
+              <div style="color: #ff3700; font-weight: 800; font-size: 15px; margin-bottom: 8px;">🎮 JUGADOR 2 (Derecha)</div>
+              <div style="font-size: 13px; color: #ddd; line-height: 1.6;">
+                • <b>Moverse</b>: <kbd style="background: #222; border: 1px solid #555; padding: 2px 6px; border-radius: 4px;">←</kbd> / <kbd style="background: #222; border: 1px solid #555; padding: 2px 6px; border-radius: 4px;">→</kbd> o Numpad 4/6<br>
+                • <b>Salto / Cabeza</b>: <kbd style="background: #222; border: 1px solid #555; padding: 2px 6px; border-radius: 4px;">↑</kbd> o Numpad 8<br>
+                • <b>Dash / Deslizar</b>: <kbd style="background: #222; border: 1px solid #555; padding: 2px 6px; border-radius: 4px;">↓</kbd> o Numpad 2<br>
+                • <b>Tiro / Carga</b>: <kbd style="background: #222; border: 1px solid #555; padding: 2px 6px; border-radius: 4px;">Enter</kbd> / <kbd style="background: #222; border: 1px solid #555; padding: 2px 6px; border-radius: 4px;">L</kbd><br>
+                • <b>Súper Tiro</b>: <kbd style="background: #222; border: 1px solid #555; padding: 2px 6px; border-radius: 4px;">Shift Der</kbd> / <kbd style="background: #222; border: 1px solid #555; padding: 2px 6px; border-radius: 4px;">P</kbd><br>
+                • <b>Gamepad</b>: Mando 2 (Stick / D-pad + A / B / Y)
+              </div>
+            </div>
+          </div>
+
+          <button class="tourn-action-btn pulse-glow" id="btnStartLocal2P" style="background: linear-gradient(135deg, #00f0ff, #ff0077);">👥 ¡COMENZAR PARTIDO 1 VS 1 LOCAL!</button>
+        </div>
+      </div>
+
+      <!-- Tab 3: Supervivencia (Gauntlet) -->
       <div class="tourn-tab-content" id="tabContentSurvival">
         <div class="survival-view-card">
           <div class="survival-badge-large">🔥 MODO SUPERVIVENCIA</div>
@@ -347,7 +384,7 @@
         </div>
       </div>
 
-      <!-- Tab 3: Gol de Oro (Sudden Death) -->
+      <!-- Tab 4: Gol de Oro (Sudden Death) -->
       <div class="tourn-tab-content" id="tabContentGolden">
         <div class="survival-view-card">
           <div class="survival-badge-large" style="background: linear-gradient(135deg, #ffd700, #ff5500);">⚡ MUERTE SÚBITA / GOL DE ORO</div>
@@ -356,7 +393,7 @@
         </div>
       </div>
 
-      <!-- Tab 4: Amistoso Rápido -->
+      <!-- Tab 5: Amistoso Rápido -->
       <div class="tourn-tab-content" id="tabContentQuick">
         <div class="survival-view-card">
           <div class="survival-badge-large" style="background: linear-gradient(135deg, #00f0ff, #0066ff);">⚽ AMISTOSO CLÁSICO ARCADE</div>
@@ -384,10 +421,6 @@
   <!-- Main Game Bootstrap -->
   <script src="bundle.js"></script>
   <script>
-    (function checkMobile(){
-      const isMob = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth <= 900);
-      if (isMob) document.body.classList.add('mobile-mode');
-    })();
     document.getElementById('btnGoArcadeHub')?.addEventListener('click', () => {
       if (window.parent && window.parent !== window) {
         window.parent.postMessage({ type: 'ARCADE_HUB_HOME' }, '*');

@@ -50,14 +50,16 @@ export class CharacterRenderer {
     }
 
     if (showSkin) {
-      this.drawArm(ctx, skeleton.armBack, false, kit);
       this.drawBoot(ctx, skeleton.footBack, false);
+      this.drawLeg(ctx, skeleton.legBack, false, kit);
+      this.drawArm(ctx, skeleton.armBack, false, kit);
       this.drawJersey(ctx, skeleton.torso, kit, character, facing);
+      this.drawLeg(ctx, skeleton.legFront, true, kit);
       this.drawBoot(ctx, skeleton.footFront, true);
+      this.drawArm(ctx, skeleton.armFront, true, kit);
       if (animState?.face === 'strain' || animState?.face === 'power' || animState?.face === 'dragon') {
         this.drawKickSwoosh(ctx, skeleton.footFront, character);
       }
-      this.drawArm(ctx, skeleton.armFront, true, kit);
     }
     this.drawHead(ctx, skeleton.head, animState, headScale, showSkin, showMesh, character, options.hp);
 
@@ -212,32 +214,33 @@ export class CharacterRenderer {
     ctx.rotate((bone.worldRotation + 90) * Math.PI / 180);
     if (kit && kit !== 'none') ctx.filter = kit;
 
-    const w = 72;
+    // Torso calibrated to 2:1 Chibi bobblehead proportion (width 64)
+    const w = 64;
     const h = (torsoImg.height / torsoImg.width) * w;
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-    ctx.shadowBlur = 10;
-    // Pivot centered on chest, slightly higher so shorts end above boots
-    ctx.drawImage(torsoImg, -w * 0.50, -h * 0.58, w, h);
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+    ctx.shadowBlur = 8;
+    // Pivot centered on chest, neck collar sits right under head chin
+    ctx.drawImage(torsoImg, -w * 0.50, -h * 0.36, w, h);
 
-    // Reset filter for layered uniform detailing (number and collar)
+    // Reset filter for layered uniform detailing (number)
     ctx.filter = 'none';
 
-    // Detailed Gold Collar Line
-    ctx.strokeStyle = 'rgba(255, 215, 0, 0.85)';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.arc(0, -h * 0.44, 9, 0, Math.PI);
-    ctx.stroke();
-
-    // Detailed Team Number badge on jersey chest
-    const num = facing > 0 ? '10' : '7';
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
-    ctx.shadowBlur = 4;
-    ctx.font = 'bold 13px "Outfit", sans-serif';
+    // Detailed Team Number badge on jersey chest (NEVER mirrored backwards)
+    const num = (character?.id === 'kenta' || !character) ? '10' : (character?.id === 'luchador' ? '7' : (character?.number || '9'));
+    ctx.save();
+    ctx.translate(0, -h * 0.04);
+    if (facing < 0) {
+      ctx.scale(-1, 1); // Un-mirror so number is never backwards
+    }
+    ctx.font = '900 12px "Outfit", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(num, 0, -h * 0.22);
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 3;
+    ctx.strokeText(num, 0, 0);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(num, 0, 0);
+    ctx.restore();
 
     ctx.restore();
   }
@@ -248,34 +251,17 @@ export class CharacterRenderer {
 
     ctx.save();
     ctx.translate(bone.worldX, bone.worldY);
-    ctx.rotate(bone.worldRotation * Math.PI / 180);
+    // Align vertical arm sprite (sleeve top to fist bottom) along bone direction
+    ctx.rotate((bone.worldRotation - 90) * Math.PI / 180);
 
-    const w = isFront ? 26 : 22;
+    const w = isFront ? 22 : 18;
     const h = (armImg.height / armImg.width) * w;
     const filters = [];
     if (kit && kit !== 'none') filters.push(kit);
-    if (!isFront) filters.push('brightness(0.68) saturate(0.9)');
+    if (!isFront) filters.push('brightness(0.72) saturate(0.9)');
     if (filters.length) ctx.filter = filters.join(' ');
-    // Shoulder pivot at top center
-    ctx.drawImage(armImg, -w * 0.45, -h * 0.12, w, h);
-
-    // Captain's Armband on Front Arm!
-    if (isFront) {
-      ctx.filter = 'none';
-      ctx.fillStyle = '#ffd700';
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 1;
-      const bandY = h * 0.35;
-      ctx.fillRect(-w * 0.42, bandY, w * 0.84, 9);
-      ctx.strokeRect(-w * 0.42, bandY, w * 0.84, 9);
-
-      // Captain "C"
-      ctx.fillStyle = '#000000';
-      ctx.font = 'bold 8px "Outfit", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('C', 0, bandY + 4.5);
-    }
+    // Shoulder sleeve pivot at top center
+    ctx.drawImage(armImg, -w * 0.50, -h * 0.12, w, h);
 
     ctx.restore();
   }
@@ -286,21 +272,29 @@ export class CharacterRenderer {
     // Head bone points upward (-90°); +90° compensation aligns head upright
     ctx.rotate((bone.worldRotation + 90) * Math.PI / 180);
 
-    const sX = headScaleMultiplier * (animState.headScaleX || 1.0);
-    const sY = headScaleMultiplier * (animState.headScaleY || 1.0);
+    // Natural living arcade blink (140ms duration every ~3.8s)
+    const nowSec = performance.now() * 0.001;
+    const charSeed = character ? character.id.charCodeAt(0) * 0.6 : 0;
+    const blinkCycle = (nowSec + charSeed) % 4.2;
+    const isBlinking = blinkCycle > 4.06 && (animState.face === 'idle' || !animState.face);
+
+    // Apply authentic 1.25x Chibi caricature multiplier so head is 2x wider than torso
+    const blinkSquash = isBlinking ? 0.86 : 1.0;
+    const sX = 1.25 * headScaleMultiplier * (animState.headScaleX || 1.0) * (isBlinking ? 1.04 : 1.0);
+    const sY = 1.25 * headScaleMultiplier * (animState.headScaleY || 1.0) * blinkSquash;
     ctx.scale(sX, sY);
 
     if (showSkin) {
       const headImg = this.pickHead(character, animState.face);
       if (this.isReady(headImg)) {
-        const cfg = character?.head || { width: 106, pivotX: 0.48, pivotY: 0.86 };
+        const cfg = character?.head || { width: 104, pivotX: 0.50, pivotY: 0.88 };
         const w = cfg.width;
         const h = (headImg.height / headImg.width) * w;
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
-        ctx.shadowBlur = 14;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.40)';
+        ctx.shadowBlur = 12;
         ctx.shadowOffsetY = 4;
-        // Neck pivot sits at bone origin (jersey collar)
-        ctx.drawImage(headImg, -w * cfg.pivotX, -h * cfg.pivotY, w, h);
+        // Chin sits cleanly right above the jersey collar
+        ctx.drawImage(headImg, -w * (cfg.pivotX ?? 0.50), -h * (cfg.pivotY ?? 0.88), w, h);
         ctx.shadowColor = 'transparent';
 
         // Expressive low-HP sweat droplets
@@ -458,26 +452,88 @@ export class CharacterRenderer {
     ctx.translate(bone.worldX, bone.worldY);
     ctx.rotate(bone.worldRotation * Math.PI / 180);
 
-    const w = isFront ? 50 : 44;
+    const w = isFront ? 48 : 42;
     const h = (bootImg.height / bootImg.width) * w;
-    if (!isFront) ctx.filter = 'brightness(0.68) saturate(0.9)';
-    // Ankle/heel pivot
-    ctx.drawImage(bootImg, -w * 0.28, -h * 0.52, w, h);
+    if (!isFront) ctx.filter = 'brightness(0.72) saturate(0.9)';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+    ctx.shadowBlur = 6;
+    // Ankle collar pivot: sits right at ankle joint, cleat sole touches ground
+    ctx.drawImage(bootImg, -w * 0.35, -h * 0.38, w, h);
 
-    // Athletic Speed Swoosh / Stripe on boot
-    ctx.filter = 'none';
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2.2;
+    ctx.restore();
+  }
+
+  drawLeg(ctx, bone, isFront, kit) {
+    if (!bone) return;
+    ctx.save();
+    ctx.translate(bone.worldX, bone.worldY);
+    ctx.rotate(bone.worldRotation * Math.PI / 180);
+
+    const len = bone.length || 20;
+    const w = isFront ? 14 : 12;
+
+    const filters = [];
+    if (kit && kit !== 'none') filters.push(kit);
+    if (!isFront) filters.push('brightness(0.72) saturate(0.9)');
+    if (filters.length) ctx.filter = filters.join(' ');
+
+    // Athletic soccer sock (matching kit shorts, e.g. blue or dark)
+    // Connecting shorts socket (x: 0) to boot collar (x: len)
+    ctx.fillStyle = '#1e3a8a'; // Deep athletic navy/blue matching uniform shorts
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 1.6;
+
     ctx.beginPath();
-    ctx.moveTo(-w * 0.12, -h * 0.15);
-    ctx.quadraticCurveTo(0, -h * 0.05, w * 0.35, -h * 0.2);
+    // Tapered muscular soccer calf shape
+    ctx.moveTo(0, -w * 0.55);
+    ctx.lineTo(len + 2, -w * 0.42);
+    ctx.lineTo(len + 2, w * 0.42);
+    ctx.lineTo(0, w * 0.55);
+    ctx.closePath();
+    ctx.fill();
     ctx.stroke();
 
-    // Cleat Sole Studs underneath
-    ctx.fillStyle = '#111111';
-    for (let s = 0; s < 3; s++) {
-      ctx.fillRect(-w * 0.15 + s * 14, h * 0.44, 4, 3);
-    }
+    // Twin Championship White Accent Stripes on the sock
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(len * 0.35, -w * 0.48, 2.5, w * 0.96);
+    ctx.fillRect(len * 0.60, -w * 0.45, 2.5, w * 0.90);
+
+    ctx.restore();
+  }
+
+  drawHeadbandRibbon(ctx, bone) {
+    if (!bone) return;
+    ctx.save();
+    ctx.translate(bone.worldX, bone.worldY);
+    ctx.rotate(bone.worldRotation * Math.PI / 180);
+
+    const time = performance.now() * 0.008;
+    const wave1 = Math.sin(time) * 4;
+    const wave2 = Math.cos(time * 1.2) * 5;
+
+    // Ribbon 1 (Main Red Banner)
+    ctx.fillStyle = '#dc2626';
+    ctx.strokeStyle = '#7f1d1d';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(0, -4);
+    ctx.quadraticCurveTo(-14, -8 + wave1, -28, -12 + wave1 * 1.5);
+    ctx.lineTo(-24, -4 + wave1);
+    ctx.quadraticCurveTo(-12, 0, 0, 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Ribbon 2 (Secondary lower tail)
+    ctx.fillStyle = '#b91c1c';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(-12, 6 + wave2, -26, 8 + wave2 * 1.3);
+    ctx.lineTo(-22, 14 + wave2);
+    ctx.quadraticCurveTo(-10, 8, 0, 5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
 
     ctx.restore();
   }

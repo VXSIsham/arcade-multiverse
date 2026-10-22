@@ -21,9 +21,9 @@ export class Skeleton {
     // Headband fluttering ribbons
     this.hairRibbon = new Bone('hair_ribbon', this.head, 24, -20, 16, 35);
 
-    // Arms attached to torso shoulders
-    this.armBack = new Bone('arm_back', this.torso, 20, 18, 12, -145);
-    this.armFront = new Bone('arm_front', this.torso, 20, 18, -12, 125);
+    // Arms attached to torso shoulders (hanging naturally downward along torso)
+    this.armBack = new Bone('arm_back', this.torso, 20, 18, 12, 185);
+    this.armFront = new Bone('arm_front', this.torso, 20, 18, -12, 175);
 
     // Back Support Leg & Boot (ground contact)
     this.legBack = new Bone('leg_back', this.hip, 20, 0, -8, 165);

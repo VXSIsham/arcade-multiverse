@@ -11,7 +11,7 @@ export const GOAL = {
 };
 
 export class Ball {
-  constructor(x = 420, y = 0, radius = 21) {
+  constructor(x = 420, y = 0, radius = 26) {
     this.x = x;
     this.y = y;
     this.vx = 0;
@@ -142,12 +142,22 @@ export class Ball {
     // 2. Inside the Net Physics (Catching tension, progressive drag, and net bulge)
     this.handleNetPhysics(groundY, stageWidth);
 
-    // Super loses its "danger" once it slows down
+    // Super shot dynamic aerodynamic decay (balances overpowered cross-field shots)
     speed = Math.hypot(this.vx, this.vy);
-    if (this.isSuper && !this.effect && speed < 260) {
-      this.isSuper = false;
-      this.heavy = false;
-      this.shotType = null;
+    if (this.isSuper) {
+      this.superLife = (this.superLife || 0) + dt;
+      if (this.superLife > 0.8) {
+        this.vx *= 0.985;
+        this.vy *= 0.985;
+      }
+      if (this.superLife > 2.2 || (!this.effect && speed < 300)) {
+        this.isSuper = false;
+        this.superLife = 0;
+        this.heavy = false;
+        this.shotType = null;
+      }
+    } else {
+      this.superLife = 0;
     }
 
     // Dynamic motion comet trail for fast balls
@@ -267,6 +277,7 @@ export class Ball {
     this.vx = powerX;
     this.vy = powerY;
     this.isSuper = isSuper;
+    this.superLife = 0;
     this.shotType = shotType;
     this.spin = spin;
     if (!isSuper) {

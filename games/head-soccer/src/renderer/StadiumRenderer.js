@@ -70,6 +70,9 @@ export class StadiumRenderer {
     this.flagTime = 0;
     this.leftFlagBend = 0;
     this.rightFlagBend = 0;
+
+    // Celebratory Stadium Confetti Cannons
+    this.confetti = [];
   }
 
   setGoalProps(newProps = {}) {
@@ -163,6 +166,29 @@ export class StadiumRenderer {
         }
       }
     }
+
+    // Explosive Confetti Cannon blast across arena!
+    const colors = ['#ffd700', '#ff0055', '#00f0ff', '#22c55e', '#a855f7', '#ff9100', '#ffffff'];
+    const startX = isRightGoal ? (this.lastStageWidth - 78) : 78;
+    for (let i = 0; i < 140; i++) {
+      const angle = isRightGoal ? (-Math.PI * 0.5 - Math.random() * 0.95) : (-Math.PI * 0.5 + Math.random() * 0.95);
+      const speed = Math.random() * 540 + 260;
+      this.confetti.push({
+        x: startX + (Math.random() - 0.5) * 50,
+        y: (this.lastGroundY || 600) - (130 + Math.random() * 80),
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        width: Math.random() * 9 + 5,
+        height: Math.random() * 6 + 4,
+        rot: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 14,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        life: 1.0,
+        decay: Math.random() * 0.28 + 0.20,
+        flutterFreq: Math.random() * 8 + 4,
+        flutterAmp: Math.random() * 65 + 30
+      });
+    }
   }
 
   update(dt, ball = null, soundManager = null) {
@@ -190,6 +216,36 @@ export class StadiumRenderer {
     // Corner flag elastic recovery
     this.leftFlagBend *= 0.93;
     this.rightFlagBend *= 0.93;
+
+    // Confetti Physics simulation
+    for (let i = this.confetti.length - 1; i >= 0; i--) {
+      const c = this.confetti[i];
+      c.vy += 380 * dt; // gravity
+      c.vx *= 0.965; // air drag
+      c.x += (c.vx + Math.sin(this.flagTime * c.flutterFreq) * c.flutterAmp) * dt;
+      c.y += c.vy * dt;
+      c.rot += c.rotSpeed * dt;
+      c.life -= c.decay * dt;
+      if (c.life <= 0 || c.y > (this.lastGroundY || 700) + 20) {
+        this.confetti.splice(i, 1);
+      }
+    }
+  }
+
+  renderConfetti(ctx) {
+    if (!this.confetti || this.confetti.length === 0) return;
+    ctx.save();
+    for (const c of this.confetti) {
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.rotate(c.rot);
+      ctx.scale(Math.cos(c.rot * 1.5), 1.0); // 3D ribbon flip
+      ctx.fillStyle = c.color;
+      ctx.globalAlpha = Math.max(0, Math.min(1, c.life * 1.8));
+      ctx.fillRect(-c.width * 0.5, -c.height * 0.5, c.width, c.height);
+      ctx.restore();
+    }
+    ctx.restore();
   }
 
   renderBackdrop(ctx, stageWidth, stageHeight, groundY) {

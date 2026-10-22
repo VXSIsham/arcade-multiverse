@@ -39,7 +39,7 @@ export class AssetLoader {
         console.warn(`[AssetLoader] Failed to load ${item.src}`);
         resolve();
       };
-      img.src = item.src;
+      img.src = `${item.src}?v=sprites_hd_v32`;
       this.sprites[item.key] = img;
     }))).then(() => {
       this.loaded = true;

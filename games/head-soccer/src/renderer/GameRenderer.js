@@ -1,5 +1,5 @@
-import { StadiumRenderer } from './StadiumRenderer.js?v=goal_rework18';
-import { CharacterRenderer } from './CharacterRenderer.js';
+import { StadiumRenderer } from './StadiumRenderer.js?v=sprites_hd_v31';
+import { CharacterRenderer } from './CharacterRenderer.js?v=sprites_hd_v31';
 import { SpineDebugger } from './SpineDebugger.js';
 
 /**
@@ -115,21 +115,54 @@ export class GameRenderer {
     // 3. Ground Pitch Line & Center Arc
     this.stadiumRenderer.renderPitchLine(ctx, this.stageWidth, this.groundY);
 
-    // 4. Character Shadows
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
+    // 4. Dynamic Character & Ball Ground Shadows with Realistic Elevation Scaling
+    // Player 1 Ground Shadow
+    const p1Elev = Math.max(0, this.groundY - player.y);
+    const p1Scale = Math.max(0.35, 1.0 - (p1Elev / 280) * 0.65);
+    const p1Alpha = Math.max(0.10, 0.42 - (p1Elev / 280) * 0.30);
+    ctx.fillStyle = `rgba(0, 0, 0, ${p1Alpha.toFixed(3)})`;
     ctx.beginPath();
-    ctx.ellipse(player.x, this.groundY + 3, 44, 11, 0, 0, Math.PI * 2);
+    ctx.ellipse(player.x, this.groundY + 3, 46 * p1Scale, 11 * p1Scale, 0, 0, Math.PI * 2);
     ctx.fill();
 
+    // CPU Rival Ground Shadow
     if (sceneState.rivalBot && sceneState.rivalBot.enabled) {
+      const cpu = sceneState.rivalBot;
+      const cpuElev = Math.max(0, this.groundY - cpu.y);
+      const cpuScale = Math.max(0.35, 1.0 - (cpuElev / 280) * 0.65);
+      const cpuAlpha = Math.max(0.10, 0.42 - (cpuElev / 280) * 0.30);
+      ctx.fillStyle = `rgba(0, 0, 0, ${cpuAlpha.toFixed(3)})`;
       ctx.beginPath();
-      ctx.ellipse(sceneState.rivalBot.x, this.groundY + 3, 44, 11, 0, 0, Math.PI * 2);
+      ctx.ellipse(cpu.x, this.groundY + 3, 46 * cpuScale, 11 * cpuScale, 0, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // 4b. Hold-to-Charge Glowing Power Aura on Turf
-    if (this.chargingAura) {
-      const { x, y, ratio, color } = this.chargingAura;
+    // Ball Ground Shadow (Crucial 3D depth cue for judging aerial passes and headers)
+    const ballElev = Math.max(0, this.groundY - ball.y);
+    const ballScale = Math.max(0.32, 1.0 - (ballElev / 320) * 0.68);
+    const ballAlpha = Math.max(0.10, 0.48 - (ballElev / 320) * 0.34);
+    ctx.fillStyle = `rgba(0, 0, 0, ${ballAlpha.toFixed(3)})`;
+    ctx.beginPath();
+    ctx.ellipse(ball.x, this.groundY + 3, Math.max(8, ball.radius * 1.35 * ballScale), Math.max(3, 7 * ballScale), 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Supply Crates Ground Shadow (shows landing zone while parachute is falling)
+    if (sceneState.powerUpSystem && sceneState.powerUpSystem.crates) {
+      for (const crate of sceneState.powerUpSystem.crates) {
+        const crateElev = Math.max(0, this.groundY - crate.y);
+        const crateScale = Math.max(0.30, 1.0 - (crateElev / 340) * 0.70);
+        const crateAlpha = Math.max(0.08, 0.38 - (crateElev / 340) * 0.28);
+        ctx.fillStyle = `rgba(0, 0, 0, ${crateAlpha.toFixed(3)})`;
+        ctx.beginPath();
+        ctx.ellipse(crate.x, this.groundY + 3, 22 * crateScale, 6 * crateScale, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // 4b. Hold-to-Charge Glowing Power Aura on Turf (P1 & P2)
+    const drawAura = (aura) => {
+      if (!aura) return;
+      const { x, y, ratio, color } = aura;
       ctx.save();
       ctx.strokeStyle = color;
       ctx.lineWidth = 3.5;
@@ -150,14 +183,10 @@ export class GameRenderer {
       ctx.ellipse(x, y + 2, 46 + ratio * 16, 12 + ratio * 4, 0, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * ratio);
       ctx.stroke();
       ctx.restore();
-    }
+    };
 
-    // 5. Ball Shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
-    const shadowScale = Math.max(0.2, 1 - (this.groundY - ball.y) / 400);
-    ctx.beginPath();
-    ctx.ellipse(ball.x, this.groundY + 3, ball.radius * shadowScale, (ball.radius * 0.38) * shadowScale, 0, 0, Math.PI * 2);
-    ctx.fill();
+    if (this.chargingAura) drawAura(this.chargingAura);
+    if (this.chargingAuraP2) drawAura(this.chargingAuraP2);
 
     // 5b. High-Speed Action Speed Lines (Anime/Arcade Rush)
     this.drawSpeedLines(ctx, ball);
@@ -187,7 +216,7 @@ export class GameRenderer {
       ctx.restore();
     }
 
-    // 6b. Dash Ghost Afterimages (Motion Blur Rocket Trails)
+    // 6b. Dash Ghost Afterimages (Motion Blur Rocket Trails - P1 & P2)
     if (player.dashGhosts && player.dashGhosts.length > 0) {
       for (const ghost of player.dashGhosts) {
         ctx.save();
@@ -195,6 +224,20 @@ export class GameRenderer {
         ctx.translate(ghost.x, ghost.y);
         ctx.scale(ghost.direction, 1);
         ctx.fillStyle = ghost.color || 'rgba(0, 240, 255, 0.4)';
+        ctx.beginPath();
+        ctx.ellipse(0, -45, 26, 44, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    if (sceneState.rivalBot && sceneState.rivalBot.dashGhosts && sceneState.rivalBot.dashGhosts.length > 0) {
+      for (const ghost of sceneState.rivalBot.dashGhosts) {
+        ctx.save();
+        ctx.globalAlpha = ghost.alpha;
+        ctx.translate(ghost.x, ghost.y);
+        ctx.scale(ghost.direction, 1);
+        ctx.fillStyle = ghost.color || 'rgba(255, 55, 0, 0.4)';
         ctx.beginPath();
         ctx.ellipse(0, -45, 26, 44, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -220,8 +263,14 @@ export class GameRenderer {
     });
     ctx.restore();
 
-    // 7b. Rival Opponent Skins & Mesh (CPU Striker)
+    // 7b. Rival Opponent Skins & Mesh (P2 / CPU Striker)
     if (sceneState.rivalBot && sceneState.rivalBot.enabled) {
+      ctx.save();
+      if (sceneState.rivalBot.isSpinning && sceneState.rivalBot.flipAngle) {
+        ctx.translate(sceneState.rivalBot.x, sceneState.rivalBot.y - 45);
+        ctx.rotate(sceneState.rivalBot.flipAngle);
+        ctx.translate(-sceneState.rivalBot.x, -(sceneState.rivalBot.y - 45));
+      }
       this.characterRenderer.render(ctx, sceneState.rivalBot.skeleton, sceneState.rivalAnimState || { face: 'idle' }, {
         showSkin: options.showSkin,
         showMesh: options.showMesh,
@@ -231,6 +280,7 @@ export class GameRenderer {
         hp: sceneState.rivalBot.hp,
         isSuperReady: sceneState.rivalBot.power >= 100
       });
+      ctx.restore();
 
       if (sceneState.rivalBot.isStunned) {
         this.drawStunStars(ctx, sceneState.rivalBot.skeleton.head);
@@ -290,6 +340,9 @@ export class GameRenderer {
 
     // 13. Particles & Sparks
     particleSystem.render(ctx);
+
+    // 13b. Celebratory Confetti Cannons
+    this.stadiumRenderer.renderConfetti(ctx);
 
     // 14. Floating Comic Damage Numbers
     if (sceneState.collisionSystem) {
