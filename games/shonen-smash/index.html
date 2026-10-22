@@ -1344,28 +1344,57 @@ if(CH.denji)Object.assign(CH.denji.mv,DENJI_MV);
 
 const B_SUB_S='suelo:',B_SUB_M='smash:',B_SUB_E='esp:';
 const SUBARU_MV={
-  jab:{f:13,spr:[[0,B_SUB_S+'0.0'],[3,B_SUB_S+'0.1'],[8,B_SUB_S+'0.2']],hb:[S(3,7,34,-32,18,2.8,80,14,18)],next:'jab2',chainAt:6},
-  jab2:{f:18,spr:[[0,B_SUB_S+'0.3'],[4,B_SUB_S+'0.4'],[9,B_SUB_S+'0.5']],hb:[S(4,9,38,-32,20,4.2,45,28,42)]},
-  ftilt:{nm:'Látigo de Culpa',f:24,spr:[[0,B_SUB_S+'1.0'],[4,B_SUB_S+'1.1'],[8,B_SUB_S+'1.2'],[14,B_SUB_S+'1.3']],whip:{f:5,to:12,range:75,style:'subaruWhip'},hb:[S(7,12,68,-32,22,10.5,36,45,84),S(7,12,34,-32,20,6.0,45,30,50)]},
-  utilt:{nm:'Cabezazo Desesperado',f:22,spr:[[0,B_SUB_S+'2.0'],[4,B_SUB_S+'2.1'],[8,B_SUB_S+'2.2'],[14,B_SUB_S+'2.3']],hb:[S(5,10,12,-50,26,8.5,88,42,78)]},
-  dtilt:{nm:'Barrida Baja',f:20,lunge:6.5,spr:[[0,B_SUB_S+'2.4'],[4,B_SUB_S+'2.5'],[9,B_SUB_S+'2.6']],hb:[S(4,9,36,-12,20,6.2,30,20,35)]},
-  dash:{f:28,spr:[[0,B_SUB_S+'3.0'],[4,B_SUB_S+'3.1'],[8,B_SUB_S+'3.2'],[14,B_SUB_S+'3.3']],imp:[{f:4,to:14,vx:14}],hb:[S(5,14,40,-32,26,9.5,42,40,80)]},
-  fsmash:{nm:'Smash de Látigo Reforzado',f:46,smash:1,charge:{at:8,max:55,btn:'attack',k:.48},spr:[[0,B_SUB_M+'0.0'],[5,B_SUB_M+'0.1'],[10,B_SUB_M+'0.2'],[14,B_SUB_M+'0.3'],[20,B_SUB_M+'0.4'],[30,B_SUB_M+'0.5']],whip:{f:12,to:20,range:110,style:'subaruWhip'},hb:[S(14,18,62,-32,28,15.0,42,48,96)]},
-  usmash:{nm:'Poción Mágica Defectuosa',f:44,smash:1,charge:{at:6,max:55,btn:'attack',k:.46},spr:[[0,B_SUB_M+'1.0'],[4,B_SUB_M+'1.1'],[8,B_SUB_M+'1.2'],[12,B_SUB_M+'1.3'],[18,B_SUB_M+'1.4'],[28,B_SUB_M+'1.5']],hb:[S(11,16,10,-55,36,16.5,90,50,92)],proj:[{f:11,t:'orb',x:10,y:-55,vx:0,r:10,life:2,explode:{r:65,d:14,a:88,b:50,g:90,anim:'boom'}}]},
-  dsmash:{nm:'Pisotón de Pánico',f:40,smash:1,charge:{at:5,max:50,btn:'attack',k:.45},spr:[[0,B_SUB_M+'2.0'],[4,B_SUB_M+'2.1'],[8,B_SUB_M+'2.2'],[12,B_SUB_M+'2.3'],[18,B_SUB_M+'2.4'],[26,B_SUB_M+'2.5']],hb:[S(8,14,35,-12,24,13.0,25,40,82),S(8,14,-35,-12,24,13.0,155,40,82)]},
-  nair:{nm:'Giro 360 Látigo',f:28,air:1,spr:[[0,B_SUB_M+'3.0'],[5,B_SUB_M+'3.1'],[12,B_SUB_M+'3.2'],[20,B_SUB_M+'3.3']],hb:[S(6,18,0,-30,42,7.5,50,25,55)]},
-  fair:{nm:'Doble Patada Frontal',f:26,air:1,spr:[[0,B_SUB_M+'3.2'],[5,B_SUB_M+'3.3'],[12,B_SUB_M+'3.4'],[18,B_SUB_M+'3.5']],hb:[S(6,12,38,-28,24,9.0,40,38,76)]},
-  bair:{nm:'Codazo Letal',f:24,air:1,spr:[[0,B_SUB_M+'3.4'],[5,B_SUB_M+'3.5'],[12,B_SUB_M+'3.6']],hb:[S(5,9,-34,-32,22,12.0,140,44,90)]},
-  uair:{nm:'Corte de Látigo Ascendente',f:25,air:1,spr:[[0,B_SUB_S+'2.1'],[5,B_SUB_S+'2.2'],[12,B_SUB_S+'2.3']],hb:[S(5,11,10,-55,26,8.5,85,36,72)]},
-  dair:{nm:'Caída en Picada Torpe',f:36,air:1,dive:1,spr:[[0,B_SUB_M+'3.5'],[6,B_SUB_M+'3.6'],[14,B_SUB_M+'3.3']],hb:[S(10,12,0,-10,24,11.0,270,35,80),S(13,24,0,-10,24,7.0,70,28,45)]},
-  ns:{nm:'Shamac',f:36,limb:'body',spr:[[0,B_SUB_E+'0.0'],[4,B_SUB_E+'0.1'],[10,B_SUB_E+'0.2'],[16,B_SUB_E+'0.3'],[24,B_SUB_E+'0.4']],proj:[{f:10,t:'shamac',x:35,y:-30,vx:6.5,r:38,life:90,d:2.5,a:60,b:15,g:0,slow:0.45,col:'#581c87'}]},
-  ss:{nm:'Enganche de Látigo',f:38,limb:'sword',spr:[[0,B_SUB_E+'1.0'],[4,B_SUB_E+'1.1'],[8,B_SUB_E+'1.2'],[14,B_SUB_E+'1.3'],[20,B_SUB_E+'1.4']],whip:{f:6,to:18,range:360,spd:20,style:'subaruWhip',txt:'¡ATRÁPALO!',col:'#d8b4fe'},hb:[S(16,24,36,-32,28,10.0,45,45,84)]},
-  us:{nm:'Impulso de Patrasche',f:42,limb:'leg',helpless:1,spr:[[0,B_SUB_E+'2.0'],[4,B_SUB_E+'2.1'],[8,B_SUB_E+'2.2'],[16,B_SUB_E+'2.3'],[24,B_SUB_E+'2.4']],imp:[{f:6,vy:-19,vx:6}],hb:[S(6,16,16,-50,28,8.0,80,45,75,{headBounce:true})],headBounce:1},
-  ds:{nm:'Invisible Providence (Ground Slam)',f:44,limb:'body',spr:[[0,B_SUB_E+'3.0'],[5,B_SUB_E+'3.1'],[10,B_SUB_E+'3.2'],[16,B_SUB_E+'3.3'],[24,B_SUB_E+'3.4'],[34,B_SUB_E+'3.5']],self:{f:10,pct:2.5},say:{f:10,txt:'¡MANO OCULTA!',col:'#a855f7'},shadowHand:{f:10,to:24,type:'ground'},hb:[S(11,20,50,-24,38,14.0,285,56,75,{groundBounce:true,unblockable:true,bypassShield:true})]},
-  ds_air:{nm:'Invisible Providence (Dark Spike)',f:44,limb:'body',air:1,spr:[[0,B_SUB_E+'3.0'],[5,B_SUB_E+'3.2'],[11,B_SUB_E+'3.4'],[16,B_SUB_E+'3.5'],[24,B_SUB_E+'3.6'],[34,B_SUB_E+'3.7']],self:{f:10,pct:2.5},say:{f:10,txt:'¡DESGARRO OSCURO!',col:'#a855f7'},shadowHand:{f:10,to:24,type:'air'},hb:[S(12,16,42,10,42,15.0,270,60,95,{meteor:true,unblockable:true,bypassShield:true}),S(17,24,40,6,36,8.0,260,35,50,{bypassShield:true})]},
-  final:{nm:'¡Al Shamac & E·M·M!',f:100,sup:{at:1,nm:'¡AL SHAMAC & E·M·M!',col:'#a855f7'},intan:[0,100],spr:[[0,B_SUB_E+'3.0'],[8,B_SUB_E+'3.1'],[16,B_SUB_E+'0.3'],[32,B_SUB_E+'0.4'],[60,B_SUB_E+'3.5'],[85,'mov:0.0']],hb:[S(10,30,0,-40,120,35,45,80,140)],full:{f:10,shake:20,p:[{t:'beam',x:0,y:-40,len:800,h:60,life:45,multi:5,d:6,a:45,b:80,g:130,col:'#9333ea'}]}}
+  jab:{f:13,spr:[[0,B_SUB_S+'0.0'],[2,B_SUB_S+'0.1'],[6,B_SUB_S+'0.2']],hb:[{s:2,e:5,at:B_SUB_S+'0.1:r',r:18,d:2.8,a:80,b:14,g:20}],next:'jab2',chainAt:5},
+  jab2:{f:18,say:{f:3,txt:'¡¡NO ME SUBESTIMES!!',col:'#f97316'},spr:[[0,B_SUB_S+'0.3'],[3,B_SUB_S+'0.4'],[8,B_SUB_S+'0.5']],hb:[{s:3,e:7,at:B_SUB_S+'0.4:r',r:20,d:4.2,a:45,b:28,g:42}]},
+  ftilt:{nm:'Látigo de Culpa',f:24,say:{f:5,txt:'¡¡LÁTIGO DE CULPA!!',col:'#c084fc'},spr:[[0,B_SUB_S+'1.0'],[3,B_SUB_S+'1.1'],[6,B_SUB_S+'1.2'],[14,B_SUB_S+'1.3']],whip:{f:5,to:12,range:75,style:'subaruWhip'},
+    hb:[{s:6,e:11,at:B_SUB_S+'1.2:r',k:0.95,r:24,d:11.5,a:36,b:48,g:88},{s:6,e:11,at:B_SUB_S+'1.2:r',k:0.45,r:18,d:6.5,a:45,b:30,g:50}]},
+  utilt:{nm:'Cabezazo Desesperado',f:22,say:{f:5,txt:'¡¡CABEZAZO DESESPERADO!!',col:'#ffd23f'},spr:[[0,B_SUB_S+'2.0'],[4,B_SUB_S+'2.1'],[7,B_SUB_S+'2.2'],[14,B_SUB_S+'2.3']],hb:[{s:6,e:10,at:B_SUB_S+'2.2:u',r:24,d:9.0,a:88,b:44,g:82}]},
+  dtilt:{nm:'Barrida Baja',f:20,lunge:6.5,say:{f:3,txt:'¡¡POR ABAJO!!',col:'#f97316'},spr:[[0,B_SUB_S+'2.4'],[3,B_SUB_S+'2.5'],[8,B_SUB_S+'2.6']],hb:[{s:3,e:8,at:B_SUB_S+'2.5:r',r:22,d:6.5,a:30,b:22,g:38}]},
+  dash:{f:28,say:{f:5,txt:'¡¡APÁRTATEEEE!!',col:'#ff5a36'},spr:[[0,B_SUB_S+'3.0'],[4,B_SUB_S+'3.1'],[7,B_SUB_S+'3.2'],[14,B_SUB_S+'3.3']],imp:[{f:4,to:14,vx:14}],hb:[{s:6,e:13,at:B_SUB_S+'3.2:r',r:26,d:10.0,a:42,b:44,g:84}]},
+  fsmash:{nm:'Smash de Látigo Reforzado',f:46,smash:1,charge:{at:8,max:55,btn:'attack',k:.48},say:[{f:4,txt:'¡¡ALCANCE MÁXIMO...!!',col:'#a855f7'},{f:11,txt:'¡¡GUILTYWHIP!!',col:'#c084fc'}],
+    spr:[[0,B_SUB_M+'0.0'],[5,B_SUB_M+'0.1'],[10,B_SUB_M+'0.2'],[14,B_SUB_M+'0.4'],[24,B_SUB_M+'0.5']],whip:{f:12,to:20,range:110,style:'subaruWhip'},
+    hb:[{s:11,e:17,at:B_SUB_M+'0.2:r',k:0.95,r:32,d:16.5,a:42,b:50,g:102},{s:11,e:17,at:B_SUB_M+'0.2:r',k:0.5,r:24,d:11.0,a:35,b:35,g:70}]},
+  usmash:{nm:'Poción Mágica Defectuosa',f:44,smash:1,charge:{at:6,max:55,btn:'attack',k:.46},say:[{f:4,txt:'¡¡PIEDRA MÁGICA!!',col:'#fbbf24'},{f:11,txt:'¡¡EXPLOTAAAA!!',col:'#ef4444'}],
+    spr:[[0,B_SUB_M+'1.0'],[4,B_SUB_M+'1.1'],[8,B_SUB_M+'1.2'],[11,B_SUB_M+'1.4'],[18,B_SUB_M+'1.5'],[28,B_SUB_M+'1.6']],hb:[{s:10,e:16,at:B_SUB_M+'1.4:u',r:38,d:17.0,a:90,b:52,g:96}],
+    proj:[{f:11,t:'orb',x:10,y:-55,vx:0,r:10,life:2,explode:{r:65,d:14,a:88,b:50,g:90,anim:'boom'}}]},
+  dsmash:{nm:'Pisotón de Pánico',f:40,smash:1,charge:{at:5,max:50,btn:'attack',k:.45},say:{f:6,txt:'¡¡QUÍTENSE DE ENCIMA!!',col:'#f59e0b'},
+    spr:[[0,B_SUB_M+'2.0'],[4,B_SUB_M+'2.1'],[9,B_SUB_M+'2.2'],[14,B_SUB_M+'2.4'],[24,B_SUB_M+'2.5']],
+    hb:[{s:8,e:14,at:B_SUB_M+'2.1:r',r:26,d:13.5,a:25,b:42,g:84},{s:8,e:14,at:B_SUB_M+'2.1:l',r:26,d:13.5,a:155,b:42,g:84}]},
+  nair:{nm:'Giro 360 Látigo',f:28,air:1,say:{f:5,txt:'¡¡360 GRADOS!!',col:'#c084fc'},spr:[[0,B_SUB_M+'3.0'],[5,B_SUB_M+'3.2'],[12,B_SUB_M+'3.3'],[20,'mov:3.4']],hb:[{s:5,e:16,x:0,y:-38,r:44,d:8.0,a:50,b:28,g:60}]},
+  fair:{nm:'Doble Patada Frontal',f:26,air:1,say:{f:5,txt:'¡¡DOBLE PATADA!!',col:'#ffffff'},spr:[[0,B_SUB_M+'3.2'],[5,B_SUB_M+'3.3'],[12,B_SUB_M+'3.4'],[18,'mov:3.4']],hb:[{s:6,e:12,at:B_SUB_M+'3.3:r',r:26,d:9.5,a:40,b:40,g:78}]},
+  bair:{nm:'Codazo Letal',f:24,air:1,say:{f:4,txt:'¡¡DESDE EL PUNTO CIEGO!!',col:'#ff3b30'},spr:[[0,B_SUB_M+'3.4'],[5,B_SUB_M+'3.5'],[12,'mov:3.4']],hb:[{s:5,e:10,at:B_SUB_M+'3.4:l',r:24,d:12.5,a:140,b:46,g:94}]},
+  uair:{nm:'Corte de Látigo Ascendente',f:25,air:1,say:{f:4,txt:'¡¡HACIA ARRIBA!!',col:'#c084fc'},spr:[[0,B_SUB_S+'2.1'],[4,B_SUB_S+'2.2'],[9,B_SUB_S+'2.3'],[16,'mov:3.4']],hb:[{s:5,e:11,at:B_SUB_S+'2.2:u',r:28,d:9.0,a:85,b:38,g:76}]},
+  dair:{nm:'Caída en Picada Torpe',f:36,air:1,dive:1,say:{f:6,txt:'¡¡CAÍDA EN PICADA!!',col:'#9333ea'},spr:[[0,B_SUB_M+'3.5'],[6,B_SUB_M+'3.6'],[14,'mov:3.4']],
+    hb:[{s:8,e:11,x:0,y:-6,r:25,d:12.0,a:270,b:38,g:84},{s:12,e:22,x:0,y:-6,r:22,d:7.0,a:70,b:28,g:45}]},
+  grab:{f:28,spr:[[0,B_SUB_S+'0.0'],[3,B_SUB_S+'0.1'],[8,B_SUB_S+'0.2']],hb:[{s:5,e:8,at:B_SUB_S+'0.1:r',r:24,d:0,a:0,b:0,g:0,grab:1}]},
+  fthrow:{nm:'Lanzamiento Desesperado',f:26,say:{f:4,txt:'¡¡FUERA DE AQUÍ!!',col:'#f97316'},spr:[[0,B_SUB_S+'0.2'],[4,B_SUB_S+'0.3'],[10,B_SUB_S+'0.4']],throw:{rel:8,d:9,a:45,b:54,g:65}},
+  bthrow:{nm:'Giro con Látigo',f:30,say:{f:4,txt:'¡¡VUELTA COMPLETA!!',col:'#c084fc'},spr:[[0,B_SUB_S+'1.0'],[4,B_SUB_S+'1.2'],[12,B_SUB_S+'1.3']],throw:{rel:10,d:11,a:135,b:58,g:72}},
+  uthrow:{nm:'Patada Ascendente',f:28,say:{f:4,txt:'¡¡A VOLAR!!',col:'#ffd23f'},spr:[[0,B_SUB_S+'2.0'],[5,B_SUB_S+'2.2'],[12,B_SUB_S+'2.3']],throw:{rel:9,d:8,a:88,b:62,g:65}},
+  dthrow:{nm:'Azote al Suelo',f:30,say:{f:4,txt:'¡¡CONTRA EL PISO!!',col:'#ef4444'},spr:[[0,B_SUB_S+'2.4'],[6,B_SUB_S+'2.5'],[12,B_SUB_S+'2.6']],throw:{rel:10,d:7,a:80,b:44,g:46}},
+  getup:{f:26,spr:[[0,B_SUB_S+'3.4'],[6,B_SUB_S+'3.5'],[12,B_SUB_S+'3.0']],hb:[{s:8,e:14,x:38,y:-20,r:24,d:7,a:30,b:38,g:30},{s:8,e:14,x:-38,y:-20,r:24,d:7,a:150,b:38,g:30}]},
+  ns:{nm:'Shamac',f:36,limb:'body',say:[{f:3,txt:'¡¡SHAMAC!!',col:'#581c87'},{f:12,txt:'¡¡PIERDAN EL RUMBO EN LA OSCURIDAD!!',col:'#a855f7'}],
+    spr:[[0,B_SUB_E+'0.0'],[4,B_SUB_E+'0.1'],[9,B_SUB_E+'0.2'],[15,B_SUB_E+'0.4'],[24,'mov:0.0']],proj:[{f:10,t:'shamac',x:35,y:-30,vx:6.5,r:38,life:90,d:2.5,a:60,b:15,g:0,slow:0.45,col:'#581c87'}]},
+  ss:{nm:'Enganche de Látigo',f:38,limb:'sword',say:{f:5,txt:'¡¡ATRÁPALO, GUILTYWHIP!!',col:'#c084fc'},spr:[[0,B_SUB_E+'1.0'],[4,B_SUB_E+'1.1'],[8,B_SUB_E+'1.3'],[14,B_SUB_E+'1.4'],[22,'mov:0.0']],
+    whip:{f:6,to:18,range:360,spd:20,style:'subaruWhip',txt:'¡ATRÁPALO!',col:'#d8b4fe'},hb:[{s:10,e:20,at:B_SUB_E+'1.4:r',r:30,d:10.5,a:45,b:46,g:86}]},
+  us:{nm:'Impulso de Patrasche',f:42,limb:'leg',helpless:1,say:{f:5,txt:'¡¡PATRASCHE, DAME UN IMPULSO!!',col:'#f59e0b'},spr:[[0,B_SUB_E+'2.0'],[4,B_SUB_E+'2.1'],[8,B_SUB_E+'2.3'],[16,B_SUB_E+'2.4'],[26,'mov:3.4']],
+    imp:[{f:6,vy:-19,vx:6}],hb:[{s:6,e:16,at:B_SUB_E+'2.3:u',r:30,d:9.0,a:80,b:46,g:78,headBounce:true}],headBounce:1},
+  ds:{nm:'Invisible Providence (Ground Slam)',f:44,limb:'body',self:{f:10,pct:2.5},
+    say:[{f:4,txt:'¡¡AUTORIDAD DE LA PEREZA!!',col:'#9333ea'},{f:11,txt:'¡¡MANO OCULTA!!',col:'#c084fc'},{f:22,txt:'¡¡Aagh, mi cabeza... se parte!!',col:'#ef4444'}],
+    shadowHand:{f:10,to:24,type:'ground'},spr:[[0,B_SUB_E+'3.0'],[4,B_SUB_E+'3.1'],[8,B_SUB_E+'3.2'],[12,B_SUB_E+'3.4'],[20,B_SUB_E+'3.5'],[30,B_SUB_E+'3.6']],
+    hb:[{s:11,e:19,at:B_SUB_E+'3.4:r',r:42,d:14.5,a:285,b:58,g:78,groundBounce:true,unblockable:true,bypassShield:true}]},
+  ds_air:{nm:'Invisible Providence (Dark Spike)',f:44,limb:'body',air:1,self:{f:10,pct:2.5},
+    say:[{f:4,txt:'¡¡DESGARRO DE SOMBRAS!!',col:'#9333ea'},{f:12,txt:'¡¡HÚNDETE AL ABISMO!!',col:'#c084fc'},{f:22,txt:'¡¡Mi cerebro... tiembla!!',col:'#ef4444'}],
+    shadowHand:{f:10,to:24,type:'air'},spr:[[0,B_SUB_E+'3.0'],[4,B_SUB_E+'3.1'],[8,B_SUB_E+'3.3'],[12,B_SUB_E+'3.7'],[20,B_SUB_E+'3.6'],[30,'mov:3.4']],
+    hb:[{s:12,e:16,at:B_SUB_E+'3.7:d',r:44,d:15.5,a:270,b:62,g:98,meteor:true,unblockable:true,bypassShield:true},{s:17,e:24,at:B_SUB_E+'3.7:d',r:36,d:8.5,a:260,b:38,g:55,bypassShield:true}]},
+  final:{nm:'¡Al Shamac & E·M·M!',f:100,sup:{at:1,nm:'¡AL SHAMAC & E·M·M!',col:'#a855f7'},intan:[0,100],
+    say:[{f:2,txt:'¡¡BEATRICE, ESTE ES NUESTRO DESTINO!!',col:'#f472b6'},{f:18,txt:'¡¡MAGIA ABSOLUTA DE SOMBRAS: E·M·M!!',col:'#c084fc'},{f:40,txt:'¡¡AL SHAMAC!!',col:'#9333ea'}],
+    spr:[[0,B_SUB_E+'3.0'],[8,B_SUB_E+'3.1'],[16,B_SUB_E+'0.3'],[32,B_SUB_E+'0.4'],[60,B_SUB_E+'3.5'],[85,'mov:0.0']],hb:[S(10,30,0,-40,120,35,45,80,140)],
+    full:{f:10,shake:20,p:[{t:'beam',x:0,y:-40,len:800,h:60,life:45,multi:5,d:6,a:45,b:80,g:130,col:'#9333ea'}]}}
 };
-if(CH.subaru)Object.assign(CH.subaru.mv,SUBARU_MV);
+if(CH.subaru){
+  Object.assign(CH.subaru.mv,SUBARU_MV);
+  for(const k in CH.subaru.mv)resolveHitboxes('subaru',CH.subaru.mv[k]);
+}
 
 const GS='suelo:',GM='smash:',GA='aereo:',GE='esp:',GR='reac:',GG='agarre:',G3='ssj:';
 const GOKU_MV={
@@ -2999,11 +3028,23 @@ function stepProjs(){
   if(p.ruin){G.dim=Math.max(G.dim||0,.55);G.shake=Math.max(G.shake,5);if(G.frame%2===0){fx('ember',p.x+rnd(-60,60),p.y+rnd(-60,60),{col:G.frame%4?'#a05aff':'#ffffff',dur:28,vx:-p.vx*.05});}if(G.frame%6===0)rocks(p.x,G.stage.main.y,2,'#6a4a9a');}
   if(p.t==='clone'&&G.frame%3===0)fx('smoke',p.x,p.y-30,{col:'#ffffff'});
   if(p.t==='shamac'){
-  ctx.save(); ctx.fillStyle = 'rgba(59, 7, 100, 0.45)';
-  ctx.shadowColor = '#9333ea'; ctx.shadowBlur = 24;
+  ctx.save();
+  // Vórtice exterior de miasma
+  ctx.fillStyle = 'rgba(38, 4, 60, 0.55)';
+  ctx.shadowColor = '#9333ea'; ctx.shadowBlur = 35;
   ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.fill();
-  ctx.fillStyle = 'rgba(88, 28, 135, 0.65)';
-  ctx.beginPath(); ctx.arc(p.x + Math.sin(G.frame*0.1)*6, p.y + Math.cos(G.frame*0.1)*6, p.r*0.65, 0, TAU); ctx.fill();
+  // Núcleo denso de sombras negras
+  ctx.fillStyle = 'rgba(18, 2, 30, 0.85)';
+  ctx.beginPath(); ctx.arc(p.x + Math.sin(G.frame * 0.12) * 8, p.y + Math.cos(G.frame * 0.12) * 8, p.r * 0.75, 0, TAU); ctx.fill();
+  // Espirales de niebla púrpura
+  ctx.strokeStyle = 'rgba(192, 132, 252, 0.45)'; ctx.lineWidth = 3;
+  ctx.beginPath();
+  for(let i = 0; i < 8; i++){
+    const an = i * TAU / 8 + G.frame * 0.08;
+    ctx.moveTo(p.x + Math.cos(an) * (p.r * 0.3), p.y + Math.sin(an) * (p.r * 0.3));
+    ctx.lineTo(p.x + Math.cos(an + 0.8) * (p.r * 0.85), p.y + Math.sin(an + 0.8) * (p.r * 0.85));
+  }
+  ctx.stroke();
   ctx.restore();
 } else if(p.t==='pochita'){
    p.vy=Math.min(10,(p.vy||0)+0.58);p.x+=p.vx;p.y+=p.vy;
@@ -3104,17 +3145,38 @@ function executeSubaruRewind(f){
     }
   }
 
-  // 3. Destruir proyectiles residuales que se hayan creado en el aire
+  // 3. Destruir proyectiles residuales creados en el aire
   G.projs = snap.projs.map(p => ({ ...p }));
 
-  // 4. Reiniciar cola en tierra y activar efectos visuales y sonoros
-  G.subaruHistory = [captureSubaruSnapshot(f)];
-  G.subaruRewindVfx = 45;
+  // 4. Frases dramáticas icónicas de Re:Zero
+  const rbdQuotes = [
+    '¡¡EMPEZAR DE CERO... DESDE AQUÍ!!',
+    '¡¡INCLUSO SI MUERO MIL VECES... TE SALVARÉ!!',
+    '¡¡NO VOY A RENDIRME... NUNCA MÁS!!',
+    '¡¡ESTA VEZ... NO COMETERÉ EL MISMO ERROR!!',
+    '¡¡ESTOY VIVO... REGRESÉ POR LA MUERTE!!'
+  ];
+  const chosenQuote = rbdQuotes[Math.floor(Math.random() * rbdQuotes.length)];
 
-  sfx('boom'); sfx('vanish');
-  G.shake = 22;
-  fx('text', f.x, f.y - 120, { txt: '¡RETURN BY DEATH!', col: '#c084fc', dur: 90, big: 1 });
-  fx('ring', f.x, f.y - 40, { r: 140, col: '#9333ea', dur: 35, thick: 2 });
+  // 5. Reiniciar cola en tierra y activar efectos visuales y sonoros cinematográficos
+  G.subaruHistory = [captureSubaruSnapshot(f)];
+  G.subaruRewindVfx = 50;
+
+  sfx('boom'); sfx('vanish'); sfx('super');
+  G.shake = 28; G.impact = 4; G.slow = 18;
+  fx('flash', 0, 0, { screen: 1, dur: 12 });
+  fx('text', f.x, f.y - 120, { txt: '¡RETURN BY DEATH!', col: '#c084fc', dur: 100, big: 1 });
+  fx('text', f.x, f.y - 160, { txt: chosenQuote, col: '#f472b6', dur: 115 });
+  fx('ring', f.x, f.y - 40, { r: 160, col: '#9333ea', dur: 40, thick: 3 });
+  fx('ring', f.x, f.y - 40, { r: 90, col: '#c084fc', dur: 25, thick: 2 });
+
+  // Miasma oscuro convergiendo en Subaru
+  for(let i = 0; i < 16; i++){
+    const an = (i / 16) * TAU;
+    fx('ember', f.x + Math.cos(an) * 80, f.y - 40 + Math.sin(an) * 80, {
+      vx: -Math.cos(an) * 3.8, vy: -Math.sin(an) * 3.8, col: i % 2 ? '#581c87' : '#a855f7', dur: 35
+    });
+  }
   return true;
 }
 
@@ -3786,40 +3848,57 @@ function drawSlashArc(f){
 }
 
 function drawInvisibleProvidence(f){
-  const p = Math.min(1, Math.max(0, (f.mf - 10) / 14));
+  const p = Math.min(1, Math.max(0, (f.mf - 9) / 13));
   const isAir = !f.ground || f.mvKey === 'ds_air';
   ctx.save();
-  const ox = f.x + f.face * 10;
+  const ox = f.x + f.face * 12;
   const oy = f.y - 36;
-  const hx = ox + f.face * (26 + p * 62);
-  const hy = oy + (isAir ? 18 + p * 42 : -6 + p * 22);
+  const hx = ox + f.face * (32 + p * 68);
+  const hy = oy + (isAir ? 18 + p * 48 : -4 + p * 24);
 
-  // Aura fantasmal purpura/negra del Factor de la Bruja
-  ctx.shadowColor = '#a855f7';
-  ctx.shadowBlur = 24;
+  // Miasma oscuro emitiéndose de la invocación
+  if(G.frame % 2 === 0){
+    fx('ember', hx + rnd(-20, 20), hy + rnd(-15, 15), { col: Math.random() < .5 ? '#3b0764' : '#a855f7', dur: 18, vx: -f.face * rnd(0.5, 2) });
+  }
 
-  // Brazo espectral saliendo del pecho
-  ctx.strokeStyle = 'rgba(40, 5, 60, 0.85)';
-  ctx.lineWidth = 14 * (1 - p * 0.3);
+  // Aura y resplandor siniestro de la Autoridad de la Pereza
+  ctx.shadowColor = '#c084fc';
+  ctx.shadowBlur = 32;
+
+  // 3 tendones sombríos retorciéndose desde el pecho de Subaru
+  for(let k = -1; k <= 1; k++){
+    const wave = Math.sin(G.frame * 0.4 + k * 1.5) * 6;
+    ctx.strokeStyle = k === 0 ? 'rgba(20, 2, 35, 0.95)' : 'rgba(88, 28, 135, 0.75)';
+    ctx.lineWidth = (k === 0 ? 14 : 7) * (1 - p * 0.25);
+    ctx.beginPath();
+    ctx.moveTo(ox, oy + k * 4);
+    ctx.quadraticCurveTo(ox + f.face * (24 + k * 6), oy - 22 + wave, hx - f.face * 18, hy + k * 5);
+    ctx.stroke();
+  }
+
+  // Palma espectral gigante con runa oscura
+  ctx.fillStyle = 'rgba(15, 2, 28, 0.96)';
+  ctx.strokeStyle = '#a855f7';
+  ctx.lineWidth = 3.5;
   ctx.beginPath();
-  ctx.moveTo(ox, oy);
-  ctx.quadraticCurveTo(ox + f.face * 20, oy - 20, hx - f.face * 16, hy);
-  ctx.stroke();
-
-  // Mano espectral y garras
-  ctx.fillStyle = 'rgba(24, 2, 38, 0.95)';
-  ctx.strokeStyle = '#c084fc';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.ellipse(hx, hy, 28, 18, f.face * (isAir ? 1.2 : 0.4), 0, TAU);
+  ctx.ellipse(hx, hy, 30, 20, f.face * (isAir ? 1.25 : 0.45), 0, TAU);
   ctx.fill();
   ctx.stroke();
 
-  // Garras afiladas de sombra
+  // 5 garras demoníacas articuladas y afiladas
   for(let i = -2; i <= 2; i++){
+    const spread = i * 7.5;
+    const clawLen = (32 + Math.abs(i) * 4) * (0.8 + p * 0.35);
+    const drop = isAir ? p * 16 : p * 8;
+    ctx.strokeStyle = i === 0 ? '#e9d5ff' : '#c084fc';
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(hx + f.face * 10, hy + i * 5);
-    ctx.lineTo(hx + f.face * (32 + Math.abs(i) * 3), hy + i * 8 + (isAir ? p * 12 : p * 6));
+    // Base a nudillo
+    ctx.moveTo(hx + f.face * 10, hy + spread);
+    const jx = hx + f.face * 20, jy = hy + spread * 1.2 + drop * 0.4;
+    ctx.lineTo(jx, jy);
+    // Nudillo a punta de garra afilada
+    ctx.lineTo(hx + f.face * clawLen, hy + spread * 1.4 + drop);
     ctx.stroke();
   }
   ctx.restore();
