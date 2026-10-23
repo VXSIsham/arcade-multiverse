@@ -728,7 +728,15 @@ const CH={
         us:{nm:'Impulso de Patrasche',f:42,limb:'leg',helpless:1,imp:[{f:6,vy:-19,vx:6}],hb:[S(6,16,16,-50,28,8.0,80,45,75,{headBounce:true})],headBounce:1},
         ds:{nm:'Invisible Providence (Ground Slam)',f:44,limb:'body',self:{f:10,pct:2.5},shadowHand:{f:10,to:24,type:'ground'},hb:[S(11,20,50,-24,38,14.0,285,56,75,{groundBounce:true,unblockable:true,bypassShield:true})]},
         ds_air:{nm:'Invisible Providence (Dark Spike)',f:44,limb:'body',air:1,self:{f:10,pct:2.5},shadowHand:{f:10,to:24,type:'air'},hb:[S(12,16,42,10,42,15.0,270,60,95,{meteor:true,unblockable:true,bypassShield:true}),S(17,24,40,6,36,8.0,260,35,50,{bypassShield:true})]}}},
-  diavolo:{name:'Diavolo',from:'JoJo',col:'#e11d48',
+    eren:{name:'Eren',from:'Attack on Titan',col:'#15803d',
+    st:{w:78,walk:4.8,run:8.6,air:6.5,aacc:.52,jump:13.0,dj:12.2,grav:.48,fall:10.5,fastFall:15.0},nr:{p:1.0,sp:1.0},
+    look:{skin:'#ffd8c0',top:'#365314',bot:'#78350f',shoe:'#1c1917',hair:'#261408',style:'eren'},
+    sp:{ns:{nm:'Blade Reload',f:26,limb:'arm'},
+        ss:{nm:'ODM Grapple',f:30,limb:'body'},
+        us:{nm:'Gas Burst',f:32,limb:'body'},
+        ds:{nm:'Blood Bite / Titan',f:35,limb:'arm'},
+        final:{nm:'The Rumbling',f:300,limb:'body'}}},
+diavolo:{name:'Diavolo',from:'JoJo',col:'#e11d48',
     st:{w:104,walk:4.2,run:7.8,air:5.4,aacc:.48,jump:13.5,dj:12.0,grav:.55,fall:11.5,fastFall:16.0},nr:{p:1.05,sp:1.0},
     look:{skin:'#ffd8c0',top:'#18181b',bot:'#4c0519',shoe:'#18181b',hair:'#f43f5e',style:'diavolo'},
     sp:{ns:{nm:'Blood Blindness',f:26,limb:'arm'},
@@ -1123,7 +1131,9 @@ Object.assign(ANIM,{goku_dios:{idle:['dios:0.0','dios:0.1','dios:0.2','dios:0.3'
  run:['dios:1.0','dios:1.1','dios:1.2','dios:1.3','dios:1.4','dios:1.5','dios:1.6','dios:1.7'],dash:['dios:1.0','dios:1.1'],crouch:['dios:2.0'],squat:['dios:2.0'],land:['dios:2.0'],
  rise:['dios:2.3'],peak:['dios:2.4'],fall:['dios:2.3'],respawn:['dios:0.0']}});
 /* Modos de transformación: multiplicadores de estadísticas y color del aura. */
-const MODES={naruto:{
+const MODES={
+  eren:{titan:{nm:'Titán de Ataque',run:.72,walk:.71,air:.62,jump:1.19,dj:.90,dmg:1.50,w:67,armor:11,aura:'#10b981',glow:1}},
+naruto:{
  sabio:{nm:'Modo Sabio',run:1.12,walk:1.06,air:1.08,jump:1.10,dj:1.10,dmg:1.38,w:16,armor:6,dmgTaken:.88,aura:'#ff8a1f'},
  kurama:{nm:'Modo Kurama',run:1.36,walk:1.20,air:1.28,jump:1.18,dj:1.18,spd:1.18,dmg:1.62,w:14,armor:10,dmgTaken:.82,jumps:2,burn:{t:100,col:'#f59e0b'},aura:'#ffd23f',glow:1}},
  deku:{fullcowl:{nm:'Full Cowl 100 %',run:1.25,walk:1.12,air:1.2,jump:1.1,dj:1.1,spd:1.15,w:0,aura:'#5dff8a',own:['fullcowl']}},
@@ -1876,6 +1886,13 @@ class DiavoloFighter {
   }
 
   activateTimeErase(isCounter = false) {
+    if(typeof G !== 'undefined' && G.fighters) {
+      for(const e of G.fighters) {
+        if(e.erenFighter && e.erenFighter.odmController && e.erenFighter.odmController.anchorEntity === this.f) {
+          e.erenFighter.odmController.detach();
+        }
+      }
+    }
     const f = this.f;
     const cost = isCounter ? 25 : 50;
     if ((f.gauge || 0) < cost) return false;
@@ -2081,6 +2098,1199 @@ class DiavoloFighter {
 }
 
 const B_DIA_S='suelo:',B_DIA_M='smash:',B_DIA_E='esp:',B_DIA_V='mov:';
+
+/* =========================================================
+   EREN YEAGER: DUAL-SCALE FIGHTER, ODM GEAR & TERRAIN MORPHING
+   ========================================================= */
+const EREN_COLLISION = typeof COLLISION_MASK !== 'undefined' ? COLLISION_MASK : {
+  NONE: 0,
+  ENVIRONMENT: 1 << 0,
+  HURTBOX:     1 << 1,
+  HITBOX:      1 << 2,
+  GRAB:        1 << 3
+};
+
+class ODMGearController {
+  constructor(fighter) {
+    this.f = fighter;
+    this.active = false;
+    this.isGrappled = false;
+    this.hookFlying = false;
+    this.anchorX = 0;
+    this.anchorY = 0;
+    this.anchorEntity = null; // Rival or null
+    this.ropeLength = 0;
+    this.hookX = 0;
+    this.hookY = 0;
+    this.hookVx = 0;
+    this.hookVy = 0;
+    this.maxDist = 320;
+    this.speed = 38; // px/frame
+    this.cableColor = '#1e293b';
+  }
+
+  fireGrapple(angleRad) {
+    const f = this.f;
+    const ox = f.x;
+    const oy = f.y - 20;
+    const dirX = Math.cos(angleRad) * f.face;
+    const dirY = Math.sin(angleRad);
+
+    this.active = true;
+    this.hookFlying = true;
+    this.isGrappled = false;
+    this.anchorEntity = null;
+    this.hookX = ox;
+    this.hookY = oy;
+    this.hookVx = dirX * this.speed;
+    this.hookVy = dirY * this.speed;
+
+    // Raycast check along the vector up to 320px
+    const steps = Math.ceil(this.maxDist / (this.speed * 0.5));
+    let hit = false;
+    let cx = ox, cy = oy;
+    const stepDx = dirX * (this.speed * 0.5);
+    const stepDy = dirY * (this.speed * 0.5);
+
+    for (let i = 0; i < steps; i++) {
+      cx += stepDx;
+      cy += stepDy;
+      const dFromOrigin = Math.hypot(cx - ox, cy - oy);
+      if (dFromOrigin > this.maxDist) break;
+
+      // 1. Check Rival Hurtboxes
+      if (typeof G !== 'undefined' && G.fighters) {
+        for (const t of G.fighters) {
+          if (t === f || t.dead || t.out) continue;
+          // Check Diavolo Time Skip
+          if (t.C && t.C.id === 'diavolo' && t.diavoloFighter && t.diavoloFighter.timeEraseTimer > 0) {
+            continue; // Cannot anchor to Diavolo in Time Erase
+          }
+          // Check AABB
+          const halfW = (t.w || 40) / 2;
+          const h = t.h || 68;
+          if (cx >= t.x - halfW && cx <= t.x + halfW && cy >= t.y - h && cy <= t.y) {
+            this.isGrappled = true;
+            this.hookFlying = false;
+            this.anchorEntity = t;
+            this.anchorX = t.x;
+            this.anchorY = t.y - h * 0.5;
+            this.ropeLength = Math.hypot(this.anchorX - f.x, this.anchorY - f.y);
+            // Micro-flinch of 6 frames to rival
+            t.hitstun = Math.max(t.hitstun || 0, 6);
+            t.hitlag = Math.max(t.hitlag || 0, 4);
+            if (typeof fx === 'function') fx('spark', cx, cy, { col: '#cbd5e1' });
+            hit = true;
+            break;
+          }
+        }
+        if (hit) break;
+
+        // Check Diavolo fake EpitaphEcho
+        if (G.epitaphEchoes) {
+          for (const echo of G.epitaphEchoes) {
+            if (echo.life > 0 && Math.hypot(cx - echo.x, cy - (echo.y - 34)) < 35) {
+              this.isGrappled = true;
+              this.hookFlying = false;
+              this.anchorEntity = echo;
+              this.anchorX = echo.x;
+              this.anchorY = echo.y - 34;
+              this.ropeLength = Math.hypot(this.anchorX - f.x, this.anchorY - f.y);
+              echo.onHit(5);
+              hit = true;
+              break;
+            }
+          }
+          if (hit) break;
+        }
+      }
+
+      // 2. Check Crystal Walls (Monolith Walls)
+      if (typeof G !== 'undefined' && G.crystalManager && G.crystalManager.crystals) {
+        for (const c of G.crystalManager.crystals) {
+          if (c.type === 'MONOLITH_WALL' && cx >= c.x && cx <= c.x + c.w && cy >= c.y && cy <= c.y + c.h) {
+            this.isGrappled = true;
+            this.hookFlying = false;
+            this.anchorEntity = null;
+            this.anchorX = cx;
+            this.anchorY = cy;
+            this.ropeLength = Math.hypot(this.anchorX - f.x, this.anchorY - f.y);
+            if (typeof fx === 'function') fx('spark', cx, cy, { col: '#5ce1e6' });
+            hit = true;
+            break;
+          }
+        }
+        if (hit) break;
+      }
+
+      // 3. Check Stage Geometry
+      if (typeof G !== 'undefined' && G.stage) {
+        const sm = G.stage.main;
+        if (sm && cy >= sm.y && cy <= sm.y + 15 && cx >= sm.x1 && cx <= sm.x2) {
+          this.isGrappled = true;
+          this.hookFlying = false;
+          this.anchorEntity = null;
+          this.anchorX = cx;
+          this.anchorY = sm.y;
+          this.ropeLength = Math.hypot(this.anchorX - f.x, this.anchorY - f.y);
+          if (typeof fx === 'function') fx('spark', cx, cy, { col: '#f59e0b' });
+          hit = true;
+          break;
+        }
+        if (G.stage.plats) {
+          for (const pl of G.stage.plats) {
+            const pt = typeof platNow === 'function' ? platNow(pl) : pl;
+            if (cy >= pt.y && cy <= pt.y + 12 && cx >= pt.x1 && cx <= pt.x2) {
+              this.isGrappled = true;
+              this.hookFlying = false;
+              this.anchorEntity = null;
+              this.anchorX = cx;
+              this.anchorY = pt.y;
+              this.ropeLength = Math.hypot(this.anchorX - f.x, this.anchorY - f.y);
+              if (typeof fx === 'function') fx('spark', cx, cy, { col: '#f59e0b' });
+              hit = true;
+              break;
+            }
+          }
+          if (hit) break;
+        }
+      }
+    }
+
+    if (!hit) {
+      this.hookX = cx;
+      this.hookY = cy;
+      if (Math.hypot(this.hookX - ox, this.hookY - oy) >= this.maxDist) {
+        this.detach();
+      }
+    }
+  }
+
+  update(G) {
+    if (!this.active) return;
+    const f = this.f;
+
+    // Follow anchored entity
+    if (this.anchorEntity) {
+      if (this.anchorEntity.dead || this.anchorEntity.out || (this.anchorEntity.life <= 0)) {
+        this.detach();
+        return;
+      }
+      // Diavolo Time Skip check
+      if (this.anchorEntity.C && this.anchorEntity.C.id === 'diavolo' && this.anchorEntity.diavoloFighter && this.anchorEntity.diavoloFighter.timeEraseTimer > 0) {
+        this.detach();
+        return;
+      }
+      this.anchorX = this.anchorEntity.x;
+      this.anchorY = this.anchorEntity.y - (this.anchorEntity.h ? this.anchorEntity.h * 0.5 : 24);
+    }
+
+    if (this.isGrappled) {
+      const dx = this.anchorX - f.x;
+      const dy = this.anchorY - f.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const dirX = dx / dist;
+      const dirY = dy / dist;
+
+      // 1. Elastic cable tension if dist > ropeLength
+      if (dist > this.ropeLength) {
+        const pull = (dist - this.ropeLength) * 0.18;
+        f.vx += dirX * pull;
+        f.vy += dirY * pull;
+      }
+
+      // 2. Motorized retraction + Tangential Gas thrust
+      const inputX = f.in ? f.in.x : f.face;
+      const holding = (f.in && (f.in.x !== 0 || f.in.y !== 0)) || (f.st === 'attack' && f.mvKey === 'ss');
+      if (f.erenFighter && f.erenFighter.gasMeter > 0 && holding) {
+        this.ropeLength = Math.max(40, this.ropeLength - 6.5);
+        const tangentX = -dirY * inputX;
+        const tangentY =  dirX * inputX;
+        f.vx += (dirX * 0.95) + (tangentX * 0.55);
+        f.vy += (dirY * 0.95) + (tangentY * 0.35);
+        f.erenFighter.gasMeter = Math.max(0, f.erenFighter.gasMeter - 0.8);
+
+        // Gas smoke trail
+        if (typeof fx === 'function' && G && G.frame % 2 === 0) {
+          fx('smoke', f.x - dirX * 14, f.y - 18 - dirY * 14, { col: 'rgba(235, 245, 255, 0.65)', dur: 14 });
+        }
+      }
+
+      // Terminal velocity limit (22 px/frame)
+      const speed = Math.hypot(f.vx, f.vy);
+      if (speed > 22) {
+        f.vx = (f.vx / speed) * 22;
+        f.vy = (f.vy / speed) * 22;
+      }
+
+      // Auto detach if extremely close to anchor or if landed
+      if (dist < 30 && f.ground) {
+        this.detach();
+      }
+    }
+  }
+
+  detach() {
+    this.active = false;
+    this.isGrappled = false;
+    this.hookFlying = false;
+    this.anchorEntity = null;
+  }
+
+  getState() {
+    return {
+      active: this.active,
+      isGrappled: this.isGrappled,
+      anchorX: this.anchorX,
+      anchorY: this.anchorY,
+      ropeLength: this.ropeLength,
+      hookX: this.hookX,
+      hookY: this.hookY
+    };
+  }
+
+  restoreState(st) {
+    if (!st) { this.detach(); return; }
+    this.active = !!st.active;
+    this.isGrappled = !!st.isGrappled;
+    this.anchorX = st.anchorX || 0;
+    this.anchorY = st.anchorY || 0;
+    this.ropeLength = st.ropeLength || 0;
+    this.hookX = st.hookX || 0;
+    this.hookY = st.hookY || 0;
+    this.anchorEntity = null;
+  }
+}
+
+let crystalIdCounter = 1;
+
+class CrystalConstruct {
+  constructor(id, type, x, y, facing, owner) {
+    this.id = id;
+    this.type = type; // 'MONOLITH_WALL' | 'GROUND_SPIKES'
+    this.owner = owner;
+    this.facing = facing;
+    this.hp = 55.0;
+    this.maxHp = 55.0;
+    this.timer = type === 'MONOLITH_WALL' ? 240 : 180;
+    if (type === 'MONOLITH_WALL') {
+      this.w = 44;
+      this.h = 140;
+    } else {
+      this.w = 110;
+      this.h = 48;
+    }
+    this.x = x - this.w / 2;
+    this.y = y - this.h;
+    this.collisionMask = EREN_COLLISION.ENVIRONMENT | EREN_COLLISION.HURTBOX;
+    this.emergingFrames = 5;
+  }
+}
+
+class CrystalTerrainManager {
+  constructor() {
+    this.crystals = [];
+  }
+
+  spawnMonolith(x, y, facing, owner) {
+    if (this.crystals.length >= 2) {
+      this.crystals.shift(); // Max 2 active structures
+    }
+    const c = new CrystalConstruct(crystalIdCounter++, 'MONOLITH_WALL', x, y, facing, owner);
+    this.crystals.push(c);
+    if (typeof sfx === 'function') sfx('rock');
+    if (typeof fx === 'function') {
+      fx('shock', x, y, { r: 60, col: '#5ce1e6', flat: 1, dur: 18 });
+      fx('text', x, y - 150, { txt: '¡MONOLITO!', col: '#5ce1e6', dur: 25 });
+    }
+    return c;
+  }
+
+  spawnSpikes(x, y, facing, owner) {
+    if (this.crystals.length >= 2) {
+      this.crystals.shift();
+    }
+    const c = new CrystalConstruct(crystalIdCounter++, 'GROUND_SPIKES', x, y, facing, owner);
+    this.crystals.push(c);
+    if (typeof sfx === 'function') sfx('rock');
+    if (typeof fx === 'function') {
+      fx('shock', x, y, { r: 70, col: '#d8f8ff', flat: 1, dur: 18 });
+      fx('text', x, y - 50, { txt: '¡PÚAS DE CRISTAL!', col: '#5ce1e6', dur: 25 });
+    }
+    return c;
+  }
+
+  update(G) {
+    for (let i = this.crystals.length - 1; i >= 0; i--) {
+      const c = this.crystals[i];
+      c.timer--;
+
+      // Emerging hitbox for Monolith Wall during first 5 frames
+      if (c.emergingFrames > 0) {
+        c.emergingFrames--;
+        if (G && G.fighters) {
+          for (const t of G.fighters) {
+            if (t === c.owner || t.dead || t.out) continue;
+            if (t.x >= c.x - 20 && t.x <= c.x + c.w + 20 && t.y >= c.y && t.y <= c.y + c.h + 20) {
+              if (typeof applyHit === 'function') {
+                applyHit(c.owner, t, { d: 14.0, a: 80, b: 55, g: 85 }, 1, c.facing, t.x, t.y - 30);
+              }
+            }
+          }
+        }
+      }
+
+      // Check destroying
+      if (c.hp <= 0 || c.timer <= 0) {
+        if (typeof fx === 'function') {
+          for (let k = 0; k < 6; k++) {
+            fx('spark', c.x + Math.random() * c.w, c.y + Math.random() * c.h, { col: '#5ce1e6' });
+          }
+        }
+        this.crystals.splice(i, 1);
+        continue;
+      }
+
+      // Wall-Bounce & Spikes Interaction
+      if (G && G.fighters) {
+        for (const t of G.fighters) {
+          if (t.dead || t.out) continue;
+
+          // 1. Monolith Wall interactions
+          if (c.type === 'MONOLITH_WALL') {
+            // Wall-Bounce: rival in hitstun with |vx| > 9
+            if (t !== c.owner && (t.st === 'hitstun' || t.hitstun > 0) && Math.abs(t.vx) > 9) {
+              if (t.x + 22 >= c.x && t.x - 22 <= c.x + c.w && t.y >= c.y && t.y - 70 <= c.y + c.h) {
+                t.vx *= -0.75;
+                t.pct = Math.min(999, t.pct + 4.0);
+                t.hitstun += 10;
+                t.hitlag = Math.max(t.hitlag || 0, 8);
+                if (typeof fx === 'function') {
+                  fx('ring', t.x, t.y - 35, { r: 40, col: '#5ce1e6', dur: 15 });
+                  fx('text', t.x, t.y - 70, { txt: '¡WALL BOUNCE!', col: '#5ce1e6', dur: 30 });
+                }
+                if (typeof sfx === 'function') sfx('hit', 8);
+              }
+            }
+
+            // Solid obstacle: push players out horizontally
+            const halfW = (t.w || 40) / 2;
+            if (t.y > c.y && t.y - (t.h || 68) < c.y + c.h) {
+              if (t.x + halfW > c.x && t.x < c.x + c.w / 2) {
+                t.x = c.x - halfW;
+                if (t.vx > 0) t.vx = 0;
+              } else if (t.x - halfW < c.x + c.w && t.x >= c.x + c.w / 2) {
+                t.x = c.x + c.w + halfW;
+                if (t.vx < 0) t.vx = 0;
+              }
+            }
+          }
+
+          // 2. Ground Spikes interactions
+          if (c.type === 'GROUND_SPIKES') {
+            if (t !== c.owner && t.ground && Math.abs(t.x - (c.x + c.w / 2)) < (c.w / 2 + 10) && Math.abs(t.y - (c.y + c.h)) < 15) {
+              t.vx *= 0.6; // 40% slow
+              if (G.frame % 20 === 0) {
+                t.pct = Math.min(999, t.pct + 1.5);
+                if (typeof fx === 'function') fx('blood', t.x, t.y - 12, { col: '#ff1e38' });
+              }
+            }
+          }
+        }
+      }
+
+      // Solid obstacle for projectiles
+      if (G && G.projs) {
+        for (const p of G.projs) {
+          if (p.dead) continue;
+          if (p.x >= c.x && p.x <= c.x + c.w && p.y >= c.y && p.y <= c.y + c.h) {
+            c.hp -= (p.d || 8.0);
+            p.dead = true;
+            if (typeof fx === 'function') fx('spark', p.x, p.y, { col: '#5ce1e6' });
+          }
+        }
+      }
+    }
+  }
+
+  detonateWall(wall, owner) {
+    const idx = this.crystals.indexOf(wall);
+    if (idx !== -1) {
+      this.crystals.splice(idx, 1);
+    }
+    if (typeof G !== 'undefined' && G.projs) {
+      const facing = owner ? owner.face : 1;
+      const spreads = [-4, -2, 0, 2, 4];
+      for (let s of spreads) {
+        G.projs.push({
+          owner: owner,
+          t: 'crystal_shrapnel',
+          x: wall.x + wall.w / 2,
+          y: wall.y + wall.h / 2 + s * 10,
+          vx: 14 * facing,
+          vy: s * 1.5,
+          r: 16,
+          life: 35,
+          d: 8.5,
+          a: 35,
+          b: 45,
+          g: 75,
+          col: '#5ce1e6',
+          hits: new Map(),
+          age: 0
+        });
+      }
+    }
+    if (typeof fx === 'function') {
+      fx('boom', wall.x + wall.w / 2, wall.y + wall.h / 2, { sc: 1.8 });
+      fx('text', wall.x + wall.w / 2, wall.y - 40, { txt: '¡DETONACIÓN DE CRISTAL!', col: '#5ce1e6', dur: 35 });
+    }
+  }
+
+  render(ctx) {
+    for (const c of this.crystals) {
+      ctx.save();
+      if (c.type === 'MONOLITH_WALL') {
+        const grad = ctx.createLinearGradient(c.x, c.y, c.x + c.w, c.y);
+        grad.addColorStop(0, '#d8f8ff');
+        grad.addColorStop(0.5, '#ffffff');
+        grad.addColorStop(1, '#a5f3fc');
+        ctx.fillStyle = grad;
+        ctx.strokeStyle = '#5ce1e6';
+        ctx.lineWidth = 3;
+
+        ctx.beginPath();
+        ctx.moveTo(c.x, c.y + c.h);
+        ctx.lineTo(c.x + 8, c.y + 12);
+        ctx.lineTo(c.x + c.w / 2, c.y);
+        ctx.lineTo(c.x + c.w - 8, c.y + 12);
+        ctx.lineTo(c.x + c.w, c.y + c.h);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(92, 225, 230, 0.6)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(c.x + c.w / 2, c.y);
+        ctx.lineTo(c.x + c.w / 2, c.y + c.h);
+        ctx.moveTo(c.x + 8, c.y + 12);
+        ctx.lineTo(c.x + c.w / 2, c.y + c.h * 0.4);
+        ctx.moveTo(c.x + c.w - 8, c.y + 12);
+        ctx.lineTo(c.x + c.w / 2, c.y + c.h * 0.4);
+        ctx.stroke();
+
+        if (c.hp < c.maxHp) {
+          const dmgRatio = 1 - (c.hp / c.maxHp);
+          ctx.strokeStyle = '#0f172a';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(c.x + c.w * 0.3, c.y + c.h * 0.3);
+          ctx.lineTo(c.x + c.w * 0.6, c.y + c.h * 0.5);
+          if (dmgRatio > 0.4) {
+            ctx.lineTo(c.x + c.w * 0.2, c.y + c.h * 0.7);
+            ctx.lineTo(c.x + c.w * 0.7, c.y + c.h * 0.85);
+          }
+          if (dmgRatio > 0.7) {
+            ctx.moveTo(c.x + c.w * 0.7, c.y + c.h * 0.2);
+            ctx.lineTo(c.x + c.w * 0.4, c.y + c.h * 0.45);
+            ctx.lineTo(c.x + c.w * 0.8, c.y + c.h * 0.65);
+          }
+          ctx.stroke();
+        }
+      } else {
+        ctx.fillStyle = '#d8f8ff';
+        ctx.strokeStyle = '#5ce1e6';
+        ctx.lineWidth = 2;
+        const spikeCount = 6;
+        const sw = c.w / spikeCount;
+        ctx.beginPath();
+        ctx.moveTo(c.x, c.y + c.h);
+        for (let s = 0; s < spikeCount; s++) {
+          const sx = c.x + s * sw;
+          const peakY = c.y + (s % 2 === 0 ? 0 : 12);
+          ctx.lineTo(sx + sw * 0.5, peakY);
+          ctx.lineTo(sx + sw, c.y + c.h);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+}
+
+class ColossalMarcher {
+  constructor(i, x, groundY) {
+    this.i = i;
+    this.w = 110;
+    this.h = 320;
+    this.x = x;
+    this.y = groundY;
+    this.vx = 3.2;
+  }
+}
+
+class RumblingUltimateHazard {
+  constructor() {
+    this.isActive = false;
+    this.timer = 0;
+    this.maxTimer = 300;
+    this.owner = null;
+    this.marchers = [];
+  }
+
+  start(owner) {
+    this.isActive = true;
+    this.timer = 300;
+    this.owner = owner;
+    const startX = typeof G !== 'undefined' && G.stage && G.stage.blast ? G.stage.blast.l - 200 : -700;
+    const groundY = typeof G !== 'undefined' && G.stage && G.stage.main ? G.stage.main.y : 400;
+    this.marchers = [0, 1, 2, 3].map(i => new ColossalMarcher(i, startX - i * 140, groundY));
+    if (typeof sfx === 'function') sfx('super');
+  }
+
+  forceStop() {
+    this.isActive = false;
+    this.timer = 0;
+    this.marchers = [];
+    this.owner = null;
+  }
+
+  restore(active, timer) {
+    this.isActive = !!active;
+    this.timer = timer || 0;
+    if (!this.isActive) {
+      this.marchers = [];
+      this.owner = null;
+    }
+  }
+
+  update(G) {
+    if (!this.isActive) return;
+    this.timer--;
+    if (this.timer <= 0) {
+      this.forceStop();
+      return;
+    }
+
+    for (const m of this.marchers) {
+      m.x += m.vx;
+    }
+
+    // Seismic Stomp every 60 frames
+    if (this.timer % 60 === 0) {
+      if (G) G.shake = Math.max(G.shake || 0, 14);
+      if (typeof sfx === 'function') sfx('explode');
+      if (G && G.fighters && G.stage && G.stage.main) {
+        for (const t of G.fighters) {
+          if (t === this.owner || t.dead || t.out) continue;
+          if (t.ground === G.stage.main || t.ground === 'main') {
+            t.pct = Math.min(999, t.pct + 6.0);
+            t.vy = -9.5;
+            t.ground = null;
+            t.st = 'air';
+            t.tumble = true;
+            if (typeof fx === 'function') {
+              fx('shock', t.x, t.y, { r: 50, col: '#f97316', flat: 1, dur: 18 });
+              fx('text', t.x, t.y - 90, { txt: '¡RETUMBAR: PISADA!', col: '#f97316', dur: 35 });
+            }
+          }
+        }
+      }
+    }
+
+    // Contact with Colossal Steam
+    if (G && G.fighters) {
+      for (const m of this.marchers) {
+        for (const t of G.fighters) {
+          if (t === this.owner || t.dead || t.out) continue;
+          if (t.x >= m.x && t.x <= m.x + m.w && t.y >= m.y - m.h && t.y <= m.y) {
+            if (typeof applyHit === 'function') {
+              applyHit(this.owner, t, { d: 18.0, a: 55, b: 70, g: 105 }, 1, 1, t.x, t.y - 40);
+              if (typeof fx === 'function') {
+                fx('smoke', t.x, t.y - 40, { col: '#ff5a6a', dur: 30 });
+                fx('text', t.x, t.y - 120, { txt: '¡VAPOR COLOSAL!', col: '#ef4444', dur: 30 });
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  renderBackground(ctx, w, h) {
+    if (!this.isActive) return;
+    ctx.save();
+    const sky = ctx.createLinearGradient(0, 0, 0, h);
+    sky.addColorStop(0, '#2a0404');
+    sky.addColorStop(0.7, '#671408');
+    sky.addColorStop(1, '#8a1c07');
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.globalAlpha = 0.75;
+    ctx.fillStyle = '#0a0505';
+    ctx.strokeStyle = '#26120e';
+    ctx.lineWidth = 4;
+
+    const midX = w / 2;
+    const groundY = h * 0.75;
+
+    ctx.beginPath();
+    for (let r = -7; r <= 7; r++) {
+      const rx = midX + r * (w * 0.065);
+      const arcH = 180 + Math.abs(r) * 15;
+      ctx.moveTo(rx, groundY);
+      ctx.quadraticCurveTo(rx - r * 15, groundY - arcH, rx, groundY - arcH - 40);
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = '#1c0e0b';
+    ctx.beginPath();
+    ctx.arc(midX, groundY - 260, 55, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.shadowColor = '#00ffff';
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = '#00ffff';
+    ctx.beginPath();
+    ctx.arc(midX - 16, groundY - 265, 5, 0, Math.PI * 2);
+    ctx.arc(midX + 16, groundY - 265, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    for (let p = 0; p < 16; p++) {
+      const px = (midX + Math.sin((typeof G !== 'undefined' ? G.frame : 0) * 0.05 + p) * (w * 0.45) + w) % w;
+      const py = (h - (((typeof G !== 'undefined' ? G.frame : 0) * 3 + p * 45) % h));
+      ctx.fillStyle = p % 2 === 0 ? 'rgba(255, 140, 0, 0.7)' : 'rgba(180, 180, 180, 0.5)';
+      ctx.fillRect(px, py, 3, 3);
+    }
+    ctx.restore();
+  }
+
+  renderForeground(ctx) {
+    if (!this.isActive) return;
+    ctx.save();
+    for (const m of this.marchers) {
+      ctx.save();
+      ctx.translate(m.x, m.y);
+      ctx.fillStyle = '#7f1d1d';
+      ctx.fillRect(0, -m.h, m.w, m.h);
+
+      ctx.fillStyle = '#fef08a';
+      for (let b = 0; b < 10; b++) {
+        ctx.fillRect(4, -m.h + 20 + b * 28, m.w - 8, 4);
+      }
+
+      ctx.fillStyle = '#e2e8f0';
+      ctx.beginPath();
+      ctx.ellipse(m.w / 2, -m.h + 25, 24, 30, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#450a0a';
+      ctx.fillRect(m.w / 2 - 14, -m.h + 20, 8, 8);
+      ctx.fillRect(m.w / 2 + 6, -m.h + 20, 8, 8);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      for (let s = 0; s < 5; s++) {
+        ctx.beginPath();
+        ctx.arc(m.w / 2 + Math.sin((typeof G !== 'undefined' ? G.frame : 0) * 0.1 + s) * 20, -m.h + s * 50, 30, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+}
+
+class ErenFighter {
+  constructor(fighter) {
+    this.f = fighter;
+    this.form = 'HUMAN'; // 'HUMAN' | 'TITAN'
+    this.determinationMeter = 0; // 0 to 100
+    this.titanSteamTimer = 0; // 0 to 900
+    this.gasMeter = 100; // 0 to 100
+    this.bladeSharpness = 8; // 0 to 8
+    this.spareBlades = 3; // 0 to 3
+    this.ultMeter = 0;
+    this.usedUltSinceLastGroundedCheckpoint = false;
+    this.usedUltThisAirSequence = false;
+    this.titanHusk = null;
+    this.transformLightningTimer = 0;
+
+    this.odmController = new ODMGearController(fighter);
+    if (typeof G !== 'undefined') {
+      if (!G.crystalManager) G.crystalManager = new CrystalTerrainManager();
+      if (!G.rumblingHazard) G.rumblingHazard = new RumblingUltimateHazard();
+    }
+
+    this.width = 40;
+    this.height = 68;
+    this.f.w = this.width;
+    this.f.h = this.height;
+    this.updateStats();
+  }
+
+  get crystalManager() {
+    return (typeof G !== 'undefined' && G.crystalManager) ? G.crystalManager : this._crystalManager;
+  }
+  set crystalManager(v) {
+    this._crystalManager = v;
+  }
+
+  get rumblingHazard() {
+    return (typeof G !== 'undefined' && G.rumblingHazard) ? G.rumblingHazard : this._rumblingHazard;
+  }
+  set rumblingHazard(v) {
+    this._rumblingHazard = v;
+  }
+
+  switchForm(targetForm) {
+    const oldHeight = this.height;
+    if (targetForm === 'TITAN') {
+      this.width = 96;
+      this.height = 156;
+      this.f.mode = 'titan';
+      this.spareBlades = 3;
+    } else {
+      this.width = 40;
+      this.height = 68;
+      this.f.mode = null;
+      this.bladeSharpness = 8;
+    }
+    this.f.y -= (this.height - oldHeight);
+    this.form = targetForm;
+    this.f.w = this.width;
+    this.f.h = this.height;
+    this.updateStats();
+  }
+
+  updateStats() {
+    const f = this.f;
+    if (this.form === 'HUMAN') {
+      f.w = 40; f.h = 68;
+      f.st = Object.assign(f.st || {}, {
+        w: 78,
+        walk: 4.8,
+        run: 8.6,
+        air: 6.5,
+        aacc: 0.52,
+        jump: 13.0,
+        dj: 12.2,
+        grav: 0.48,
+        fall: 10.5,
+        fastFall: 15.0
+      });
+      f.heavyArmor = 0;
+    } else {
+      f.w = 96; f.h = 156;
+      f.st = Object.assign(f.st || {}, {
+        w: 145,
+        walk: 3.4,
+        run: 6.2,
+        air: 4.0,
+        aacc: 0.40,
+        jump: 15.5,
+        dj: 11.0,
+        grav: 0.78,
+        fall: 14.0,
+        fastFall: 19.5
+      });
+      f.heavyArmor = 11.0;
+    }
+  }
+
+  calculateKineticMultiplier() {
+    if (this.bladeSharpness <= 0) return 0.45; // Cuchillas rotas
+    const currentSpeed = Math.hypot(this.f.vx, this.f.vy);
+    const bonus = Math.min(0.85, (currentSpeed / 22) * 0.85);
+    return 1.0 + bonus;
+  }
+
+  onBladeHit(rival, hb) {
+    this.bladeSharpness = Math.max(0, this.bladeSharpness - 1);
+    const dmg = hb.d || 4.0;
+    this.determinationMeter = Math.min(100, this.determinationMeter + dmg * 1.2);
+
+    const currentSpeed = Math.hypot(this.f.vx, this.f.vy);
+    if (currentSpeed >= 15.0) {
+      this.f.hitlag = Math.max(this.f.hitlag || 0, 14);
+      if (rival) {
+        rival.hitlag = Math.max(rival.hitlag || 0, 14);
+        if (rival.shield) rival.shield = Math.max(0, rival.shield - dmg * 1.5);
+      }
+      if (typeof fx === 'function') {
+        fx('flash', 0, 0, { screen: 1, dur: 4 });
+        fx('text', this.f.x, this.f.y - 70, { txt: '¡CRITICAL SLASH!', col: '#10b981', dur: 30 });
+      }
+    }
+  }
+
+  onDamageTaken(d) {
+    if (this.form === 'HUMAN') {
+      this.determinationMeter = Math.min(100, this.determinationMeter + d * 0.8);
+    } else {
+      if (d > 15.0) {
+        this.titanSteamTimer = Math.max(0, this.titanSteamTimer - 25);
+      }
+    }
+  }
+
+  onMoveExecuted(key) {
+    if (this.form === 'TITAN') {
+      if (key && (key.includes('smash') || key.includes('ns') || key.includes('ss') || key.includes('us') || key.includes('ds'))) {
+        this.titanSteamTimer = Math.max(0, this.titanSteamTimer - 35);
+      }
+    }
+  }
+
+  spawnMonolith() {
+    if (this.crystalManager) {
+      const spawnX = this.f.x + 95 * this.f.face;
+      const spawnY = this.f.y;
+      return this.crystalManager.spawnMonolith(spawnX, spawnY, this.f.face, this.f);
+    }
+  }
+
+  spawnSpikes() {
+    if (this.crystalManager) {
+      return this.crystalManager.spawnSpikes(this.f.x, this.f.y, this.f.face, this.f);
+    }
+  }
+
+  detonateWall() {
+    if (this.crystalManager && this.crystalManager.crystals.length > 0) {
+      const wall = this.crystalManager.crystals.find(c => c.type === 'MONOLITH_WALL');
+      if (wall) this.crystalManager.detonateWall(wall, this.f);
+    }
+  }
+
+  startRumbling() {
+    this.ultMeter = 0;
+    this.f.meter = 0;
+    this.usedUltSinceLastGroundedCheckpoint = true;
+    if (this.form === 'HUMAN') {
+      this.switchForm('TITAN');
+      this.titanSteamTimer = 900;
+    }
+    if (this.rumblingHazard) {
+      this.rumblingHazard.start(this.f);
+    }
+  }
+
+  update(G) {
+    const f = this.f;
+    f.gauge = this.form === 'HUMAN' ? this.determinationMeter : Math.round((this.titanSteamTimer / 900) * 100);
+    this.ultMeter = f.meter || 0;
+
+    if (this.transformLightningTimer > 0) this.transformLightningTimer--;
+
+    if (this.form === 'HUMAN') {
+      if (f.ground) {
+        this.gasMeter = Math.min(100, this.gasMeter + 0.6);
+      }
+      this.odmController.update(G);
+    } else {
+      this.titanSteamTimer--;
+      if (this.titanSteamTimer <= 0) {
+        this.switchForm('HUMAN');
+        this.bladeSharpness = 8;
+        f.intan = 20;
+        if (typeof fx === 'function') {
+          fx('smoke', f.x, f.y - 40, { col: '#ffffff', dur: 45 });
+          fx('text', f.x, f.y - 80, { txt: '¡EYECCIÓN DE NUCA!', col: '#f8fafc', dur: 35 });
+        }
+      }
+      if (G && G.frame % 3 === 0 && typeof fx === 'function') {
+        fx('smoke', f.x - 25 * f.face, f.y - 120, { col: '#ffffff', dur: 18 });
+        fx('smoke', f.x + 25 * f.face, f.y - 120, { col: '#ffffff', dur: 18 });
+      }
+    }
+
+    if (this.titanHusk) {
+      this.titanHusk.timer--;
+      if (G && G.fighters) {
+        for (const t of G.fighters) {
+          if (t === f || t.dead || t.out) continue;
+          if (t.x >= this.titanHusk.x - 48 && t.x <= this.titanHusk.x + 48 && t.y >= this.titanHusk.y - 156 && t.y <= this.titanHusk.y) {
+            t.pct = Math.min(999, t.pct + 0.05);
+            if (G.frame % 15 === 0 && typeof fx === 'function') {
+              fx('smoke', t.x, t.y - 30, { col: '#ef4444', dur: 15 });
+            }
+          }
+        }
+      }
+      if (this.titanHusk.timer <= 0) this.titanHusk = null;
+    }
+
+    if (f.ground && f.st !== 'hitstun') {
+      this.usedUltSinceLastGroundedCheckpoint = false;
+      this.usedUltThisAirSequence = false;
+    }
+  }
+
+  getSnapshotState() {
+    return {
+      x: this.f.x, y: this.f.y, vx: this.f.vx, vy: this.f.vy,
+      facing: this.f.face, state: this.f.st, form: this.form,
+      width: this.width, height: this.height,
+      damagePercent: this.f.pct,
+      determinationMeter: this.determinationMeter,
+      titanSteamTimer: this.titanSteamTimer,
+      gasMeter: this.gasMeter,
+      bladeSharpness: this.bladeSharpness,
+      spareBlades: this.spareBlades,
+      ultMeter: this.ultMeter,
+      odmState: Object.assign({}, this.odmController.getState()),
+      activeCrystals: this.crystalManager.crystals.map(c => ({
+        id: c.id,
+        type: c.type,
+        x: c.x,
+        y: c.y,
+        w: c.w,
+        h: c.h,
+        hp: c.hp,
+        maxHp: c.maxHp,
+        timer: c.timer,
+        facing: c.facing,
+        collisionMask: c.collisionMask,
+        emergingFrames: c.emergingFrames
+      })),
+      rumblingActive: this.rumblingHazard.isActive,
+      rumblingTimer: this.rumblingHazard.timer
+    };
+  }
+
+  restoreSnapshotState(snapshot) {
+    if (!snapshot) return;
+    this.f.x = snapshot.x; this.f.y = snapshot.y;
+    this.f.vx = snapshot.vx; this.f.vy = snapshot.vy;
+    this.f.face = snapshot.facing; this.f.st = snapshot.state;
+    this.form = snapshot.form;
+    this.width = snapshot.width; this.height = snapshot.height;
+    this.f.w = this.width; this.f.h = this.height;
+    this.f.pct = snapshot.damagePercent;
+    this.determinationMeter = snapshot.determinationMeter;
+    this.titanSteamTimer = snapshot.titanSteamTimer;
+    this.gasMeter = snapshot.gasMeter;
+    this.bladeSharpness = snapshot.bladeSharpness;
+    this.spareBlades = snapshot.spareBlades;
+    this.updateStats();
+
+    if (this.usedUltSinceLastGroundedCheckpoint) {
+      this.ultMeter = 0;
+      this.f.meter = 0;
+      this.rumblingHazard.forceStop();
+    } else {
+      this.ultMeter = snapshot.ultMeter;
+      this.f.meter = snapshot.ultMeter;
+      this.rumblingHazard.restore(snapshot.rumblingActive, snapshot.rumblingTimer);
+    }
+
+    this.odmController.restoreState(snapshot.odmState);
+    if (snapshot.activeCrystals) {
+      this.crystalManager.crystals = snapshot.activeCrystals.map(c => {
+        const construct = new CrystalConstruct(c.id, c.type, c.x + c.w / 2, c.y + c.h, c.facing, this.f);
+        construct.hp = c.hp;
+        construct.maxHp = c.maxHp;
+        construct.timer = c.timer;
+        construct.emergingFrames = c.emergingFrames;
+        return construct;
+      });
+    }
+  }
+
+  render(ctx, flash) {
+    const f = this.f;
+    ctx.save();
+    ctx.translate(f.x, f.y);
+    ctx.scale(f.face, 1);
+    if (flash) ctx.globalAlpha = 0.55;
+
+    if (this.form === 'HUMAN') {
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(-12, -26, 8, 26);
+      ctx.fillRect(4, -26, 8, 26);
+
+      ctx.fillStyle = '#2b1d0c';
+      ctx.fillRect(-13, -14, 10, 14);
+      ctx.fillRect(3, -14, 10, 14);
+
+      ctx.strokeStyle = '#291a0e';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-12, -24); ctx.lineTo(-4, -16);
+      ctx.moveTo(4, -24); ctx.lineTo(12, -16);
+      ctx.stroke();
+
+      ctx.fillStyle = '#64748b';
+      ctx.fillRect(-16, -34, 6, 22);
+      ctx.fillRect(10, -34, 6, 22);
+      ctx.fillStyle = '#ca8a04';
+      ctx.fillRect(-16, -36, 6, 2);
+      ctx.fillRect(10, -36, 6, 2);
+
+      ctx.fillStyle = '#f1ede4';
+      ctx.fillRect(-10, -48, 20, 22);
+      ctx.fillStyle = '#4a3728';
+      ctx.fillRect(-12, -48, 6, 18);
+      ctx.fillRect(6, -48, 6, 18);
+      ctx.fillRect(-12, -48, 24, 6);
+
+      ctx.fillStyle = '#3b82f6';
+      ctx.fillRect(-8, -44, 4, 6);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-4, -44, 4, 6);
+
+      ctx.fillStyle = '#ffd8c0';
+      ctx.fillRect(-8, -64, 16, 16);
+
+      ctx.fillStyle = '#10b981';
+      ctx.fillRect(2, -58, 3, 3);
+
+      ctx.fillStyle = '#261408';
+      ctx.beginPath();
+      ctx.moveTo(-9, -64);
+      ctx.lineTo(8, -64);
+      ctx.lineTo(11, -55);
+      ctx.lineTo(5, -53);
+      ctx.lineTo(-2, -56);
+      ctx.lineTo(-9, -53);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.save();
+      const bladeCol = this.bladeSharpness > 0 ? '#cbd5e1' : '#64748b';
+      ctx.fillStyle = bladeCol;
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1;
+      ctx.fillRect(14, -42, 28, 4);
+      ctx.strokeRect(14, -42, 28, 4);
+      ctx.fillRect(-22, -38, 24, 4);
+      ctx.strokeRect(-22, -38, 24, 4);
+      ctx.restore();
+    } else {
+      const muscleTone = '#83281c';
+      const fiberHighlight = '#c2410c';
+
+      ctx.fillStyle = muscleTone;
+      ctx.fillRect(-32, -65, 26, 65);
+      ctx.fillRect(6, -65, 26, 65);
+
+      ctx.strokeStyle = fiberHighlight;
+      ctx.lineWidth = 2;
+      for (let str = -55; str <= -10; str += 12) {
+        ctx.beginPath();
+        ctx.moveTo(-30, str); ctx.lineTo(-8, str + 6);
+        ctx.moveTo(8, str); ctx.lineTo(30, str + 6);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = muscleTone;
+      ctx.beginPath();
+      ctx.roundRect(-42, -135, 84, 75, [14, 14, 6, 6]);
+      ctx.fill();
+
+      ctx.fillStyle = '#991b1b';
+      ctx.fillRect(-28, -100, 24, 16);
+      ctx.fillRect(4, -100, 24, 16);
+      ctx.fillRect(-28, -80, 24, 16);
+      ctx.fillRect(4, -80, 24, 16);
+
+      ctx.fillStyle = muscleTone;
+      ctx.fillRect(-48, -125, 20, 60);
+      ctx.fillRect(28, -125, 20, 60);
+
+      ctx.fillStyle = '#d8f8ff';
+      ctx.strokeStyle = '#5ce1e6';
+      ctx.lineWidth = 2;
+      ctx.fillRect(28, -70, 24, 24);
+      ctx.strokeRect(28, -70, 24, 24);
+      ctx.fillRect(-52, -70, 24, 24);
+      ctx.strokeRect(-52, -70, 24, 24);
+
+      ctx.fillStyle = muscleTone;
+      ctx.beginPath();
+      ctx.ellipse(0, -145, 22, 26, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      for (let t = -5; t <= 5; t++) {
+        ctx.fillRect(t * 3.5 - 1, -140, 2.5, 5);
+        ctx.fillRect(t * 3.5 - 1, -134, 2.5, 5);
+      }
+
+      ctx.shadowColor = '#10b981';
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = '#10b981';
+      ctx.fillRect(5, -150, 5, 4);
+      ctx.shadowBlur = 0;
+
+      ctx.fillStyle = '#261408';
+      ctx.beginPath();
+      ctx.moveTo(-22, -150);
+      ctx.quadraticCurveTo(-45, -130, -50, -95);
+      ctx.quadraticCurveTo(-30, -125, 0, -165);
+      ctx.quadraticCurveTo(25, -165, 22, -150);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.restore();
+
+    if (this.form === 'HUMAN' && this.odmController && this.odmController.isGrappled) {
+      ctx.save();
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(f.x, f.y - 20);
+      ctx.lineTo(this.odmController.anchorX, this.odmController.anchorY);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (this.transformLightningTimer > 0) {
+      ctx.save();
+      ctx.shadowColor = '#ff8c00';
+      ctx.shadowBlur = 25;
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 12;
+
+      ctx.beginPath();
+      let ly = -200;
+      let lx = f.x;
+      ctx.moveTo(lx, ly);
+      for (let s = 1; s <= 8; s++) {
+        ly = -200 + s * ((f.y - (-200)) / 8);
+        lx = f.x + (s === 8 ? 0 : (Math.random() - 0.5) * 60);
+        ctx.lineTo(lx, ly);
+      }
+      ctx.stroke();
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 5;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (this.titanHusk) {
+      ctx.save();
+      ctx.translate(this.titanHusk.x, this.titanHusk.y);
+      ctx.globalAlpha = Math.min(1.0, this.titanHusk.timer / 30);
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(-35, -140, 70, 140);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.beginPath();
+      ctx.arc(0, -80, 45, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+}
+
 const DIAVOLO_MV = {
   jab: {
     nm: 'Puñetazo Directo', f: 14, limb: 'arm', chainAt: 6, next: 'jab2',
@@ -2210,6 +3420,183 @@ const DIAVOLO_MV = {
 if (CH.diavolo) {
   Object.assign(CH.diavolo.mv, DIAVOLO_MV);
 }
+
+
+const EREN_MV = {
+  // ===== HUMAN FORM (18 MOVIMIENTOS) =====
+  jab: {
+    nm: 'Corte Cruzado Derecho', f: 13, limb: 'arm', chainAt: 5, next: 'jab2',
+    hb: [{ s: 4, e: 6, x: 32, y: -8, r: 19, w: 38, h: 24, d: 3.0, a: 361, b: 12, g: 18, usesBlade: true }]
+  },
+  jab2: {
+    nm: 'Corte Cruzado Izquierdo', f: 13, limb: 'arm', chainAt: 4, next: 'jab3',
+    hb: [{ s: 3, e: 5, x: 36, y: -10, r: 20, w: 40, h: 28, d: 3.5, a: 75, b: 15, g: 20, usesBlade: true }]
+  },
+  jab3: {
+    nm: 'Tajo en Giro con Gas', f: 22, limb: 'arm',
+    hb: [{ s: 5, e: 8, x: 44, y: -12, r: 24, w: 48, h: 36, d: 5.5, a: 38, b: 40, g: 68, usesBlade: true }]
+  },
+  ftilt: {
+    nm: 'Estocada Doble de Acero', f: 24, limb: 'arm',
+    hb: [{ s: 7, e: 11, x: 48, y: -10, r: 26, w: 54, h: 26, d: 8.5, a: 34, b: 32, g: 75, usesBlade: true }]
+  },
+  utilt: {
+    nm: 'Media Luna Antiaérea', f: 22, limb: 'arm',
+    hb: [{ s: 5, e: 10, x: 12, y: -46, r: 25, w: 50, h: 48, d: 7.5, a: 88, b: 38, g: 72, usesBlade: true }]
+  },
+  dtilt: {
+    nm: 'Barrida de Cable de Acero', f: 21, limb: 'leg', crouch: 1, tripChance: 0.30,
+    hb: [{ s: 6, e: 9, x: 42, y: 14, r: 22, w: 52, h: 18, d: 6.5, a: 80, b: 28, g: 55, trip: true, usesBlade: false }]
+  },
+  dash: {
+    nm: 'Asalto Propulsado por Gas', f: 28, limb: 'body', slide: 1,
+    hb: [{ s: 6, e: 12, x: 38, y: -8, r: 24, w: 48, h: 34, d: 9.5, a: 42, b: 45, g: 76, usesBlade: true }]
+  },
+  fsmash: {
+    nm: 'Giro Torbellino Levi-Style', f: 45, limb: 'arm', smash: 1,
+    charge: { at: 10, max: 60, btn: 'attack', k: 0.4 },
+    hb: [
+      { s: 12, e: 15, x: 44, y: -10, r: 25, w: 50, h: 40, d: 4.0, a: 361, b: 25, g: 30, usesBlade: true, multi: 3 },
+      { s: 15, e: 18, x: 48, y: -10, r: 26, w: 54, h: 40, d: 4.0, a: 361, b: 25, g: 30, usesBlade: true, multi: 3 },
+      { s: 18, e: 21, x: 52, y: -10, r: 28, w: 58, h: 42, d: 9.0, a: 30, b: 55, g: 98, usesBlade: true }
+    ]
+  },
+  usmash: {
+    nm: 'Catapulta de Doble Ancla', f: 37, limb: 'arm', smash: 1,
+    charge: { at: 8, max: 60, btn: 'attack', k: 0.4 },
+    hb: [{ s: 10, e: 15, x: 0, y: -62, r: 32, w: 68, h: 58, d: 15.0, a: 89, b: 52, g: 94, usesBlade: true }]
+  },
+  dsmash: {
+    nm: 'Corte Rasante en 360°', f: 35, limb: 'arm', smash: 1,
+    charge: { at: 6, max: 60, btn: 'attack', k: 0.4 },
+    hb: [{ s: 8, e: 14, x: 0, y: 10, r: 35, w: 108, h: 28, d: 13.5, a: 25, b: 48, g: 86, usesBlade: true }]
+  },
+  nair: {
+    nm: 'Rueda de Cuchillas', f: 27, limb: 'body', air: 1, landingLag: 6,
+    hb: [
+      { s: 5, e: 9, x: 0, y: 0, r: 34, w: 68, h: 68, d: 3.0, a: 361, b: 15, g: 20, usesBlade: true, multi: 4 },
+      { s: 9, e: 13, x: 0, y: 0, r: 34, w: 68, h: 68, d: 3.0, a: 361, b: 15, g: 20, usesBlade: true, multi: 4 },
+      { s: 13, e: 17, x: 0, y: 0, r: 34, w: 68, h: 68, d: 3.0, a: 361, b: 35, g: 68, usesBlade: true }
+    ]
+  },
+  fair: {
+    nm: 'Guillotina en Picada', f: 28, limb: 'arm', air: 1, landingLag: 10,
+    hb: [{ s: 9, e: 13, x: 40, y: -4, r: 23, w: 46, h: 44, d: 12.5, a: 35, b: 45, g: 84, usesBlade: true }]
+  },
+  bair: {
+    nm: 'Corte Reverso con Propulsor', f: 24, limb: 'arm', air: 1, landingLag: 9,
+    hb: [{ s: 7, e: 10, x: -44, y: -6, r: 24, w: 48, h: 32, d: 13.5, a: 145, b: 48, g: 90, usesBlade: true }]
+  },
+  uair: {
+    nm: 'Tijera Aérea Ascendente', f: 22, limb: 'arm', air: 1, landingLag: 8,
+    hb: [{ s: 6, e: 10, x: 6, y: -48, r: 26, w: 54, h: 42, d: 10.5, a: 85, b: 38, g: 80, usesBlade: true }]
+  },
+  dair: {
+    nm: 'Ejecución de Nuca Spike', f: 32, limb: 'arm', air: 1, landingLag: 12,
+    hb: [{ s: 11, e: 14, x: 0, y: 38, r: 21, w: 38, h: 44, d: 14.0, a: 270, b: 50, g: 88, usesBlade: true }]
+  },
+  ns: {
+    nm: 'Recarga de Hojas y Ráfaga', f: 26, limb: 'arm',
+    hb: [{ s: 8, e: 12, x: 30, y: 0, r: 30, w: 60, h: 50, d: 0, a: 361, b: 10, g: 0, windbox: true }]
+  },
+  ss: {
+    nm: 'Disparo de Ancla ODM', f: 30, limb: 'body'
+  },
+  us: {
+    nm: 'Ascenso de Emergencia', f: 32, limb: 'body', helpless: 1,
+    hb: [{ s: 6, e: 12, x: 0, y: 30, r: 20, w: 40, h: 30, d: 8.0, a: 270, b: 45, g: 70 }]
+  },
+  ds: {
+    nm: 'Mordida / Titán', f: 27, limb: 'arm'
+  },
+
+  // ===== TITAN FORM (18 MOVIMIENTOS) =====
+  jab_titan: {
+    nm: 'Directo Colosal', f: 26, limb: 'arm', chainAt: 11, next: 'jab2_titan',
+    hb: [{ s: 8, e: 12, x: 68, y: -30, r: 35, w: 72, h: 50, d: 8.0, a: 361, b: 30, g: 40 }]
+  },
+  jab2_titan: {
+    nm: 'Martillazo con Ambos Puños', f: 33, limb: 'arm',
+    hb: [{ s: 9, e: 13, x: 76, y: -20, r: 40, w: 80, h: 68, d: 11.0, a: 40, b: 55, g: 82 }]
+  },
+  ftilt_titan: {
+    nm: 'Barrido de Brazo Salvaje', f: 39, limb: 'arm',
+    hb: [{ s: 12, e: 17, x: 84, y: -25, r: 44, w: 92, h: 54, d: 14.5, a: 32, b: 50, g: 88 }]
+  },
+  utilt_titan: {
+    nm: 'Cabezazo Desquiciado', f: 32, limb: 'head',
+    hb: [{ s: 9, e: 14, x: 30, y: -110, r: 42, w: 86, h: 74, d: 13.0, a: 86, b: 48, g: 85 }]
+  },
+  dtilt_titan: {
+    nm: 'Pisotón Sísmico', f: 35, limb: 'leg', crouch: 1,
+    hb: [{ s: 11, e: 15, x: 70, y: 15, r: 35, w: 80, h: 40, d: 12.5, a: 270, b: 45, g: 80, bury: 30 }]
+  },
+  dash_titan: {
+    nm: 'Tacleada Imparable de Titán', f: 45, limb: 'body', slide: 1,
+    superArmor: { s: 1, e: 45, maxDmg: 999 },
+    hb: [{ s: 11, e: 19, x: 55, y: -15, r: 48, w: 90, h: 95, d: 16.0, a: 38, b: 60, g: 92 }]
+  },
+  fsmash_titan: {
+    nm: 'Puño de Endurecimiento Blanco', f: 59, limb: 'arm', smash: 1,
+    charge: { at: 18, max: 60, btn: 'attack', k: 0.4 },
+    hb: [{ s: 21, e: 25, x: 92, y: -28, r: 42, w: 84, h: 64, d: 26.0, a: 24, b: 72, g: 115, shieldBreak: true, detonateWall: true }]
+  },
+  usmash_titan: {
+    nm: 'Pilar Ascendente del Martillo', f: 53, limb: 'arm', smash: 1,
+    charge: { at: 14, max: 60, btn: 'attack', k: 0.4 },
+    hb: [{ s: 16, e: 23, x: 40, y: -140, r: 45, w: 76, h: 150, d: 22.0, a: 90, b: 65, g: 104 }]
+  },
+  dsmash_titan: {
+    nm: 'Campo de Empalamiento Spikes', f: 53, limb: 'arm', smash: 1,
+    charge: { at: 12, max: 60, btn: 'attack', k: 0.4 },
+    hb: [{ s: 15, e: 21, x: 0, y: 35, r: 40, w: 220, h: 55, d: 19.5, a: 65, b: 60, g: 98, spawnSpikes: true }]
+  },
+  nair_titan: {
+    nm: 'Explosión Corporal de Vapor', f: 36, limb: 'body', air: 1, landingLag: 14,
+    hb: [{ s: 8, e: 18, x: 0, y: 0, r: 65, w: 130, h: 150, d: 13.0, a: 361, b: 48, g: 78 }]
+  },
+  fair_titan: {
+    nm: 'Martillo de Guerra Gigante', f: 46, limb: 'arm', air: 1, landingLag: 18,
+    hb: [{ s: 16, e: 20, x: 95, y: 15, r: 44, w: 88, h: 88, d: 21.0, a: 280, b: 60, g: 98 }]
+  },
+  bair_titan: {
+    nm: 'Revés con Dorso Endurecido', f: 38, limb: 'arm', air: 1, landingLag: 15,
+    hb: [{ s: 12, e: 16, x: -82, y: -20, r: 38, w: 78, h: 56, d: 18.5, a: 150, b: 58, g: 96 }]
+  },
+  uair_titan: {
+    nm: 'Mordisco Aéreo Salvaje', f: 32, limb: 'head', air: 1, landingLag: 13,
+    hb: [{ s: 10, e: 14, x: 15, y: -95, r: 36, w: 74, h: 64, d: 16.0, a: 85, b: 50, g: 88, restoreSteam: 60 }]
+  },
+  dair_titan: {
+    nm: 'Caída Meteórica Colosal', f: 62, limb: 'leg', air: 1, landingLag: 22,
+    hb: [{ s: 14, e: 34, x: 0, y: 60, r: 40, w: 86, h: 68, d: 20.0, a: 270, b: 62, g: 95 }]
+  },
+  ns_titan: {
+    nm: 'Rugido Berserker Coordenada', f: 50, limb: 'head',
+    hb: [{ s: 14, e: 22, x: 0, y: -30, r: 110, w: 240, h: 200, d: 6.0, a: 361, b: 20, g: 30, paralyze: 55, clearProj: true }]
+  },
+  ss_titan: {
+    nm: 'Creación de Monolito', f: 38, limb: 'arm',
+    hb: [{ s: 16, e: 21, x: 95, y: -40, r: 40, w: 48, h: 120, d: 14.0, a: 80, b: 55, g: 85 }]
+  },
+  us_titan: {
+    nm: 'Salto Sísmico con Ballesta', f: 40, limb: 'body', helpless: 1
+  },
+  ds_titan: {
+    nm: 'Eyección Táctica de Nuca', f: 35, limb: 'body'
+  },
+
+  // ===== DEFINITIVA (THE RUMBLING) =====
+  final: {
+    nm: 'El Retumbar', f: 300, limb: 'body', invincible: 1
+  }
+};
+
+if (CH.eren) {
+  if (!CH.eren.mv) CH.eren.mv = {};
+  Object.assign(CH.eren.mv, EREN_MV);
+}
+
 
 const GS='suelo:',GM='smash:',GA='aereo:',GE='esp:',GR='reac:',GG='agarre:',G3='ssj:';
 const GOKU_MV={
@@ -2986,6 +4373,7 @@ const GAUGE={
 
  mob:{nm:'ESTRÉS',col:'#e84393',start:0,take:.75,hit:.35,still:.15,autoMode:[100,'cien',0],hint:'recibe daño y pelea; al 100 % desata su poder'},
  subaru:{nm:'MIASMA RBD',col:'#a855f7',start:0,take:.5,hit:.35,hint:'recibe daño (1% c/2%) y conecta golpes; al 100% otorga 1 resurrección extra'},
+   eren:{nm:'DETERMINACIÓN',col:'#15803d',start:0,take:.8,hit:1.2,hint:'Cuchillas + daño recibido o ↓+Esp para morder pulgar; al 100% activa Titán'},
  diavolo:{nm:'CRIMSON',col:'#e11d48',start:50,time:0.08,hit:4.0,take:6.0,hint:'Borrado de Tiempo y Epitaph'},
  denji:{nm:'MOTOR / SANGRE',col:'#ff2a3a',start:25,hit:.95,take:.65,charge:1.35,autoMode:[100,'motosierra',0],hint:'↓+especial jala la cuerda del pecho o desgarra rivales'}};
 function gaugeAdd(f,v){const Gd=GAUGE[f.C.id];if(!Gd||!v)return;if(v>0&&f.gLock>0)return;const was=f.gauge||0;f.gauge=clamp(was+v,0,100);
@@ -3169,6 +4557,8 @@ function makeFighter(i,cfg,x){
   in:blank(),pin:blank(),tapX:99,tapY:99,victim:null,holder:null,holdT:0,pummelCd:0,dead:0,respawn:0,shakeHud:0,anim:0,usedUp:false,
   counterOn:false,reflectOn:false,out:false,place:0,collisionMask:15,crimsonMeter:50};
  if(cfg.ch==='diavolo'){f.diavoloFighter=new DiavoloFighter(f);f.stand=f.diavoloFighter.stand;}
+ if(cfg.ch==='eren'){f.erenFighter=new ErenFighter(f);}
+ 
  return f;
 }
 
@@ -3211,6 +4601,69 @@ function startMove(f,key){
  else if(f.mode&&f.C.mv[key+'_'+f.mode])key=key+'_'+f.mode;
  else if(f.mode&&modeOf(f).base&&f.C.mv[key+'_'+modeOf(f).base])key=key+'_'+modeOf(f).base;
  if(f.C.id==='subaru'&&key==='ds'&&!f.ground&&f.C.mv.ds_air)key='ds_air';
+ if(f.C.id==='eren'&&f.erenFighter){
+  if(f.mf===1)f.erenFighter.onMoveExecuted(f.mvKey);
+  if(f.erenFighter.form==='HUMAN'){
+   if(f.mvKey==='jab3'&&f.mf===5){f.vx=5*f.face;}
+   if(f.mvKey==='dash'&&f.mf>=6&&f.mf<=12){f.vx=13*f.face;if(f.mf===6){f.erenFighter.gasMeter=Math.max(0,f.erenFighter.gasMeter-5);fx('smoke',f.x-f.face*15,f.y-20,{col:'#e2e8f0',dur:14});}}
+   if(f.mvKey==='bair'&&f.mf===7){f.vx+=4*f.face;fx('smoke',f.x+f.face*10,f.y-20,{col:'#e2e8f0',dur:12});}
+   if(f.mvKey==='usmash'&&f.mf===10){f.y-=24;f.vy=-4;}
+   if(f.mvKey==='ns'&&f.mf===8){
+    if(f.erenFighter.bladeSharpness<8&&f.erenFighter.spareBlades>0){
+     f.erenFighter.spareBlades--;f.erenFighter.bladeSharpness=8;
+     G.projs.push({owner:f,t:'blade_discard',x:f.x+30*f.face,y:f.y-28,vx:15*f.face,vy:-1.5,r:14,life:25,d:6.5,a:40,b:40,g:65,col:'#94a3b8',hits:new Map(),age:0});
+     fx('spark',f.x+20*f.face,f.y-28,{col:'#cbd5e1'});fx('text',f.x,f.y-65,{txt:'¡RECARGA DE HOJAS!',col:'#38bdf8',dur:25});
+    }
+    f.erenFighter.gasMeter=Math.max(0,f.erenFighter.gasMeter-10);fx('smoke',f.x+30*f.face,f.y-20,{col:'rgba(235,245,255,0.8)',dur:20});
+    for(const p of G.projs){if(p.owner!==f&&Math.hypot(p.x-(f.x+30*f.face),p.y-(f.y-20))<65){p.owner=f;p.vx=-p.vx*1.3;p.vy=-p.vy*1.3;fx('spark',p.x,p.y,{col:'#38bdf8'});}}
+    for(const t of G.fighters){if(t!==f&&!t.dead&&!t.out&&Math.hypot(t.x-(f.x+30*f.face),t.y-(f.y-20))<70){t.vx+=10*f.face;}}
+   }
+   if(f.mvKey==='ss'&&f.mf===6){
+    const angle=(I&&I.y<-0.3)?-0.436:0;
+    f.erenFighter.odmController.fireGrapple(angle);
+    if(f.erenFighter.odmController.isGrappled&&f.erenFighter.odmController.anchorEntity){f.vx=19*f.face;}
+   }
+   if(f.mvKey==='us'&&f.mf===6){
+    f.erenFighter.gasMeter=Math.max(0,f.erenFighter.gasMeter-20);f.vy=-17.5;f.vx=(I?I.x:0)*6;f.ground=null;f.st='air';
+    fx('smoke',f.x,f.y+10,{col:'rgba(240,248,255,0.9)',dur:22});sfx('launch');
+   }
+   if(f.mvKey==='ds'&&f.mf===12){
+    if(f.erenFighter.determinationMeter<100){
+     f.pct=Math.min(999,f.pct+5.0);f.erenFighter.determinationMeter=Math.min(100,f.erenFighter.determinationMeter+30);
+     fx('blood',f.x+8*f.face,f.y-42,{col:'#dc2626'});fx('spark',f.x+8*f.face,f.y-42,{col:'#ffd700'});fx('text',f.x,f.y-75,{txt:'+30 DETERMINACIÓN',col:'#ffd700',dur:30});
+    }else{
+     f.erenFighter.determinationMeter=0;f.erenFighter.titanSteamTimer=900;f.erenFighter.transformLightningTimer=18;
+     f.erenFighter.switchForm('TITAN');G.shake=Math.max(G.shake||0,16);
+     for(const t of G.fighters){if(t!==f&&!t.dead&&!t.out&&Math.abs(t.x-f.x)<70&&t.y>=f.y-200&&t.y<=f.y+20){applyHit(f,t,{d:18.0,a:90,b:75,g:110},1,f.face,t.x,t.y-40);}}
+     fx('flash',0,0,{screen:1,dur:6});fx('text',f.x,f.y-170,{txt:'¡TITÁN DE ATAQUE!',col:'#10b981',dur:45});sfx('thunder');
+    }
+   }
+  }
+  if(f.erenFighter.form==='TITAN'){
+   if((f.mvKey==='dair_titan'||f.mvKey==='dair')){
+    f.vy=20;
+    if(f.ground&&f.mf>=14){
+     for(const t of G.fighters){if(t!==f&&!t.dead&&!t.out&&Math.abs(t.x-f.x)<80&&Math.abs(t.y-f.y)<30){applyHit(f,t,{d:12.0,a:80,b:50,g:80},1,Math.sign(t.x-f.x)||f.face,t.x,t.y-20);}}
+     G.shake=Math.max(G.shake||0,10);fx('shock',f.x,f.y,{r:80,col:'#8a1c07',flat:1,dur:18});
+    }
+   }
+   if((f.mvKey==='ns_titan'||f.mvKey==='ns')&&f.mf===14){
+    G.shake=Math.max(G.shake||0,12);fx('ring',f.x,f.y-30,{r:120,col:'#00ffff',dur:22});fx('ring',f.x,f.y-30,{r:70,col:'#ffffff',dur:14});
+    fx('text',f.x,f.y-150,{txt:'¡LA COORDENADA!',col:'#00ffff',dur:40});sfx('roar');
+   }
+   if((f.mvKey==='ss_titan'||f.mvKey==='ss')&&f.mf===16){f.erenFighter.spawnMonolith();}
+   if((f.mvKey==='us_titan'||f.mvKey==='us')){
+    if(f.mf===6){f.vy=-18.5;f.vx=(I?I.x:0)*5;f.ground=null;f.st='air';G.shake=Math.max(G.shake||0,8);fx('shock',f.x,f.y,{r:70,col:'#5ce1e6',flat:1,dur:16});}
+    if(f.mf===18){G.projs.push({owner:f,t:'crystal_arrow',x:f.x+40*f.face,y:f.y-50,vx:20*f.face,vy:14,r:22,life:45,d:15.0,a:45,b:50,g:88,col:'#5ce1e6',hits:new Map(),age:0});fx('streak',f.x+30*f.face,f.y-50,{dir:f.face,len:60,col:'#5ce1e6',w:6});}
+   }
+   if((f.mvKey==='ds_titan'||f.mvKey==='ds')&&f.mf===6){
+    f.erenFighter.titanHusk={x:f.x,y:f.y,timer:120};
+    f.erenFighter.switchForm('HUMAN');f.vx=-8*f.face;f.vy=-12;f.ground=null;f.st='air';f.intan=20;f.erenFighter.bladeSharpness=8;
+    fx('smoke',f.x,f.y-60,{col:'#ffffff',dur:50});fx('text',f.x,f.y-90,{txt:'¡CASCARÓN TÁCTICO!',col:'#ffd700',dur:35});
+   }
+  }
+  if(f.mvKey==='final'&&f.mf===1){f.erenFighter.startRumbling();}
+ }
  if(f.C.id==='diavolo'){
   if(!f.diavoloFighter)f.diavoloFighter=new DiavoloFighter(f);
   if(key==='ds'){
@@ -3341,6 +4794,7 @@ function stepFighter(f){
  if(hasSheet(f.C.id)){const fast=f.st==='dash'||f.st==='attack'&&f.mv&&(f.mv.lunge||f.mv.slide||f.mv.imp)||f.st==='hitstun'&&Math.hypot(f.vx,f.vy)>9||f.st==='adodge';
   f.trail=f.trail||[];if(fast&&f.lastRef){f.trail.push({x:f.x,y:f.y,ref:f.lastRef,flip:f.lastFlip,face:f.face});if(f.trail.length>4)f.trail.shift();}else if(f.trail.length)f.trail.shift();}
  if(f.diavoloFighter)f.diavoloFighter.update();
+ if(f.erenFighter)f.erenFighter.update(G);
  if(f.dead>0){f.dead--;if(f.dead===0)respawnF(f);return;}
  readInput(f);
  if(f.st==='grabbed'){if(f.pr.attack||f.pr.special||f.pr.jump)f.holder&&(f.holder.holdT-=5);return;}
@@ -3868,6 +5322,27 @@ function applyHit(a,t,hb,sc,dir,hx,hy,proj){
   if(a.mv&&a.mv.smash&&G.frame-(a.smT||0)>20){a.smT=G.frame;fx('text',hx,hy-40,{txt:'¡SMASH!',col:'#5dff8a'});G.shake=Math.max(G.shake,8);}}
  if(a&&a.mode==='gear5'&&G.frame-(a.toonT||0)>6){a.toonT=G.frame;fx('text',hx+rnd(-20,20),hy-30,{txt:['¡BOING!','¡POW!','¡PAF!','¡BONK!','¡ZAS!','¡PLOP!'][Math.floor(Math.random()*6)],col:['#ffffff','#ffe14d','#ff8ad8','#8fe8ff'][Math.floor(Math.random()*4)]});t.sq=1.7;}
  const own=proj?proj.owner:a;const wasStun=t.st==='hitstun'||t.st==='grabbed'||t.hitlag>0;
+ const isTitanArmor=(t.C.id==='eren'&&t.erenFighter&&t.erenFighter.form==='TITAN'&&(hb.d*sc)<11.0);
+ if(isTitanArmor){
+  t.pct+=hb.d*sc;if(t.erenFighter)t.erenFighter.onDamageTaken(hb.d*sc);
+  t.hitlag=Math.max(t.hitlag,Math.floor(hb.d*sc*.2)+2);
+  fx('ring',t.x,t.y-70,{r:50,col:'#10b981',dur:12});fx('text',t.x,t.y-160,{txt:'¡TITAN ARMOR!',col:'#10b981',dur:25});
+  return;
+ }
+ if(a&&a.C.id==='eren'&&a.erenFighter){
+  if(hb.usesBlade){
+   const kMult=a.erenFighter.calculateKineticMultiplier();
+   sc*=kMult;a.erenFighter.onBladeHit(t,hb);
+  }
+  if(hb.detonateWall)a.erenFighter.detonateWall();
+  if(hb.spawnSpikes)a.erenFighter.spawnSpikes();
+  if(hb.restoreSteam)a.erenFighter.titanSteamTimer=Math.min(900,a.erenFighter.titanSteamTimer+hb.restoreSteam);
+ }
+ if(t&&t.C.id==='eren'&&t.erenFighter){t.erenFighter.onDamageTaken(hb.d*sc);}
+ if(hb.paralyze&&t.st!=='shield'){t.st='hitstun';t.hitstun=Math.max(t.hitstun,hb.paralyze);t.vx=0;t.vy=0;fx('shock',t.x,t.y-30,{r:50,col:'#00ffff',dur:20});fx('text',t.x,t.y-80,{txt:'¡PARALIZADO!',col:'#00ffff',dur:35});}
+ if(hb.clearProj&&G.projs){G.projs=G.projs.filter(p=>p.owner===a);}
+ if(hb.bury&&t.ground){t.st='hitstun';t.hitstun=Math.max(t.hitstun,hb.bury);t.vx=0;t.vy=0;fx('shock',t.x,t.y,{r:40,col:'#8a1c07',dur:15});fx('text',t.x,t.y-60,{txt:'¡ENTERRADO!',col:'#f59e0b',dur:30});}
+ if(hb.shieldBreak&&t.st==='shield'){shieldBreak(t);}
  const isDiavoloDashArmor=(t.C.id==='diavolo'&&t.st==='attack'&&t.mvKey==='dash'&&t.mf>=5&&t.mf<=12&&hb.d*sc<=12);
  if(isDiavoloDashArmor){t.hitlag=Math.max(t.hitlag,Math.floor(hb.d*sc*.25)+2);fx('ring',t.x,t.y-34,{r:36,col:'#e11d48',dur:10});fx('text',t.x,t.y-120,{txt:'¡SUPER ARMOR!',col:'#e11d48',dur:25});return;}
  if(a&&a.C.id==='diavolo'&&a.mvKey==='dtilt'&&Math.random()<0.35){t.st='trip';t.sf=0;t.tripT=25;t.vx*=0.2;fx('text',t.x,t.y-60,{txt:'¡TROPIEZO!',col:'#f43f5e',dur:25});}
@@ -4088,7 +5563,9 @@ function explode(p){
    RETURN BY DEATH (GLOBAL REWIND ENGINE) - SUBARU NATSUKI
    ========================================================= */
 function captureSubaruSnapshot(f){
+  const eF = G.fighters.find(o => o.erenFighter);
   return {
+    erenSnapshot: eF ? eF.erenFighter.getSnapshotState() : null,
     subaru: {
       x: f.x, y: f.y, pct: f.pct, face: f.face, ground: f.ground,
       anim: f.anim, animF: f.animF
@@ -4134,6 +5611,10 @@ function executeSubaruRewind(f){
     }
   }
 
+  const eF = G.fighters.find(o => o.erenFighter);
+  if(eF && snap.erenSnapshot) {
+    eF.erenFighter.restoreSnapshotState(snap.erenSnapshot);
+  }
   // 3. Destruir proyectiles residuales creados en el aire
   G.projs = snap.projs.map(p => ({ ...p }));
 
@@ -4491,7 +5972,8 @@ function drawHair(L,hx,hy){
  const s=L.style;ctx.fillStyle=L.hair;
  const spikes=(arr)=>{ctx.beginPath();for(const [a,len,w] of arr){const r=13,ca=Math.cos(a),sa=Math.sin(a);ctx.moveTo(hx+Math.cos(a-w)*r,hy+Math.sin(a-w)*r);ctx.lineTo(hx+ca*(r+len),hy+sa*(r+len));ctx.lineTo(hx+Math.cos(a+w)*r,hy+Math.sin(a+w)*r);}ctx.fill();
   ctx.beginPath();ctx.arc(hx-1,hy-4,13.5,Math.PI*1.02,Math.PI*1.98);ctx.fill();};
- if(s==='naruto')spikes([[-2.6,9,.35],[-2.1,11,.35],[-1.6,10,.35],[-1.1,10,.35],[-.6,8,.35],[2.9,8,.35]]);
+  if(s==='eren')spikes([[-2.6,9,.32],[-2.1,13,.3],[-1.6,14,.28],[-1.15,13,.3],[-0.7,9,.32],[2.7,8,.35]]);
+ else if(s==='naruto')spikes([[-2.6,9,.35],[-2.1,11,.35],[-1.6,10,.35],[-1.1,10,.35],[-.6,8,.35],[2.9,8,.35]]);
  else if(s==='goku')spikes([[-2.8,16,.4],[-2.3,20,.38],[-1.75,22,.36],[-1.2,18,.36],[-.7,12,.35],[2.7,14,.4],[-.2,7,.3]]);
  else if(s==='ichigo')spikes([[-2.5,10,.3],[-2,14,.3],[-1.55,15,.3],[-1.1,12,.3],[-.65,9,.3],[2.8,9,.35]]);
  else if(s==='gojo')spikes([[-2.4,11,.3],[-1.95,16,.28],[-1.55,18,.28],[-1.15,15,.28],[-.75,10,.3],[2.9,9,.35]]);
@@ -4992,6 +6474,13 @@ function drawPatrascheLeap(f){
 }
 
 function drawFighter(f,ctx2){
+ if(f.erenFighter){
+  const flash=(f.intan>0&&f.st!=='respawn'&&!(f.st==='attack'&&f.mvKey==='final')&&G.frame%6<3)||f.dead>0;
+  drawLivingAuraBack(f);
+  f.erenFighter.render(ctx,flash);
+  drawLivingAuraFront(f);
+  return;
+ }
  const L=f.C.look,P=pose(f),flash=(f.intan>0&&f.st!=='respawn'&&!(f.st==='attack'&&f.mvKey==='final')&&G.frame%6<3)||f.dead>0;
  const SPok=spriteReady(f.C.id);
  drawLivingAuraBack(f);
@@ -5451,10 +6940,13 @@ function render(){
  ctx.setTransform(dpr,0,0,dpr,0,0);
  if(!G.stage){ctx.fillStyle='#121319';ctx.fillRect(0,0,cw,ch);return;}
  drawBg(G.stage);
+ if(G.rumblingHazard&&G.rumblingHazard.isActive)G.rumblingHazard.renderBackground(ctx,cw,ch);
  if(G.domain)drawDomain();
  if(G.dim>0){ctx.fillStyle=`rgba(0,0,12,${Math.min(.7,G.dim)})`;ctx.fillRect(0,0,cw,ch);}
  worldT();
  drawStage(G.stage);
+ if(G.crystalManager)G.crystalManager.render(ctx);
+ if(G.rumblingHazard&&G.rumblingHazard.isActive)G.rumblingHazard.renderForeground(ctx);
  for(const p of G.projs)if(p.t==='pull')drawProj(p);
  for(const f of G.fighters)if(f.rideAng!=null&&f.st==='attack'&&f.mv&&f.mv.ride)drawRide(f);
  for(const f of G.fighters)if(!f.out&&f.dead===0&&f.st!=='dead'&&modeOf(f).darkAura)drawDarkAura(f);
@@ -5828,6 +7320,9 @@ function tick(){
  if(G.intro>0){G.intro--;if(G.intro===20)sfx('go');for(const f of G.fighters){readInput(f);physics(f);}stepFx();return;}
  for(const p of G.fighters)if(p.pr&&p.pr.start&&G.mode==='fight'&&!p.ai){togglePause();return;}
  for(const f of G.fighters)stepFighter(f);
+ if(G.crystalManager)G.crystalManager.update(G);
+ if(G.rumblingHazard)G.rumblingHazard.update(G);
+ 
  if(G.domain){G.domain.t--;if(G.domain.t<=0)G.domain=null;}
  hitPhase();
  stepProjs();
