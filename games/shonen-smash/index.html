@@ -1909,9 +1909,8 @@ class DiavoloFighter {
     if (this.epitaphCounterWindow > 0) this.epitaphCounterWindow--;
     if (this.glassShatterTimer > 0) this.glassShatterTimer--;
 
-    if (this.activeEcho) {
-      this.activeEcho.update();
-      if (this.activeEcho.life <= 0) this.activeEcho = null;
+    if (this.activeEcho && this.activeEcho.life <= 0) {
+      this.activeEcho = null;
     }
 
     this.stand.update();
@@ -1975,9 +1974,21 @@ class DiavoloFighter {
     f.collisionMask = COLLISION_MASK.ENVIRONMENT;
     this.queuedAmbushAttack = null;
 
+    if (this.activeEcho || (typeof G !== 'undefined' && G.epitaphEchoes && G.epitaphEchoes.some(e => e.owner === f))) {
+      if (this.activeEcho && typeof fx === 'function') {
+        fx('vanish', this.activeEcho.x, this.activeEcho.y - 34, {});
+      }
+      if (typeof G !== 'undefined' && G.epitaphEchoes) {
+        G.epitaphEchoes = G.epitaphEchoes.filter(e => e.owner !== f && e.life > 0);
+      }
+      this.activeEcho = null;
+    }
+
     this.activeEcho = new EpitaphEcho(f, f.x, f.y, f.face, f.drawSize);
-    G.epitaphEchoes = G.epitaphEchoes || [];
-    G.epitaphEchoes.push(this.activeEcho);
+    if (typeof G !== 'undefined') {
+      G.epitaphEchoes = G.epitaphEchoes || [];
+      G.epitaphEchoes.push(this.activeEcho);
+    }
 
     sfx('vanish');
     fx('flash', 0, 0, { screen: 1, dur: 8 });
@@ -1990,6 +2001,7 @@ class DiavoloFighter {
     const f = this.f;
     if (this.queuedAmbushAttack) return;
     const pr = f.pr, I = f.in;
+    if (!pr || !I) return;
     let chosenKey = null;
 
     if (pr.attack || pr.c) {
@@ -2030,10 +2042,12 @@ class DiavoloFighter {
         fx('vanish', this.activeEcho.x, this.activeEcho.y - 34, {});
         fx('flash', 0, 0, { screen: 1, dur: 4 });
       }
+      this.activeEcho.life = 0;
     }
+    const echoToRemove = this.activeEcho;
     this.activeEcho = null;
-    if (G.epitaphEchoes) {
-      G.epitaphEchoes = G.epitaphEchoes.filter(e => e !== this.activeEcho && e.life > 0);
+    if (typeof G !== 'undefined' && G.epitaphEchoes) {
+      G.epitaphEchoes = G.epitaphEchoes.filter(e => e !== echoToRemove && e.life > 0 && e.owner !== f);
     }
 
     for (const o of G.fighters) {
@@ -2948,7 +2962,7 @@ class ErenFighter {
     const f = this.f;
     if (this.form === 'HUMAN') {
       f.w = 40; f.h = 68;
-      f.st = Object.assign(f.st || {}, {
+      f.C.st = Object.assign(f.C.st || {}, {
         w: 78,
         walk: 4.8,
         run: 8.6,
@@ -2963,7 +2977,7 @@ class ErenFighter {
       f.heavyArmor = 0;
     } else {
       f.w = 96; f.h = 156;
-      f.st = Object.assign(f.st || {}, {
+      f.C.st = Object.assign(f.C.st || {}, {
         w: 145,
         walk: 3.4,
         run: 6.2,
@@ -2976,6 +2990,9 @@ class ErenFighter {
         fastFall: 19.5
       });
       f.heavyArmor = 11.0;
+    }
+    if (typeof statCache !== 'undefined' && statCache.clear) {
+      statCache.clear();
     }
   }
 
@@ -4734,7 +4751,7 @@ function makeFighter(i,cfg,x){
   col:SLOT_COL[i],x,y:0,vx:0,vy:0,lvx:0,lvy:0,face:x<0?1:-1,ground:'main',jumps:1,pct:0,stocks:G.rules.stocks,
   st:'ground',sf:0,mv:null,mvKey:null,mf:0,mvAir:false,hit:new Map(),charge:0,hitlag:0,hitstun:0,tumble:false,intan:0,shield:50,
   ledge:-1,ledgeCd:0,airdodged:false,ff:false,dropT:0,buff:null,cds:{},kos:0,falls:0,dmgDone:0,lastHitBy:null,lastHitF:-999,hasDefaultRevive:cfg.ch==='subaru',hasMeterRevive:false,
-  in:blank(),pin:blank(),tapX:99,tapY:99,victim:null,holder:null,holdT:0,pummelCd:0,dead:0,respawn:0,shakeHud:0,anim:0,usedUp:false,
+  in:blank(),pin:blank(),pr:{jump:false,attack:false,special:false,shield:false,grab:false,c:false,start:false},tapX:99,tapY:99,victim:null,holder:null,holdT:0,pummelCd:0,dead:0,respawn:0,shakeHud:0,anim:0,usedUp:false,
   counterOn:false,reflectOn:false,out:false,place:0,collisionMask:15,crimsonMeter:50};
  if(cfg.ch==='diavolo'){f.diavoloFighter=new DiavoloFighter(f);f.stand=f.diavoloFighter.stand;}
  if(cfg.ch==='eren'){f.erenFighter=new ErenFighter(f);}
@@ -4781,72 +4798,16 @@ function startMove(f,key){
  else if(f.mode&&f.C.mv[key+'_'+f.mode])key=key+'_'+f.mode;
  else if(f.mode&&modeOf(f).base&&f.C.mv[key+'_'+modeOf(f).base])key=key+'_'+modeOf(f).base;
  if(f.C.id==='subaru'&&key==='ds'&&!f.ground&&f.C.mv.ds_air)key='ds_air';
- if(f.C.id==='eren'&&f.erenFighter){
-  if(f.mf===1)f.erenFighter.onMoveExecuted(f.mvKey);
-  if(f.erenFighter.form==='HUMAN'){
-   if(f.mvKey==='jab3'&&f.mf===5){f.vx=5*f.face;}
-   if(f.mvKey==='dash'&&f.mf>=6&&f.mf<=12){f.vx=13*f.face;if(f.mf===6){f.erenFighter.gasMeter=Math.max(0,f.erenFighter.gasMeter-5);fx('smoke',f.x-f.face*15,f.y-20,{col:'#e2e8f0',dur:14});}}
-   if(f.mvKey==='bair'&&f.mf===7){f.vx+=4*f.face;fx('smoke',f.x+f.face*10,f.y-20,{col:'#e2e8f0',dur:12});}
-   if(f.mvKey==='usmash'&&f.mf===10){f.y-=24;f.vy=-4;}
-   if(f.mvKey==='ns'&&f.mf===8){
-    if(f.erenFighter.bladeSharpness<8&&f.erenFighter.spareBlades>0){
-     f.erenFighter.spareBlades--;f.erenFighter.bladeSharpness=8;
-     G.projs.push({owner:f,t:'blade_discard',x:f.x+30*f.face,y:f.y-28,vx:15*f.face,vy:-1.5,r:14,life:25,d:6.5,a:40,b:40,g:65,col:'#94a3b8',hits:new Map(),age:0});
-     fx('spark',f.x+20*f.face,f.y-28,{col:'#cbd5e1'});fx('text',f.x,f.y-65,{txt:'¡RECARGA DE HOJAS!',col:'#38bdf8',dur:25});
-    }
-    f.erenFighter.gasMeter=Math.max(0,f.erenFighter.gasMeter-10);fx('smoke',f.x+30*f.face,f.y-20,{col:'rgba(235,245,255,0.8)',dur:20});
-    for(const p of G.projs){if(p.owner!==f&&Math.hypot(p.x-(f.x+30*f.face),p.y-(f.y-20))<65){p.owner=f;p.vx=-p.vx*1.3;p.vy=-p.vy*1.3;fx('spark',p.x,p.y,{col:'#38bdf8'});}}
-    for(const t of G.fighters){if(t!==f&&!t.dead&&!t.out&&Math.hypot(t.x-(f.x+30*f.face),t.y-(f.y-20))<70){t.vx+=10*f.face;}}
-   }
-   if(f.mvKey==='ss'&&f.mf===6){
-    const angle=(I&&I.y<-0.3)?-0.436:0;
-    f.erenFighter.odmController.fireGrapple(angle);
-    if(f.erenFighter.odmController.isGrappled&&f.erenFighter.odmController.anchorEntity){f.vx=19*f.face;}
-   }
-   if(f.mvKey==='us'&&f.mf===6){
-    f.erenFighter.gasMeter=Math.max(0,f.erenFighter.gasMeter-20);f.vy=-17.5;f.vx=(I?I.x:0)*6;f.ground=null;f.st='air';
-    fx('smoke',f.x,f.y+10,{col:'rgba(240,248,255,0.9)',dur:22});sfx('launch');
-   }
-   if(f.mvKey==='ds'&&f.mf===12){
-    if(f.erenFighter.determinationMeter<100){
-     f.pct=Math.min(999,f.pct+5.0);f.erenFighter.determinationMeter=Math.min(100,f.erenFighter.determinationMeter+30);
-     fx('blood',f.x+8*f.face,f.y-42,{col:'#dc2626'});fx('spark',f.x+8*f.face,f.y-42,{col:'#ffd700'});fx('text',f.x,f.y-75,{txt:'+30 DETERMINACIÓN',col:'#ffd700',dur:30});
-    }else{
-     f.erenFighter.determinationMeter=0;f.erenFighter.titanSteamTimer=900;f.erenFighter.transformLightningTimer=18;
-     f.erenFighter.switchForm('TITAN');G.shake=Math.max(G.shake||0,16);
-     for(const t of G.fighters){if(t!==f&&!t.dead&&!t.out&&Math.abs(t.x-f.x)<70&&t.y>=f.y-200&&t.y<=f.y+20){applyHit(f,t,{d:18.0,a:90,b:75,g:110},1,f.face,t.x,t.y-40);}}
-     fx('flash',0,0,{screen:1,dur:6});fx('text',f.x,f.y-170,{txt:'¡TITÁN DE ATAQUE!',col:'#10b981',dur:45});sfx('thunder');
-    }
-   }
-  }
-  if(f.erenFighter.form==='TITAN'){
-   if((f.mvKey==='dair_titan'||f.mvKey==='dair')){
-    f.vy=20;
-    if(f.ground&&f.mf>=14){
-     for(const t of G.fighters){if(t!==f&&!t.dead&&!t.out&&Math.abs(t.x-f.x)<80&&Math.abs(t.y-f.y)<30){applyHit(f,t,{d:12.0,a:80,b:50,g:80},1,Math.sign(t.x-f.x)||f.face,t.x,t.y-20);}}
-     G.shake=Math.max(G.shake||0,10);fx('shock',f.x,f.y,{r:80,col:'#8a1c07',flat:1,dur:18});
-    }
-   }
-   if((f.mvKey==='ns_titan'||f.mvKey==='ns')&&f.mf===14){
-    G.shake=Math.max(G.shake||0,12);fx('ring',f.x,f.y-30,{r:120,col:'#00ffff',dur:22});fx('ring',f.x,f.y-30,{r:70,col:'#ffffff',dur:14});
-    fx('text',f.x,f.y-150,{txt:'¡LA COORDENADA!',col:'#00ffff',dur:40});sfx('roar');
-   }
-   if((f.mvKey==='ss_titan'||f.mvKey==='ss')&&f.mf===16){f.erenFighter.spawnMonolith();}
-   if((f.mvKey==='us_titan'||f.mvKey==='us')){
-    if(f.mf===6){f.vy=-18.5;f.vx=(I?I.x:0)*5;f.ground=null;f.st='air';G.shake=Math.max(G.shake||0,8);fx('shock',f.x,f.y,{r:70,col:'#5ce1e6',flat:1,dur:16});}
-    if(f.mf===18){G.projs.push({owner:f,t:'crystal_arrow',x:f.x+40*f.face,y:f.y-50,vx:20*f.face,vy:14,r:22,life:45,d:15.0,a:45,b:50,g:88,col:'#5ce1e6',hits:new Map(),age:0});fx('streak',f.x+30*f.face,f.y-50,{dir:f.face,len:60,col:'#5ce1e6',w:6});}
-   }
-   if((f.mvKey==='ds_titan'||f.mvKey==='ds')&&f.mf===6){
-    f.erenFighter.titanHusk={x:f.x,y:f.y,timer:120};
-    f.erenFighter.switchForm('HUMAN');f.vx=-8*f.face;f.vy=-12;f.ground=null;f.st='air';f.intan=20;f.erenFighter.bladeSharpness=8;
-    fx('smoke',f.x,f.y-60,{col:'#ffffff',dur:50});fx('text',f.x,f.y-90,{txt:'¡CASCARÓN TÁCTICO!',col:'#ffd700',dur:35});
-   }
-  }
-  if(f.mvKey==='final'&&f.mf===1){f.erenFighter.startRumbling();}
+  if(f.C.id==='eren'&&f.erenFighter){
+  f.erenFighter.onMoveExecuted(key);
  }
  if(f.C.id==='diavolo'){
   if(!f.diavoloFighter)f.diavoloFighter=new DiavoloFighter(f);
   if(key==='ds'){
+   if(f.diavoloFighter.timeEraseTimer>0){
+    f.diavoloFighter.resumeTime();
+    return true;
+   }
    f.diavoloFighter.epitaphCounterWindow=6;
    const ok=f.diavoloFighter.activateTimeErase(false);
    if(!ok){fx('text',f.x,f.y-120,{txt:'¡FALTA CRIMSON (50)!',col:'#e11d48',dur:30});return false;}
@@ -5215,6 +5176,69 @@ function stepAttack(f,spd){
     }
    }
   }
+ }
+ if(f.C.id==='eren'&&f.erenFighter){
+  if(f.mf===1)f.erenFighter.onMoveExecuted(f.mvKey);
+  if(f.erenFighter.form==='HUMAN'){
+   if(f.mvKey==='jab3'&&f.mf===5){f.vx=5*f.face;}
+   if(f.mvKey==='dash'&&f.mf>=6&&f.mf<=12){f.vx=13*f.face;if(f.mf===6){f.erenFighter.gasMeter=Math.max(0,f.erenFighter.gasMeter-5);fx('smoke',f.x-f.face*15,f.y-20,{col:'#e2e8f0',dur:14});}}
+   if(f.mvKey==='bair'&&f.mf===7){f.vx+=4*f.face;fx('smoke',f.x+f.face*10,f.y-20,{col:'#e2e8f0',dur:12});}
+   if(f.mvKey==='usmash'&&f.mf===10){f.y-=24;f.vy=-4;}
+   if(f.mvKey==='ns'&&f.mf===8){
+    if(f.erenFighter.bladeSharpness<8&&f.erenFighter.spareBlades>0){
+     f.erenFighter.spareBlades--;f.erenFighter.bladeSharpness=8;
+     G.projs.push({owner:f,t:'blade_discard',x:f.x+30*f.face,y:f.y-28,vx:15*f.face,vy:-1.5,r:14,life:25,d:6.5,a:40,b:40,g:65,col:'#94a3b8',hits:new Map(),age:0});
+     fx('spark',f.x+20*f.face,f.y-28,{col:'#cbd5e1'});fx('text',f.x,f.y-65,{txt:'¡RECARGA DE HOJAS!',col:'#38bdf8',dur:25});
+    }
+    f.erenFighter.gasMeter=Math.max(0,f.erenFighter.gasMeter-10);fx('smoke',f.x+30*f.face,f.y-20,{col:'rgba(235,245,255,0.8)',dur:20});
+    for(const p of G.projs){if(p.owner!==f&&Math.hypot(p.x-(f.x+30*f.face),p.y-(f.y-20))<65){p.owner=f;p.vx=-p.vx*1.3;p.vy=-p.vy*1.3;fx('spark',p.x,p.y,{col:'#38bdf8'});}}
+    for(const t of G.fighters){if(t!==f&&!t.dead&&!t.out&&Math.hypot(t.x-(f.x+30*f.face),t.y-(f.y-20))<70){t.vx+=10*f.face;}}
+   }
+   if(f.mvKey==='ss'&&f.mf===6){
+    const angle=(I&&I.y<-0.3)?-0.436:0;
+    f.erenFighter.odmController.fireGrapple(angle);
+    if(f.erenFighter.odmController.isGrappled&&f.erenFighter.odmController.anchorEntity){f.vx=19*f.face;}
+   }
+   if(f.mvKey==='us'&&f.mf===6){
+    f.erenFighter.gasMeter=Math.max(0,f.erenFighter.gasMeter-20);f.vy=-17.5;f.vx=(I?I.x:0)*6;f.ground=null;f.st='air';
+    fx('smoke',f.x,f.y+10,{col:'rgba(240,248,255,0.9)',dur:22});sfx('launch');
+   }
+   if(f.mvKey==='ds'&&f.mf===12){
+    if(f.erenFighter.determinationMeter<100){
+     f.pct=Math.min(999,f.pct+5.0);f.erenFighter.determinationMeter=Math.min(100,f.erenFighter.determinationMeter+30);
+     fx('blood',f.x+8*f.face,f.y-42,{col:'#dc2626'});fx('spark',f.x+8*f.face,f.y-42,{col:'#ffd700'});fx('text',f.x,f.y-75,{txt:'+30 DETERMINACIÓN',col:'#ffd700',dur:30});
+    }else{
+     f.erenFighter.determinationMeter=0;f.erenFighter.titanSteamTimer=900;f.erenFighter.transformLightningTimer=18;
+     f.erenFighter.switchForm('TITAN');G.shake=Math.max(G.shake||0,16);
+     for(const t of G.fighters){if(t!==f&&!t.dead&&!t.out&&Math.abs(t.x-f.x)<70&&t.y>=f.y-200&&t.y<=f.y+20){applyHit(f,t,{d:18.0,a:90,b:75,g:110},1,f.face,t.x,t.y-40);}}
+     fx('flash',0,0,{screen:1,dur:6});fx('text',f.x,f.y-170,{txt:'¡TITÁN DE ATAQUE!',col:'#10b981',dur:45});sfx('thunder');
+    }
+   }
+  }
+  if(f.erenFighter.form==='TITAN'){
+   if((f.mvKey==='dair_titan'||f.mvKey==='dair')){
+    f.vy=20;
+    if(f.ground&&f.mf>=14){
+     for(const t of G.fighters){if(t!==f&&!t.dead&&!t.out&&Math.abs(t.x-f.x)<80&&Math.abs(t.y-f.y)<30){applyHit(f,t,{d:12.0,a:80,b:50,g:80},1,Math.sign(t.x-f.x)||f.face,t.x,t.y-20);}}
+     G.shake=Math.max(G.shake||0,10);fx('shock',f.x,f.y,{r:80,col:'#8a1c07',flat:1,dur:18});
+    }
+   }
+   if((f.mvKey==='ns_titan'||f.mvKey==='ns')&&f.mf===14){
+    G.shake=Math.max(G.shake||0,12);fx('ring',f.x,f.y-30,{r:120,col:'#00ffff',dur:22});fx('ring',f.x,f.y-30,{r:70,col:'#ffffff',dur:14});
+    fx('text',f.x,f.y-150,{txt:'¡LA COORDENADA!',col:'#00ffff',dur:40});sfx('roar');
+   }
+   if((f.mvKey==='ss_titan'||f.mvKey==='ss')&&f.mf===16){f.erenFighter.spawnMonolith();}
+   if((f.mvKey==='us_titan'||f.mvKey==='us')){
+    if(f.mf===6){f.vy=-18.5;f.vx=(I?I.x:0)*5;f.ground=null;f.st='air';G.shake=Math.max(G.shake||0,8);fx('shock',f.x,f.y,{r:70,col:'#5ce1e6',flat:1,dur:16});}
+    if(f.mf===18){G.projs.push({owner:f,t:'crystal_arrow',x:f.x+40*f.face,y:f.y-50,vx:20*f.face,vy:14,r:22,life:45,d:15.0,a:45,b:50,g:88,col:'#5ce1e6',hits:new Map(),age:0});fx('streak',f.x+30*f.face,f.y-50,{dir:f.face,len:60,col:'#5ce1e6',w:6});}
+   }
+   if((f.mvKey==='ds_titan'||f.mvKey==='ds')&&f.mf===6){
+    f.erenFighter.titanHusk={x:f.x,y:f.y,timer:120};
+    f.erenFighter.switchForm('HUMAN');f.vx=-8*f.face;f.vy=-12;f.ground=null;f.st='air';f.intan=20;f.erenFighter.bladeSharpness=8;
+    fx('smoke',f.x,f.y-60,{col:'#ffffff',dur:50});fx('text',f.x,f.y-90,{txt:'¡CASCARÓN TÁCTICO!',col:'#ffd700',dur:35});
+   }
+  }
+  if(f.mvKey==='final'&&f.mf===1){f.erenFighter.startRumbling();}
  }
  if(mv.charge&&f.mf===mv.charge.at&&f.charge<mv.charge.max&&(mv.charge.btn==='attack'?I.attack:I.special)){
   f.charge++;const chPct=f.charge/mv.charge.max;
@@ -7527,6 +7551,13 @@ function tick(){
  for(const f of G.fighters)stepFighter(f);
  if(G.crystalManager)G.crystalManager.update(G);
  if(G.rumblingHazard)G.rumblingHazard.update(G);
+ if(G.epitaphEchoes&&G.epitaphEchoes.length>0){
+  for(let i=G.epitaphEchoes.length-1;i>=0;i--){
+   const echo=G.epitaphEchoes[i];
+   echo.update();
+   if(echo.life<=0)G.epitaphEchoes.splice(i,1);
+  }
+ }
  
  if(G.domain){G.domain.t--;if(G.domain.t<=0)G.domain=null;}
  hitPhase();
@@ -7552,7 +7583,7 @@ const $=id=>document.getElementById(id);
 const SCREENS=['title','css','sss','ctrl','pause','results'];
 function show(id){for(const s of SCREENS)$(s).hidden=s!==id;updateTouchPad();}
 function startMatch(cfgs,stage,rules,demo){
- G.stage=STAGES[stage];G.rules=rules;G.fighters=[];G.projs=[];G.fx=[];G.ledges=[null,null];G.domain=null;G.shadows=[];G.orb=null;G.orbWait=null;G.over=0;G.frame=0;G.timer=rules.time*60;G.demo=!!demo;
+ G.stage=STAGES[stage];G.rules=rules;G.fighters=[];G.projs=[];G.fx=[];G.ledges=[null,null];G.domain=null;G.shadows=[];G.orb=null;G.orbWait=null;G.over=0;G.frame=0;G.timer=rules.time*60;G.demo=!!demo;G.epitaphEchoes=[];
  const xs=[-300,300,-130,130];
  cfgs.forEach((c,i)=>{if(c.type==='off')return;const f=makeFighter(G.fighters.length,c,xs[i]);f.i=G.fighters.length;f.col=SLOT_COL[i];f.gauge=(GAUGE[f.C.id]||{}).start||0;G.fighters.push(f);});
  G.cam={x:0,y:-180,z:.5};G.intro=demo?0:170;
