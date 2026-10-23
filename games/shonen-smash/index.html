@@ -3613,12 +3613,12 @@ const DIAVOLO_MV = {
     ]
   },
   us: {
-    nm: 'Ascensión del Destino', f: 46, limb: 'leg', helpless: 1, stand: true,
+    nm: 'Salto del Tiempo & Vórtice de Epitaph', f: 48, limb: 'both', helpless: 1, stand: true,
     spr: [[0, B_DIA_E+'2.0'], [5, B_DIA_E+'2.1'], [10, B_DIA_E+'2.2'], [16, B_DIA_E+'2.3'], [22, B_DIA_E+'2.4'], [30, B_DIA_E+'2.5'], [38, B_DIA_E+'2.6']],
     hb: [
-      { s: 5, e: 15, x: 12, y: -38, r: 32, w: 58, h: 64, d: 2.5, a: 88, b: 16, g: 12, multi: 4 },
-      { s: 16, e: 22, x: 20, y: 5, r: 24, w: 46, h: 42, d: 13.0, a: 270, b: 45, g: 88, meteor: true, sweetspot: true },
-      { s: 16, e: 22, x: 0, y: -38, r: 42, w: 84, h: 84, d: 11.5, a: 72, b: 52, g: 82 }
+      { s: 5, e: 15, x: 12, y: -38, r: 36, w: 64, h: 72, d: 3.0, a: 88, b: 18, g: 14, multi: 4, diavoloUpHit: true },
+      { s: 16, e: 22, x: 20, y: -45, r: 28, w: 54, h: 54, d: 14.0, a: 45, b: 62, g: 92, sweetspot: true, diavoloUpHit: true },
+      { s: 16, e: 22, x: 0, y: -35, r: 44, w: 88, h: 88, d: 11.0, a: 68, b: 50, g: 80, diavoloUpHit: true }
     ],
     cancelFreefallOnDown: true
   },
@@ -5255,33 +5255,117 @@ function stepAttack(f,spd){
    }
    if(f.mf>=22)f.vx*=0.82;
   } else if(f.mvKey==='us'){
-   if(f.mf===0){sfx('charge');f.intan=Math.max(f.intan,3);fx('ring',f.x,f.y-34,{r:22,col:'#f43f5e',dur:8});}
-   if(f.mf===5){
-    sfx('super');f.vy=-16.2;f.ground=null;
-    const steer=f.in?f.in.x:0;f.vx=steer*4.8;
-    if(Math.abs(steer)>0.2)f.face=Math.sign(steer);
-    fx('shock',f.x,f.y,{r:32,col:'#e11d48',flat:1,dur:12});
-    fx('ring',f.x,f.y-34,{r:50,col:'#dc2626',dur:14});
-   }
-   if(f.mf>5&&f.mf<16){
-    if(f.in&&Math.abs(f.in.x)>0.1)f.vx+=(f.in.x*4.5-f.vx)*0.2;
-    if(G.frame%2===0){
-     fx('ember',f.x+rnd(-16,16),f.y-rnd(10,50),{col:'#fb7185',dur:14,vx:rnd(-1,1),vy:2});
-     fx('ring',f.x,f.y-34,{r:24,col:'#f43f5e',dur:8});
+    const df = f.diavoloFighter;
+    if(f.mf===0){
+     sfx('charge');
+     f.intan=Math.max(f.intan,6);
+     if(df){
+      df.upSpecialMarker = { x: f.x, y: f.y, face: f.face, timer: 120 };
+      df.upSpecialHitOpponent = false;
+      df.upSpecialIsDiving = false;
+     }
+     fx('ring',f.x,f.y-34,{r:32,col:'#f43f5e',dur:10});
+     fx('spark',f.x,f.y-34,{d:20,col:'#dc2626'});
     }
-   }
-   if(f.mf===16){
-    sfx('slash');sfx('hit',8);G.shake=Math.max(G.shake,7);
-    fx('ring',f.x,f.y-34,{r:60,col:'#e11d48',dur:16});
-    fx('ring',f.x,f.y-34,{r:35,col:'#ffffff',dur:12});
-    fx('shock',f.x,f.y-34,{r:45,col:'#fb7185',dur:14});
-   }
-   if(f.mf>=18&&f.in&&f.in.y>0.45&&!f.canceledFreefall){
-    f.canceledFreefall=true;f.st='air';f.mv=null;f.mvKey=null;f.intan=14;f.vy=4;
-    sfx('vanish');
-    fx('ring',f.x,f.y-34,{r:38,col:'#fb7185',dur:12});
-    fx('text',f.x,f.y-100,{txt:'¡CANCELAR CAÍDA (EPITAPH)!',col:'#fb7185',dur:35});
-   }
+    if(f.mf===5){
+     sfx('super');sfx('vanish');
+     const I = f.in;
+     const steerX = I ? I.x : 0;
+     const steerY = (I && I.y !== 0) ? I.y : -1;
+     if(Math.abs(steerX)>0.2) f.face = Math.sign(steerX);
+     f.vx = steerX * 7.5;
+     f.vy = Math.min(-14.5, steerY * 17.5);
+     f.ground = null;
+     fx('shock',f.x,f.y,{r:45,col:'#e11d48',flat:1,dur:14});
+     fx('ring',f.x,f.y-34,{r:55,col:'#dc2626',dur:16});
+     fx('streak',f.x,f.y-34,{dir:f.face,len:80,col:'#f43f5e',w:3});
+    }
+    if(f.mf>5&&f.mf<16){
+     f.armor = Math.max(f.armor||0, 8);
+     if(f.in&&Math.abs(f.in.x)>0.1)f.vx+=(f.in.x*5.2-f.vx)*0.18;
+     if(G.frame%2===0){
+      fx('ember',f.x+rnd(-16,16),f.y-rnd(10,50),{col:'#fb7185',dur:14,vx:rnd(-1,1),vy:2});
+      fx('ring',f.x,f.y-34,{r:26,col:'#f43f5e',dur:8});
+     }
+    }
+    if(f.mf===16){
+     sfx('slash');sfx('hit',8);G.shake=Math.max(G.shake,8);
+     fx('ring',f.x,f.y-34,{r:65,col:'#e11d48',dur:18});
+     fx('ring',f.x,f.y-34,{r:38,col:'#ffffff',dur:14});
+     fx('shock',f.x,f.y-34,{r:50,col:'#fb7185',dur:16});
+    }
+    // Destiny Branching Window at apex (frames 17 to 32)
+    if(f.mf>=17&&f.mf<=32){
+     f.vy *= 0.82;
+     const pr = f.pr, I = f.in;
+
+     // Branch 1: Second Time Skip in mid-air (Press Special)
+     if(pr && pr.special && df && !df.usedSecondTimeSkip){
+      df.usedSecondTimeSkip = true;
+      sfx('vanish');sfx('boom');
+      fx('flash',0,0,{screen:1,dur:5});
+      fx('ring',f.x,f.y-34,{r:50,col:'#dc2626',dur:14});
+      const skipDirX = I ? I.x : f.face;
+      const skipDirY = I ? (I.y || -0.5) : -0.7;
+      const dist = Math.hypot(skipDirX, skipDirY) || 1;
+      f.x += (skipDirX / dist) * 125;
+      f.y += (skipDirY / dist) * 110;
+      f.vx = (skipDirX / dist) * 6;
+      f.vy = Math.min(-4, (skipDirY / dist) * 8);
+      f.st = 'air'; f.mv = null; f.mvKey = null; f.intan = 14;
+      fx('ring',f.x,f.y-34,{r:45,col:'#ffffff',dur:12});
+      fx('text',f.x,f.y-90,{txt:'¡TIME SKIP AÉREO!',col:'#f43f5e',dur:35});
+      return;
+     }
+
+     // Branch 2: Meteor Axe Dive (Press Attack)
+     if(pr && (pr.attack || pr.c)){
+      sfx('slash');sfx('launch');
+      if(df) df.upSpecialIsDiving = true;
+      f.vy = 21.0;
+      f.vx = f.face * 5.0;
+      f.intan = Math.max(f.intan, 8);
+      fx('streak',f.x,f.y-34,{dir:-Math.PI/2,len:100,col:'#dc2626',w:4});
+      fx('text',f.x,f.y-90,{txt:'¡HACHAZO DESCENDENTE (METEOR)!',col:'#ef4444',dur:35});
+      f.mv = {
+       nm: 'Hachazo Descendente Carmesí', f: 40,
+       hb: [{ s: 0, e: 40, x: 12, y: 15, r: 26, w: 52, h: 54, d: 15.0, a: 270, b: 58, g: 98, meteor: true, sweetspot: true, diavoloDive: true }]
+      };
+      f.mf = 0;
+      return;
+     }
+
+     // Branch 3: Snap to Origin Marker (Press Down)
+     if(I && I.y > 0.55 && df && df.upSpecialMarker){
+      sfx('vanish');
+      fx('flash',0,0,{screen:1,dur:5});
+      fx('ring',f.x,f.y-34,{r:40,col:'#fb7185',dur:12});
+      f.x = df.upSpecialMarker.x;
+      f.y = df.upSpecialMarker.y;
+      f.vx = 0; f.vy = 2;
+      f.st = 'air'; f.mv = null; f.mvKey = null; f.intan = 18;
+      df.upSpecialMarker = null;
+      fx('ring',f.x,f.y-34,{r:55,col:'#dc2626',dur:16});
+      fx('text',f.x,f.y-100,{txt:'¡RETORNO DE DESTINO (EPITAPH)!',col:'#fb7185',dur:40});
+      return;
+     }
+    }
+
+    if(df && df.upSpecialIsDiving && f.ground){
+     df.upSpecialIsDiving = false;
+     sfx('boom');G.shake=Math.max(G.shake,10);
+     fx('shock',f.x,f.y,{r:60,col:'#dc2626',flat:1});
+     fx('ring',f.x,f.y-20,{r:45,col:'#ffffff',dur:12});
+     f.st = 'land'; f.mv = null; f.mvKey = null; f.lag = 12;
+     return;
+    }
+
+    if(f.mf>=f.mv.f-1){
+     if(df && df.upSpecialHitOpponent){
+      f.st = 'air'; f.mv = null; f.mvKey = null; f.jumps = Math.max(f.jumps, 1);
+      fx('text',f.x,f.y-80,{txt:'¡DESTINO CONSUMADO (COMBO)!',col:'#10b981',dur:30});
+     }
+    }
   } else if(f.mvKey==='final'&&f.mf>=8&&f.mf<=14&&!G.diavoloCinematic){
    const xmin=f.x+(f.face>0?0:-120),xmax=f.x+(f.face>0?120:0),ymin=f.y-45,ymax=f.y+45;
    let captured=false;
