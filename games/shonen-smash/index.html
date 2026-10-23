@@ -1179,7 +1179,7 @@ Object.assign(ANIM,{goku_dios:{idle:['dios:0.0','dios:0.1','dios:0.2','dios:0.3'
  rise:['dios:2.3'],peak:['dios:2.4'],fall:['dios:2.3'],respawn:['dios:0.0']}});
 /* Modos de transformación: multiplicadores de estadísticas y color del aura. */
 const MODES={
-  eren:{titan:{nm:'Titán de Ataque',run:.72,walk:.71,air:.62,jump:1.19,dj:.90,dmg:1.50,w:67,armor:11,aura:'#10b981',glow:1}},
+  eren:{titan:{nm:'Titán de Ataque',run:.85,walk:.80,air:.70,jump:1.25,dj:.95,dmg:1.85,w:80,armor:16,size:2.25,aura:'#10b981',glow:1}},
 naruto:{
  sabio:{nm:'Modo Sabio',run:1.12,walk:1.06,air:1.08,jump:1.10,dj:1.10,dmg:1.38,w:16,armor:6,dmgTaken:.88,aura:'#ff8a1f'},
  kurama:{nm:'Modo Kurama',run:1.36,walk:1.20,air:1.28,jump:1.18,dj:1.18,spd:1.18,dmg:1.62,w:14,armor:10,dmgTaken:.82,jumps:2,burn:{t:100,col:'#f59e0b'},aura:'#ffd23f',glow:1}},
@@ -2390,12 +2390,12 @@ class ODMGearController {
       const inputX = f.in ? f.in.x : f.face;
       const holding = (f.in && (f.in.x !== 0 || f.in.y !== 0)) || (f.st === 'attack' && f.mvKey === 'ss');
       if (f.erenFighter && f.erenFighter.gasMeter > 0 && holding) {
-        this.ropeLength = Math.max(40, this.ropeLength - 6.5);
+        this.ropeLength = Math.max(30, this.ropeLength - 9.0);
         const tangentX = -dirY * inputX;
         const tangentY =  dirX * inputX;
-        f.vx += (dirX * 0.95) + (tangentX * 0.55);
-        f.vy += (dirY * 0.95) + (tangentY * 0.35);
-        f.erenFighter.gasMeter = Math.max(0, f.erenFighter.gasMeter - 0.8);
+        f.vx += (dirX * 1.4) + (tangentX * 0.75);
+        f.vy += (dirY * 1.4) + (tangentY * 0.45);
+        f.erenFighter.gasMeter = Math.max(0, f.erenFighter.gasMeter - 0.6);
 
         // Gas smoke trail
         if (typeof fx === 'function' && G && G.frame % 2 === 0) {
@@ -2405,9 +2405,9 @@ class ODMGearController {
 
       // Terminal velocity limit (22 px/frame)
       const speed = Math.hypot(f.vx, f.vy);
-      if (speed > 22) {
-        f.vx = (f.vx / speed) * 22;
-        f.vy = (f.vy / speed) * 22;
+      if (speed > 26) {
+        f.vx = (f.vx / speed) * 26;
+        f.vy = (f.vy / speed) * 26;
       }
 
       // Auto detach if extremely close to anchor or if landed
@@ -2897,7 +2897,7 @@ class ErenFighter {
   constructor(fighter) {
     this.f = fighter;
     this.form = 'HUMAN'; // 'HUMAN' | 'TITAN'
-    this.determinationMeter = 0; // 0 to 100
+    this.determinationMeter = 50; // Inicia en 50 para transformacion rapida
     this.titanSteamTimer = 0; // 0 to 900
     this.gasMeter = 100; // 0 to 100
     this.bladeSharpness = 8; // 0 to 8
@@ -2942,8 +2942,9 @@ class ErenFighter {
       this.width = 96;
       this.height = 156;
       this.f.mode = 'titan';
-      this.f.drawSize = 2.2;
+      this.f.drawSize = 2.25;
       this.spareBlades = 3;
+      if (this.titanSteamTimer <= 0) this.titanSteamTimer = 1200;
     } else {
       this.width = 40;
       this.height = 68;
@@ -3082,16 +3083,18 @@ class ErenFighter {
     if (this.transformLightningTimer > 0) this.transformLightningTimer--;
 
     if (this.form === 'HUMAN') {
+      this.f.drawSize = 1.0;
       if (f.ground) {
-        this.gasMeter = Math.min(100, this.gasMeter + 0.6);
+        this.gasMeter = Math.min(100, this.gasMeter + 0.8);
       }
       this.odmController.update(G);
     } else {
+      this.f.drawSize = 2.25;
       this.titanSteamTimer--;
       if (this.titanSteamTimer <= 0) {
         this.switchForm('HUMAN');
         this.bladeSharpness = 8;
-        f.intan = 20;
+        f.intan = 25;
         if (typeof fx === 'function') {
           fx('smoke', f.x, f.y - 40, { col: '#ffffff', dur: 45 });
           fx('text', f.x, f.y - 80, { txt: '¡EYECCIÓN DE NUCA!', col: '#f8fafc', dur: 35 });
@@ -3690,95 +3693,95 @@ const EREN_MV = {
 
   // ===== TITAN FORM (18 MOVIMIENTOS CON SPRITES) =====
   jab_titan: {
-    nm: 'Directo Colosal', f: 26, limb: 'arm', chainAt: 11, next: 'jab2_titan',
+    nm: 'Directo Colosal', f: 24, limb: 'arm', chainAt: 9, next: 'jab2_titan',
     spr: [[0, B_ERN_T + '0.0'], [4, B_ERN_T + '0.1'], [8, B_ERN_T + '0.2']],
-    hb: [{ s: 8, e: 12, x: 68, y: -30, r: 35, w: 72, h: 50, d: 8.0, a: 361, b: 30, g: 40 }]
+    hb: [{ s: 6, e: 11, x: 74, y: -30, r: 40, w: 82, h: 56, d: 12.0, a: 361, b: 38, g: 55, restoreSteam: 20 }]
   },
   jab2_titan: {
-    nm: 'Martillazo con Ambos Puños', f: 33, limb: 'arm',
+    nm: 'Martillazo con Ambos Puños', f: 30, limb: 'arm',
     spr: [[0, B_ERN_T + '0.3'], [5, B_ERN_T + '0.4'], [10, B_ERN_T + '0.5']],
-    hb: [{ s: 9, e: 13, x: 76, y: -20, r: 40, w: 80, h: 68, d: 11.0, a: 40, b: 55, g: 82 }]
+    hb: [{ s: 8, e: 13, x: 82, y: -20, r: 46, w: 92, h: 74, d: 16.0, a: 42, b: 65, g: 90, restoreSteam: 25 }]
   },
   ftilt_titan: {
-    nm: 'Barrido de Brazo Salvaje', f: 39, limb: 'arm',
+    nm: 'Barrido de Brazo Salvaje', f: 36, limb: 'arm',
     spr: [[0, B_ERN_T + '0.2'], [5, B_ERN_T + '0.3'], [12, B_ERN_T + '0.4']],
-    hb: [{ s: 12, e: 17, x: 84, y: -25, r: 44, w: 92, h: 54, d: 14.5, a: 32, b: 50, g: 88 }]
+    hb: [{ s: 10, e: 16, x: 92, y: -25, r: 48, w: 100, h: 60, d: 18.0, a: 35, b: 60, g: 95, restoreSteam: 25 }]
   },
   utilt_titan: {
-    nm: 'Cabezazo Desquiciado', f: 32, limb: 'head',
+    nm: 'Cabezazo Desquiciado', f: 30, limb: 'head',
     spr: [[0, B_ERN_T + '0.1'], [5, B_ERN_T + '0.2'], [10, B_ERN_T + '0.0']],
-    hb: [{ s: 9, e: 14, x: 30, y: -110, r: 42, w: 86, h: 74, d: 13.0, a: 86, b: 48, g: 85 }]
+    hb: [{ s: 8, e: 14, x: 32, y: -115, r: 46, w: 92, h: 80, d: 15.5, a: 88, b: 58, g: 92, restoreSteam: 20 }]
   },
   dtilt_titan: {
-    nm: 'Pisotón Sísmico', f: 35, limb: 'leg', crouch: 1,
+    nm: 'Pisotón Sísmico', f: 32, limb: 'leg', crouch: 1,
     spr: [[0, B_ERN_T + '2.0'], [6, B_ERN_T + '2.1'], [12, B_ERN_T + '0.0']],
-    hb: [{ s: 11, e: 15, x: 70, y: 15, r: 35, w: 80, h: 40, d: 12.5, a: 270, b: 45, g: 80, bury: 30 }]
+    hb: [{ s: 9, e: 15, x: 75, y: 15, r: 42, w: 90, h: 48, d: 15.0, a: 270, b: 52, g: 88, bury: 60, restoreSteam: 25 }]
   },
   dash_titan: {
-    nm: 'Tacleada Imparable de Titán', f: 45, limb: 'body', slide: 1,
-    superArmor: { s: 1, e: 45, maxDmg: 999 },
+    nm: 'Tacleada Imparable de Titán', f: 42, limb: 'body', slide: 1,
+    superArmor: { s: 1, e: 42, maxDmg: 999 },
     spr: [[0, B_ERN_T + '0.3'], [6, B_ERN_T + '0.4'], [14, B_ERN_T + '0.5']],
-    hb: [{ s: 11, e: 19, x: 55, y: -15, r: 48, w: 90, h: 95, d: 16.0, a: 38, b: 60, g: 92 }]
+    hb: [{ s: 9, e: 20, x: 65, y: -15, r: 54, w: 105, h: 105, d: 19.0, a: 38, b: 70, g: 102, restoreSteam: 30 }]
   },
   fsmash_titan: {
-    nm: 'Puño de Endurecimiento Blanco', f: 59, limb: 'arm', smash: 1,
-    charge: { at: 18, max: 60, btn: 'attack', k: 0.4 },
+    nm: 'Puño de Endurecimiento Blanco', f: 55, limb: 'arm', smash: 1,
+    charge: { at: 16, max: 60, btn: 'attack', k: 0.4 },
     spr: [[0, B_ERN_T + '1.0'], [8, B_ERN_T + '1.1'], [21, B_ERN_T + '1.2'], [30, B_ERN_T + '0.0']],
-    hb: [{ s: 21, e: 25, x: 92, y: -28, r: 42, w: 84, h: 64, d: 26.0, a: 24, b: 72, g: 115, shieldBreak: true, detonateWall: true }]
+    hb: [{ s: 19, e: 25, x: 105, y: -28, r: 48, w: 98, h: 72, d: 32.0, a: 22, b: 85, g: 125, shieldBreak: true, detonateWall: true, restoreSteam: 40 }]
   },
   usmash_titan: {
-    nm: 'Pilar Ascendente del Martillo', f: 53, limb: 'arm', smash: 1,
-    charge: { at: 14, max: 60, btn: 'attack', k: 0.4 },
+    nm: 'Pilar Ascendente del Martillo', f: 50, limb: 'arm', smash: 1,
+    charge: { at: 12, max: 60, btn: 'attack', k: 0.4 },
     spr: [[0, B_ERN_T + '2.0'], [8, B_ERN_T + '2.1'], [20, B_ERN_T + '0.0']],
-    hb: [{ s: 16, e: 23, x: 40, y: -140, r: 45, w: 76, h: 150, d: 22.0, a: 90, b: 65, g: 104 }]
+    hb: [{ s: 14, e: 22, x: 45, y: -150, r: 50, w: 86, h: 170, d: 26.0, a: 90, b: 75, g: 112, restoreSteam: 35 }]
   },
   dsmash_titan: {
-    nm: 'Campo de Empalamiento Spikes', f: 53, limb: 'arm', smash: 1,
-    charge: { at: 12, max: 60, btn: 'attack', k: 0.4 },
+    nm: 'Campo de Empalamiento Spikes', f: 50, limb: 'arm', smash: 1,
+    charge: { at: 10, max: 60, btn: 'attack', k: 0.4 },
     spr: [[0, B_ERN_T + '2.2'], [6, B_ERN_T + '2.3'], [18, B_ERN_T + '0.0']],
-    hb: [{ s: 15, e: 21, x: 0, y: 35, r: 40, w: 220, h: 55, d: 19.5, a: 65, b: 60, g: 98, spawnSpikes: true }]
+    hb: [{ s: 13, e: 21, x: 0, y: 35, r: 48, w: 250, h: 65, d: 24.0, a: 65, b: 72, g: 108, spawnSpikes: true, restoreSteam: 35 }]
   },
   nair_titan: {
-    nm: 'Explosión Corporal de Vapor', f: 36, limb: 'body', air: 1, landingLag: 14,
+    nm: 'Explosión Corporal de Vapor', f: 34, limb: 'body', air: 1, landingLag: 12,
     spr: [[0, B_ERN_T + '0.0'], [6, B_ERN_T + '0.1'], [14, B_ERN_T + '0.2']],
-    hb: [{ s: 8, e: 18, x: 0, y: 0, r: 65, w: 130, h: 150, d: 13.0, a: 361, b: 48, g: 78 }]
+    hb: [{ s: 7, e: 18, x: 0, y: 0, r: 75, w: 150, h: 170, d: 15.0, a: 361, b: 54, g: 86, restoreSteam: 25 }]
   },
   fair_titan: {
-    nm: 'Martillo de Guerra Gigante', f: 46, limb: 'arm', air: 1, landingLag: 18,
+    nm: 'Martillo de Guerra Gigante', f: 44, limb: 'arm', air: 1, landingLag: 16,
     spr: [[0, B_ERN_T + '1.0'], [8, B_ERN_T + '1.1'], [18, B_ERN_T + '1.2']],
-    hb: [{ s: 16, e: 20, x: 95, y: 15, r: 44, w: 88, h: 88, d: 21.0, a: 280, b: 60, g: 98 }]
+    hb: [{ s: 14, e: 20, x: 105, y: 15, r: 50, w: 100, h: 100, d: 24.0, a: 280, b: 68, g: 105, restoreSteam: 35 }]
   },
   bair_titan: {
-    nm: 'Revés con Dorso Endurecido', f: 38, limb: 'arm', air: 1, landingLag: 15,
+    nm: 'Revés con Dorso Endurecido', f: 36, limb: 'arm', air: 1, landingLag: 14,
     spr: [[0, B_ERN_T + '0.2'], [6, B_ERN_T + '0.3'], [14, B_ERN_T + '0.0']],
-    hb: [{ s: 12, e: 16, x: -82, y: -20, r: 38, w: 78, h: 56, d: 18.5, a: 150, b: 58, g: 96 }]
+    hb: [{ s: 10, e: 16, x: -90, y: -20, r: 44, w: 88, h: 64, d: 20.0, a: 150, b: 64, g: 104, restoreSteam: 30 }]
   },
   uair_titan: {
-    nm: 'Mordisco Aéreo Salvaje', f: 32, limb: 'head', air: 1, landingLag: 13,
+    nm: 'Mordisco Aéreo Salvaje', f: 30, limb: 'head', air: 1, landingLag: 11,
     spr: [[0, B_ERN_T + '3.0'], [5, B_ERN_T + '3.1'], [12, B_ERN_T + '0.0']],
-    hb: [{ s: 10, e: 14, x: 15, y: -95, r: 36, w: 74, h: 64, d: 16.0, a: 85, b: 50, g: 88, restoreSteam: 60 }]
+    hb: [{ s: 8, e: 14, x: 18, y: -105, r: 42, w: 84, h: 72, d: 18.0, a: 85, b: 58, g: 96, restoreSteam: 60 }]
   },
   dair_titan: {
-    nm: 'Caída Meteórica Colosal', f: 62, limb: 'leg', air: 1, landingLag: 22,
+    nm: 'Caída Meteórica Colosal', f: 58, limb: 'leg', air: 1, landingLag: 20,
     spr: [[0, B_ERN_T + '2.0'], [8, B_ERN_T + '2.1'], [18, B_ERN_T + '0.0']],
-    hb: [{ s: 14, e: 34, x: 0, y: 60, r: 40, w: 86, h: 68, d: 20.0, a: 270, b: 62, g: 95 }]
+    hb: [{ s: 12, e: 34, x: 0, y: 65, r: 46, w: 98, h: 78, d: 23.0, a: 270, b: 70, g: 105, restoreSteam: 35 }]
   },
   ns_titan: {
-    nm: 'Rugido Berserker Coordenada', f: 50, limb: 'head',
+    nm: 'Rugido Berserker Coordenada', f: 46, limb: 'head',
     spr: [[0, B_ERN_T + '3.0'], [6, B_ERN_T + '3.1'], [14, B_ERN_T + '3.2']],
-    hb: [{ s: 14, e: 22, x: 0, y: -30, r: 110, w: 240, h: 200, d: 6.0, a: 361, b: 20, g: 30, paralyze: 55, clearProj: true }]
+    hb: [{ s: 12, e: 22, x: 0, y: -30, r: 140, w: 300, h: 240, d: 10.0, a: 361, b: 35, g: 45, paralyze: 55, clearProj: true, restoreSteam: 40 }]
   },
   ss_titan: {
-    nm: 'Creación de Monolito', f: 38, limb: 'arm',
+    nm: 'Creación de Monolito', f: 35, limb: 'arm',
     spr: [[0, B_ERN_T + '2.2'], [6, B_ERN_T + '2.3'], [16, B_ERN_T + '0.0']],
-    hb: [{ s: 16, e: 21, x: 95, y: -40, r: 40, w: 48, h: 120, d: 14.0, a: 80, b: 55, g: 85 }]
+    hb: [{ s: 14, e: 21, x: 105, y: -40, r: 46, w: 56, h: 130, d: 16.0, a: 80, b: 62, g: 92, restoreSteam: 30 }]
   },
   us_titan: {
-    nm: 'Salto Sísmico con Ballesta', f: 40, limb: 'body', helpless: 1,
+    nm: 'Salto Sísmico con Jabalina', f: 38, limb: 'body', helpless: 1,
     spr: [[0, B_ERN_T + '0.1'], [6, B_ERN_T + '0.2'], [16, B_ERN_T + '0.0']]
   },
   ds_titan: {
-    nm: 'Eyección Táctica de Nuca', f: 35, limb: 'body',
+    nm: 'Eyección Táctica de Nuca', f: 32, limb: 'body',
     spr: [[0, B_ERN_T + '3.3'], [6, B_ERN_T + '3.4'], [14, B_ERN_MOV + '3.4']]
   },
 
@@ -4570,7 +4573,7 @@ const GAUGE={
 
  mob:{nm:'ESTRÉS',col:'#e84393',start:0,take:.75,hit:.35,still:.15,autoMode:[100,'cien',0],hint:'recibe daño y pelea; al 100 % desata su poder'},
  subaru:{nm:'MIASMA RBD',col:'#a855f7',start:0,take:.5,hit:.35,hint:'recibe daño (1% c/2%) y conecta golpes; al 100% otorga 1 resurrección extra'},
-   eren:{nm:'DETERMINACIÓN',col:'#15803d',start:0,take:.8,hit:1.2,hint:'Cuchillas + daño recibido o ↓+Esp para morder pulgar; al 100% activa Titán'},
+   eren:{nm:'DETERMINACIÓN',col:'#15803d',start:50,take:1.2,hit:1.8,hint:'Cuchillas + daño recibido o ↓+Esp para morder pulgar; al 100% activa Titán'},
  diavolo:{nm:'CRIMSON',col:'#e11d48',start:50,time:0.08,hit:4.0,take:6.0,hint:'Borrado de Tiempo y Epitaph'},
  denji:{nm:'MOTOR / SANGRE',col:'#ff2a3a',start:25,hit:.95,take:.65,charge:1.35,autoMode:[100,'motosierra',0],hint:'↓+especial jala la cuerda del pecho o desgarra rivales'}};
 function gaugeAdd(f,v){const Gd=GAUGE[f.C.id];if(!Gd||!v)return;if(v>0&&f.gLock>0)return;const was=f.gauge||0;f.gauge=clamp(was+v,0,100);
@@ -4936,6 +4939,14 @@ function stepFighter(f){
   f.trail=f.trail||[];if(fast&&f.lastRef){f.trail.push({x:f.x,y:f.y,ref:f.lastRef,flip:f.lastFlip,face:f.face});if(f.trail.length>4)f.trail.shift();}else if(f.trail.length)f.trail.shift();}
  if(f.diavoloFighter)f.diavoloFighter.update();
  if(f.erenFighter)f.erenFighter.update(G);
+ if(f.C.id==='eren'&&f.erenFighter&&f.erenFighter.form==='TITAN'&&f.ground){
+  if((f.st==='dash'||(f.st==='ground'&&f.anim==='run'))&&G.frame%10===0){
+   G.shake=Math.max(G.shake||0,3.5);
+   sfx('hit',2);
+   fx('dust',f.x-f.face*20,f.y,{n:6});
+   fx('shock',f.x,f.y,{r:40,col:'#8a1c07',flat:1,dur:10});
+  }
+ }
  if(f.dead>0){f.dead--;if(f.dead===0)respawnF(f);return;}
  readInput(f);
  if(f.st==='grabbed'){if(f.pr.attack||f.pr.special||f.pr.jump)f.holder&&(f.holder.holdT-=5);return;}
@@ -5204,14 +5215,17 @@ function stepAttack(f,spd){
     fx('smoke',f.x,f.y+10,{col:'rgba(240,248,255,0.9)',dur:22});sfx('launch');
    }
    if(f.mvKey==='ds'&&f.mf===12){
-    if(f.erenFighter.determinationMeter<100){
-     f.pct=Math.min(999,f.pct+5.0);f.erenFighter.determinationMeter=Math.min(100,f.erenFighter.determinationMeter+30);
-     fx('blood',f.x+8*f.face,f.y-42,{col:'#dc2626'});fx('spark',f.x+8*f.face,f.y-42,{col:'#ffd700'});fx('text',f.x,f.y-75,{txt:'+30 DETERMINACIÓN',col:'#ffd700',dur:30});
+    f.pct=Math.min(999,f.pct+5.0);
+    f.erenFighter.determinationMeter=Math.min(100,f.erenFighter.determinationMeter+50);
+    if(f.erenFighter.determinationMeter>=100){
+     f.erenFighter.determinationMeter=0;f.erenFighter.titanSteamTimer=1200;f.erenFighter.transformLightningTimer=25;
+     f.erenFighter.switchForm('TITAN');G.shake=Math.max(G.shake||0,25);G.punch=1.5;
+     for(const t of G.fighters){if(t!==f&&!t.dead&&!t.out&&Math.abs(t.x-f.x)<110&&t.y>=f.y-220&&t.y<=f.y+30){applyHit(f,t,{d:20.0,a:85,b:80,g:120},1,Math.sign(t.x-f.x)||f.face,t.x,t.y-50);}}
+     if(G.projs)G.projs=G.projs.filter(p=>p.owner===f);
+     fx('flash',0,0,{screen:1,dur:8});fx('shock',f.x,f.y,{r:110,col:'#ffd700',dur:22});fx('ring',f.x,f.y-60,{r:130,col:'#ffffff',dur:25});
+     fx('text',f.x,f.y-180,{txt:'¡TRANSFORMACIÓN TITÁN!',col:'#10b981',dur:60});sfx('thunder');sfx('boom');
     }else{
-     f.erenFighter.determinationMeter=0;f.erenFighter.titanSteamTimer=900;f.erenFighter.transformLightningTimer=18;
-     f.erenFighter.switchForm('TITAN');G.shake=Math.max(G.shake||0,16);
-     for(const t of G.fighters){if(t!==f&&!t.dead&&!t.out&&Math.abs(t.x-f.x)<70&&t.y>=f.y-200&&t.y<=f.y+20){applyHit(f,t,{d:18.0,a:90,b:75,g:110},1,f.face,t.x,t.y-40);}}
-     fx('flash',0,0,{screen:1,dur:6});fx('text',f.x,f.y-170,{txt:'¡TITÁN DE ATAQUE!',col:'#10b981',dur:45});sfx('thunder');
+     sfx('slash');fx('blood',f.x+8*f.face,f.y-42,{col:'#dc2626'});fx('spark',f.x+8*f.face,f.y-42,{col:'#ffd700'});fx('text',f.x,f.y-75,{txt:'+50 DETERMINACIÓN',col:'#ffd700',dur:30});
     }
    }
   }
@@ -5526,7 +5540,7 @@ function applyHit(a,t,hb,sc,dir,hx,hy,proj){
   if(a.mv&&a.mv.smash&&G.frame-(a.smT||0)>20){a.smT=G.frame;fx('text',hx,hy-40,{txt:'¡SMASH!',col:'#5dff8a'});G.shake=Math.max(G.shake,8);}}
  if(a&&a.mode==='gear5'&&G.frame-(a.toonT||0)>6){a.toonT=G.frame;fx('text',hx+rnd(-20,20),hy-30,{txt:['¡BOING!','¡POW!','¡PAF!','¡BONK!','¡ZAS!','¡PLOP!'][Math.floor(Math.random()*6)],col:['#ffffff','#ffe14d','#ff8ad8','#8fe8ff'][Math.floor(Math.random()*4)]});t.sq=1.7;}
  const own=proj?proj.owner:a;const wasStun=t.st==='hitstun'||t.st==='grabbed'||t.hitlag>0;
- const isTitanArmor=(t.C.id==='eren'&&t.erenFighter&&t.erenFighter.form==='TITAN'&&(hb.d*sc)<11.0);
+ const isTitanArmor=(t.C.id==='eren'&&t.erenFighter&&t.erenFighter.form==='TITAN'&&(hb.d*sc)<16.0);
  if(isTitanArmor){
   t.pct+=hb.d*sc;if(t.erenFighter)t.erenFighter.onDamageTaken(hb.d*sc);
   t.hitlag=Math.max(t.hitlag,Math.floor(hb.d*sc*.2)+2);
@@ -5534,13 +5548,19 @@ function applyHit(a,t,hb,sc,dir,hx,hy,proj){
   return;
  }
  if(a&&a.C.id==='eren'&&a.erenFighter){
+  if(a.erenFighter.form==='TITAN'){
+   a.erenFighter.titanSteamTimer=Math.min(1200,a.erenFighter.titanSteamTimer+30);
+   G.shake=Math.max(G.shake||0,8);
+   fx('shock',hx,hy,{r:50,col:'#ffd700',dur:12});
+   fx('ring',hx,hy,{r:35,col:'#ffffff',dur:10});
+  }
   if(hb.usesBlade){
    const kMult=a.erenFighter.calculateKineticMultiplier();
    sc*=kMult;a.erenFighter.onBladeHit(t,hb);
   }
   if(hb.detonateWall)a.erenFighter.detonateWall();
   if(hb.spawnSpikes)a.erenFighter.spawnSpikes();
-  if(hb.restoreSteam)a.erenFighter.titanSteamTimer=Math.min(900,a.erenFighter.titanSteamTimer+hb.restoreSteam);
+  if(hb.restoreSteam)a.erenFighter.titanSteamTimer=Math.min(1200,a.erenFighter.titanSteamTimer+hb.restoreSteam);
  }
  if(t&&t.C.id==='eren'&&t.erenFighter){t.erenFighter.onDamageTaken(hb.d*sc);}
  if(hb.paralyze&&t.st!=='shield'){t.st='hitstun';t.hitstun=Math.max(t.hitstun,hb.paralyze);t.vx=0;t.vy=0;fx('shock',t.x,t.y-30,{r:50,col:'#00ffff',dur:20});fx('text',t.x,t.y-80,{txt:'¡PARALIZADO!',col:'#00ffff',dur:35});}
@@ -6246,7 +6266,7 @@ function blendBuf(){if(!_blend){const c=document.createElement('canvas');c.width
 function blitFrame(R,flip){const fr=R.fr;ctx.drawImage(R.S.img,fr.sx,fr.sy,fr.w,fr.h,-fr.ax,-fr.ay,fr.w,fr.h);}
 function drawSpriteBody(f,S,flash){
  const sf=spriteFrame(f),R=fref(f.C.id,sf.ref)||fref(f.C.id,'b:0');if(!R||!R.S.ready)return;
- const sc=R.sc*(f.drawSize||1);
+ const sc=R.sc;
  // anticipación y arremetida en los ataques
  let dx=0;const mv=f.st==='attack'&&f.mv;
  if(mv&&mv.lunge&&mv.hb&&mv.hb[0]){const h=mv.hb[0];dx=f.mf<h.s?-mv.lunge*.4*(f.mf/h.s):f.mf<=h.e+4?mv.lunge:mv.lunge*Math.max(0,1-(f.mf-h.e-4)/10);}
