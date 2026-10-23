@@ -313,9 +313,10 @@ export class UIManager {
       const el = document.getElementById(id);
       if (el) {
         el.checked = !!this.toggles[key];
-        el.addEventListener('change', (e) => {
-          this.toggles[key] = e.target.checked;
-        });
+        const update = () => { this.toggles[key] = el.checked; };
+        el.addEventListener('change', update);
+        el.addEventListener('input', update);
+        el.addEventListener('click', update);
       }
     };
     bindToggle('dbgHitboxes', 'showHitboxes');

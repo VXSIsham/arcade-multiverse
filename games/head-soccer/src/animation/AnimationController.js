@@ -1,4 +1,4 @@
-import { AnimationClips } from './AnimationClip.js?v=anim_hd_v28';
+import { AnimationClips } from './AnimationClip.js?v=char_overhaul_v40';
 
 /**
  * Advanced State Machine, Timeline Sequencer and Pose Blender for Head Soccer.
@@ -31,7 +31,16 @@ export class AnimationController {
     this.lookTarget = null; // { x, y }
     this.currentLookAngle = 0;
 
+    // Athletic momentum velocity tracking
+    this.vx = 0;
+    this.vy = 0;
+
     this.onStateChangeCallbacks = [];
+  }
+
+  setVelocity(vx, vy) {
+    this.vx = vx || 0;
+    this.vy = vy || 0;
   }
 
   onStateChange(fn) {
@@ -157,11 +166,21 @@ export class AnimationController {
     if (state.hipY !== undefined) {
       hip.y = state.hipY + this.squashY * 18.0;
     }
-    if (state.torsoRot !== undefined) torso.rotation = state.torsoRot;
+
+    // Dynamic athletic momentum lean (forward sprint pitch & airborne diving posture)
+    const facing = this.skeleton.facing || 1;
+    const speedRatio = Math.max(-1.0, Math.min(1.0, (this.vx || 0) / 360));
+    const forwardLean = speedRatio * 5.5 * facing;
+    const vertRatio = Math.max(-1.0, Math.min(1.0, (this.vy || 0) / 600));
+    const airTilt = vertRatio * 4.0;
+
+    if (state.torsoRot !== undefined) {
+      torso.rotation = state.torsoRot + forwardLean * 0.75 + airTilt * 0.45;
+    }
     
     // Apply Head with Look-At tracking and dynamic stretch
     if (state.headRot !== undefined) {
-      head.rotation = state.headRot + this.currentLookAngle;
+      head.rotation = state.headRot + this.currentLookAngle + forwardLean * 0.40 - airTilt * 0.25;
     }
 
     const baseScaleX = (state.headScaleX || 1.0) * this.headScaleMultiplier;

@@ -44,7 +44,7 @@ export class SuperShots {
       case 'laser': {
         this.soundManager.play('laser');
         this.cameraFx?.shake(10);
-        this.activeAbilities.push({
+        const newAbility = {
           type: 'laser',
           owner,
           x: caster ? caster.x : (dir > 0 ? 100 : 900),
@@ -52,8 +52,20 @@ export class SuperShots {
           dir,
           life: 0.65,
           maxLife: 0.65,
+          hasSuperchargedBall: false,
+          hasHitOpponent: false,
+          isReflected: false,
           colors: ['#00f0ff', '#ffffff', '#ff0055']
-        });
+        };
+
+        // Opción 3: Si ya hay un poder activo del rival en el campo -> ¡CHOQUE DE PODERES INSTANTÁNEO!
+        const opposingAbility = this.activeAbilities.find(ab => ab.owner !== owner);
+        if (opposingAbility) {
+          this.triggerBeamClash(1200, 520, ball, resolvedTargets.player, resolvedTargets.rivalBot, null, newAbility, opposingAbility);
+          return;
+        }
+
+        this.activeAbilities.push(newAbility);
         break;
       }
 
@@ -379,30 +391,76 @@ export class SuperShots {
         // --- LASER BEAM ---
         case 'laser': {
           // Particle sparks along beam
-          this.particleSystem.spawnSparks(a.x + dir * Math.random() * (stageWidth * 0.8), a.y + (Math.random() - 0.5) * 20, 2, '#00f0ff');
+          this.particleSystem.spawnSparks(a.x + dir * Math.random() * (stageWidth * 0.8), a.y + (Math.random() - 0.5) * 20, 2, a.isReflected ? '#ffd700' : '#00f0ff');
 
-          // Check Ball intersection
-          const inRayX = (dir > 0 && ball.x > a.x) || (dir < 0 && ball.x < a.x);
-          const inRayY = Math.abs(ball.y - a.y) < 42;
-          if (inRayX && inRayY) {
-            ball.kick(dir * 1420, -15, true, a.owner);
-            ball.superType = 'laser';
-            ball.superColors = a.colors;
-            this.soundManager.play('superExplode');
-            this.cameraFx?.shake(10);
-            this.particleSystem.spawnSparks(ball.x, ball.y, 25, '#00f0ff');
-            collisionSystem?.addFloatingText('⚡ ¡SUPERCARGA LÁSER! 🤖', ball.x, ball.y - 70, '#00f0ff', 20);
+          // 1. BEAM CLASH CHECK (Opción 3: choque de poderes con otra habilidad activa opuesta)
+          for (let j = this.activeAbilities.length - 1; j >= 0; j--) {
+            if (j === i) continue;
+            const other = this.activeAbilities[j];
+            if (other && other.owner !== a.owner) {
+              const clashDist = Math.abs(a.x - other.x);
+              const clashY = Math.abs(a.y - (other.y || groundY - 100));
+              if (clashDist < stageWidth && clashY < 120) {
+                this.triggerBeamClash(stageWidth, groundY, ball, player, rivalBot, collisionSystem, a, other);
+                return;
+              }
+            }
           }
 
-          // Check Opponent intersection
+          // 2. Check Ball intersection (Only supercharge once so it never gets stuck or dragged!)
+          const inRayX = (dir > 0 && ball.x >= a.x - 20) || (dir < 0 && ball.x <= a.x + 20);
+          const inRayY = Math.abs(ball.y - a.y) < 55;
+          if (!a.hasSuperchargedBall && inRayX && inRayY) {
+            a.hasSuperchargedBall = true;
+            ball.kick(dir * 1480, -22, true, a.owner);
+            ball.superType = a.isReflected ? 'laser_reflected' : 'laser';
+            ball.superColors = a.colors;
+            this.soundManager.play('superExplode');
+            this.soundManager.play('laser');
+            this.cameraFx?.shake(12);
+            this.particleSystem.spawnSonicBoom(ball.x, ball.y, dir, a.isReflected ? '#ffd700' : '#00f0ff');
+            this.particleSystem.spawnSparks(ball.x, ball.y, 35, a.isReflected ? '#ffd700' : '#00f0ff');
+            collisionSystem?.addFloatingText(a.isReflected ? '🪞⚡ ¡LÁSER REFLEJADO! ⚡' : '⚡ ¡SUPERCARGA LÁSER! 🤖', ball.x, ball.y - 70, a.isReflected ? '#ffd700' : '#00f0ff', 22);
+          }
+
+          // 3. Check Opponent intersection (Damage + Stun largo 2.6s + Balón rebota y sale volando)
           if (opponent && !a.hasHitOpponent) {
             const oppInX = (dir > 0 && opponent.x > a.x) || (dir < 0 && opponent.x < a.x);
-            const oppInY = Math.abs((opponent.y - 45) - a.y) < 55;
-            if (oppInX && oppInY) {
+            const oppInY = Math.abs((opponent.y - 45) - a.y) < 60;
+            const distBallOpp = Math.hypot(ball.x - opponent.x, ball.y - (opponent.y - 45));
+
+            if (oppInX && oppInY && (distBallOpp < 90 || a.life < 0.40)) {
               a.hasHitOpponent = true;
-              opponent.takeDamage ? opponent.takeDamage(30, dir * 320, -280, true) : collisionSystem?.applyDamage(player, 30, null, dir * 320, -280, true);
-              this.particleSystem.spawnSparks(opponent.x, opponent.y - 45, 30, '#00f0ff');
-              collisionSystem?.addFloatingText('⚡ ¡IMPACTO LÁSER!', opponent.x, opponent.y - 90, '#00f0ff', 22);
+              a.life = Math.min(a.life, 0.08); // Beam finishes and dissipates
+
+              const stunDuration = 2.6; // Stun largo como pidió el usuario!
+              const dmg = a.isReflected ? 38 : 35;
+              if (opponent.takeDamage) {
+                opponent.takeDamage(dmg, dir * 420, -380, true, stunDuration);
+              } else if (collisionSystem) {
+                collisionSystem.applyDamage(player, dmg, null, dir * 420, -380, true, stunDuration);
+              }
+
+              // BALL COLLISION & REBOUND:
+              // "choque con el rival, le haga daño y salga volando la pelota"
+              ball.isSuper = false;
+              ball.superType = null;
+              ball.vx = -dir * (380 + Math.random() * 120); // Rebounds backwards
+              ball.vy = -720 - Math.random() * 140; // Launches high into the air!
+              ball.spin = -dir * 18;
+
+              this.soundManager.play('superExplode');
+              this.soundManager.play('knockout');
+              this.soundManager.playSubBassKick();
+              this.cameraFx?.shake(18);
+              this.cameraFx?.flash('#00f0ff');
+              collisionSystem?.triggerHitStop(0.08);
+              this.particleSystem.spawnSonicBoom(opponent.x, opponent.y - 45, -dir, '#00f0ff');
+              this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#00ffff');
+              this.particleSystem.spawnTurfSpray(opponent.x, groundY, -dir, 20);
+
+              collisionSystem?.addFloatingText(`💥 ¡IMPACTO DEMOLEDOR! (-${dmg} HP)`, opponent.x, opponent.y - 95, '#00f0ff', 24);
+              collisionSystem?.addFloatingText('😵 ¡STUN CRÍTICO! (2.6s)', opponent.x, opponent.y - 68, '#ffd700', 18);
             }
           }
           break;
@@ -752,6 +810,51 @@ export class SuperShots {
     }
   }
 
+  triggerBeamClash(stageWidth, groundY, ball, player, rivalBot, collisionSystem, a1, a2) {
+    const clashX = (a1.x + a2.x) * 0.5 || stageWidth * 0.5;
+    const clashY = groundY - 110;
+
+    const idx1 = this.activeAbilities.indexOf(a1);
+    if (idx1 !== -1) this.activeAbilities.splice(idx1, 1);
+    const idx2 = this.activeAbilities.indexOf(a2);
+    if (idx2 !== -1) this.activeAbilities.splice(idx2, 1);
+
+    // Ball blasted skyward into the stratosphere!
+    ball.x = clashX;
+    ball.y = clashY;
+    ball.vx = (Math.random() - 0.5) * 160;
+    ball.vy = -980; // Launches vertically skyward!
+    ball.spin = 24;
+    ball.isSuper = false;
+    ball.superType = null;
+
+    if (player) {
+      player.x = Math.max(130, player.x - 70 * (player.direction || 1));
+      collisionSystem?.applyDamage(player, 15, null, -200, -180, true, 1.2);
+    }
+    if (rivalBot) {
+      rivalBot.x = Math.min(stageWidth - 130, rivalBot.x - 70 * (rivalBot.direction || -1));
+      rivalBot.takeDamage?.(15, 200, -180, true, 1.2);
+    }
+
+    this.soundManager.play('superExplode');
+    this.soundManager.play('chargedBlast');
+    this.soundManager.playSubBassKick();
+    this.cameraFx?.shake(24);
+    this.cameraFx?.flash('#ffffff');
+    collisionSystem?.triggerHitStop(0.12);
+
+    this.particleSystem.spawnSonicBoom(clashX, clashY, 1, '#ffd700');
+    this.particleSystem.spawnSonicBoom(clashX, clashY, -1, '#00f0ff');
+    this.particleSystem.spawnSparks(clashX, clashY, 60, '#ffd700');
+    this.particleSystem.spawnSparks(clashX, clashY, 60, '#00f0ff');
+    this.particleSystem.spawnTurfSpray(clashX, groundY, 1, 25);
+    this.particleSystem.spawnTurfSpray(clashX, groundY, -1, 25);
+
+    collisionSystem?.addFloatingText('💥⚔️ ¡CHOQUE DE PODERES! ⚔️💥', clashX, clashY - 60, '#ffd700', 28);
+    collisionSystem?.addFloatingText('⚡ ¡ENERGÍA SOBRECARGADA! ⚡', clashX, clashY - 25, '#00ffff', 20);
+  }
+
   /**
    * Renders all active special abilities onto the canvas with rich procedural aesthetics.
    */
@@ -766,11 +869,12 @@ export class SuperShots {
           ctx.globalAlpha = alpha;
           const beamLen = stageWidth + 100;
           const startX = a.dir > 0 ? a.x : a.x - beamLen;
+          const isReflected = !!a.isReflected;
 
           // Outer plasma glow
-          ctx.shadowColor = '#00f0ff';
+          ctx.shadowColor = isReflected ? '#ffd700' : '#00f0ff';
           ctx.shadowBlur = 40;
-          ctx.fillStyle = 'rgba(0, 240, 255, 0.45)';
+          ctx.fillStyle = isReflected ? 'rgba(255, 215, 0, 0.45)' : 'rgba(0, 240, 255, 0.45)';
           ctx.fillRect(startX, a.y - 20, beamLen, 40);
 
           // Inner laser core
@@ -779,7 +883,7 @@ export class SuperShots {
           ctx.fillRect(startX, a.y - 7, beamLen, 14);
 
           // Digital laser scanlines
-          ctx.strokeStyle = 'rgba(255, 0, 85, 0.7)';
+          ctx.strokeStyle = isReflected ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 0, 85, 0.7)';
           ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.moveTo(startX, a.y - 12);

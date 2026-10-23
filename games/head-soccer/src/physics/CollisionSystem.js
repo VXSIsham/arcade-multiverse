@@ -84,7 +84,7 @@ export class CollisionSystem {
     });
   }
 
-  applyDamage(player, amount, ragdollSystem, impulseX = -280, impulseY = -380, isHeavyBlast = false) {
+  applyDamage(player, amount, ragdollSystem, impulseX = -280, impulseY = -380, isHeavyBlast = false, customStunTimer = null) {
     if (player.hasShield) {
       this.soundManager.play('bounce');
       this.particleSystem.spawnSparks(player.x, player.y - 50, 20, '#ffd700');
@@ -109,13 +109,10 @@ export class CollisionSystem {
 
     this.onDamageCallbacks.forEach(fn => fn(player.hp));
 
-    // Stun logic: NO MORE RANDOM STUNS!
-    // Stun occurs ONLY on:
-    // 1. Direct Super Shot / Heavy Blast / Bomb / Glove (isHeavyBlast === true)
-    // 2. Critical Guard Break (player.hp <= 15 and amount >= 25)
+    // Stun logic: Heavy blasts or critical guard break
     const isGuardBroken = player.hp <= 15 && amount >= 25;
     if (isHeavyBlast || isGuardBroken) {
-      this.triggerStun(player, ragdollSystem, impulseX, impulseY, isHeavyBlast);
+      this.triggerStun(player, ragdollSystem, impulseX, impulseY, isHeavyBlast, customStunTimer);
     } else {
       // Normal combat pushback — player stays agile and retains full control!
       player.x += Math.sign(impulseX) * 20;
@@ -132,11 +129,12 @@ export class CollisionSystem {
     this.addFloatingText('🧊 ¡CONGELADO! 🧊', player.x, player.y - 110, '#00ffff', 24);
   }
 
-  triggerStun(player, ragdollSystem, impulseX = -280, impulseY = -380, isHeavyBlast = false) {
+  triggerStun(player, ragdollSystem, impulseX = -280, impulseY = -380, isHeavyBlast = false, customStunTimer = null) {
     player.isStunned = true;
-    player.stunTimer = 0.65; // Snappy 0.65s stun, quick recovery!
+    player.stunTimer = customStunTimer != null ? customStunTimer : 0.65;
     this.soundManager.play('knockout');
-    this.addFloatingText('😵 ¡STUNNED!', player.x, player.y - 110, '#00f0ff', 22);
+    const stunLabel = customStunTimer && customStunTimer > 1.5 ? `😵 ¡STUN CRÍTICO (${customStunTimer.toFixed(1)}s)!` : '😵 ¡STUNNED!';
+    this.addFloatingText(stunLabel, player.x, player.y - 110, '#00f0ff', 22);
 
     this.onStunCallbacks.forEach(fn => fn(true));
 
@@ -148,8 +146,9 @@ export class CollisionSystem {
     }
   }
 
-  update(player, skeleton, ball, stageWidth, groundY, dt, ragdollSystem, powerSystem, rivalBot, inputManager = null, isMatchOver = false) {
+  update(player, skeleton, ball, stageWidth, groundY, dt, ragdollSystem, powerSystem, rivalBot, inputManager = null, isMatchOver = false, superShots = null) {
     this.isMatchOver = isMatchOver;
+    this.superShots = superShots;
     if (this.isMatchOver) {
       // Smoothly bring the ball to rest after the final whistle
       ball.vx *= 0.94;
@@ -161,6 +160,7 @@ export class CollisionSystem {
     if (this.goalCooldown > 0) this.goalCooldown -= dt;
     if (this.damageCooldown > 0) this.damageCooldown -= dt;
     if (this.kickCooldown > 0) this.kickCooldown -= dt;
+    if (player.hitFlashTimer > 0) player.hitFlashTimer = Math.max(0, player.hitFlashTimer - dt);
 
     if (!player.freeze) {
       player.freeze = (dur) => this.freezePlayer(player, dur);
@@ -217,26 +217,32 @@ export class CollisionSystem {
       return;
     }
 
-    // 1. Precise Hitbox Updates
-    // Kick Foot Hitbox (Toe / Cleat: radius 18px)
+    // 1. Anatomically Calibrated Hitbox Updates (Matches Chibi 1.25x caricature proportion)
+    const headScale = (player.userHeadScale || 1.0) * 1.25;
+
+    // Head Hitbox (Full skull cranium mass from crown to jaw: radius 48px scaled)
+    player.headHitbox.x = skeleton.head.worldX + player.direction * (14 * headScale);
+    player.headHitbox.y = skeleton.head.worldY - (50 * headScale);
+    player.headHitbox.radius = Math.round(48 * headScale);
+
+    // Dedicated Forehead Strike Sweetspot (Forehead/brow header impact zone: radius 30px)
+    if (!player.foreheadHitbox) player.foreheadHitbox = { x: 0, y: 0, radius: 30 };
+    player.foreheadHitbox.x = skeleton.head.worldX + player.direction * (28 * headScale);
+    player.foreheadHitbox.y = skeleton.head.worldY - (58 * headScale);
+    player.foreheadHitbox.radius = Math.round(30 * headScale);
+
+    // Kick Foot Hitbox (Covers Cleat Instep, Sole & Extended Toe: radius 26px)
     const footTip = skeleton.footFront.getWorldTip();
     const footOffsetX = Math.abs(footTip.x - skeleton.root.x);
-    player.kickHitbox.x = player.x + player.direction * footOffsetX;
-    player.kickHitbox.y = footTip.y;
-    player.kickHitbox.radius = 18;
+    player.kickHitbox.x = player.x + player.direction * (footOffsetX + 4);
+    player.kickHitbox.y = footTip.y - 2;
+    player.kickHitbox.radius = 26;
 
-    // Head Hitbox (Forehead / Crown: radius 26px)
-    const headX = skeleton.head.worldX + player.direction * 12;
-    const headY = skeleton.head.worldY - 32;
-    player.headHitbox.x = headX;
-    player.headHitbox.y = headY;
-    player.headHitbox.radius = 26;
-
-    // Torso Hitbox (Chest / Body trap: radius 20px)
-    if (!player.torsoHitbox) player.torsoHitbox = { x: 0, y: 0, radius: 20 };
-    player.torsoHitbox.x = skeleton.torso.worldX;
-    player.torsoHitbox.y = skeleton.torso.worldY - 14;
-    player.torsoHitbox.radius = 20;
+    // Torso Hitbox (Chest / Body trap: radius 24px)
+    if (!player.torsoHitbox) player.torsoHitbox = { x: 0, y: 0, radius: 24 };
+    player.torsoHitbox.x = skeleton.torso.worldX + player.direction * 4;
+    player.torsoHitbox.y = skeleton.torso.worldY - 12;
+    player.torsoHitbox.radius = 24;
 
     const curAnim = player.animController.currentAnim;
     const isSpecialKick = ['bicycle_kick', 'rocket_kick', 'diving_header', 'scorpion_kick', 'smash_header'].includes(curAnim);
@@ -248,13 +254,49 @@ export class CollisionSystem {
     // --- A. KICK FOOT COLLISION ---
     const distFoot = Math.hypot(ball.x - player.kickHitbox.x, ball.y - player.kickHitbox.y);
     if (distFoot < ball.radius + player.kickHitbox.radius) {
-      const isRivalSuper = ball.isSuper && ball.lastKickedBy === 'rival';
+      const isRivalSuper = (ball.isSuper && ball.lastKickedBy === 'rival') || ball.superType === 'laser';
       if (isRivalSuper) {
         if (isKicking || isJumping) {
-          // CLUTCH PARRY WITH ACTIVE KICK / CLEAT!
+          const isLaser = ball.superType === 'laser';
+          if (isLaser) {
+            // OPTION 1: REFLEJO PRISMATICO ON FOOT KICK!
+            ball.isSuper = true;
+            ball.superType = 'laser_reflected';
+            ball.superColors = ['#ffd700', '#ffffff', '#00f0ff'];
+            ball.lastKickedBy = 'player';
+            ball.vx = 1580;
+            ball.vy = -25;
+            powerSystem?.addPower(35);
+
+            if (this.superShots) {
+              const activeLaser = this.superShots.activeAbilities.find(a => a.type === 'laser');
+              if (activeLaser) {
+                activeLaser.dir = 1;
+                activeLaser.owner = 'player';
+                activeLaser.x = player.x;
+                activeLaser.colors = ['#ffd700', '#ffffff', '#00f0ff'];
+                activeLaser.isReflected = true;
+                activeLaser.hasHitOpponent = false;
+                activeLaser.hasSuperchargedBall = true;
+                activeLaser.life = 0.65;
+              }
+            }
+
+            this.soundManager.play('superPower');
+            this.soundManager.play('laser');
+            this.soundManager.playSubBassKick();
+            this.particleSystem.spawnSonicBoom(footTip.x, footTip.y, 1, '#ffd700');
+            this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#ffd700');
+            this.triggerShake(16);
+            this.triggerHitStop(0.09);
+            this.addFloatingText('🪞⚡ ¡REFLEJO PRISMÁTICO! ⚡🪞', player.x, player.y - 110, '#ffd700', 26);
+            return;
+          }
+
+          // Standard Super Parry
           ball.isSuper = false;
           ball.lastKickedBy = 'player';
-          ball.vx = 880; // Rocket counter-strike back towards rival!
+          ball.vx = 880;
           ball.vy = -260;
           powerSystem?.addPower(25);
           this.soundManager.playSubBassKick();
@@ -266,12 +308,19 @@ export class CollisionSystem {
           return;
         } else {
           // UNGUARDED PLAYER STRUCK BY BLAST!
-          this.applyDamage(player, 25, ragdollSystem, -320, -360, true);
+          const isLaser = ball.superType === 'laser';
+          const stunDur = isLaser ? 2.6 : 0.65;
+          const dmg = isLaser ? 35 : 25;
+          this.applyDamage(player, dmg, ragdollSystem, -420, -380, true, stunDur);
           this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#ff3700');
           this.soundManager.play('superExplode');
+          this.soundManager.play('knockout');
           ball.isSuper = false;
-          ball.vx = Math.abs(ball.vx) * 0.35 + 80;
-          ball.vy = -Math.abs(ball.vy) * 0.5 - 120;
+          ball.superType = null;
+          // Ball collides with player, damages, and launches high into the air!
+          ball.vx = 380 + Math.random() * 100;
+          ball.vy = -720 - Math.random() * 120;
+          ball.spin = -14;
           return;
         }
       }
@@ -424,8 +473,12 @@ export class CollisionSystem {
 
     // --- B. HEAD COLLISION (NEVER self-damages on headers) ---
     const distHead = Math.hypot(ball.x - player.headHitbox.x, ball.y - player.headHitbox.y);
-    if (distHead < ball.radius + player.headHitbox.radius) {
-      const isRivalSuper = ball.isSuper && ball.lastKickedBy === 'rival';
+    const distForehead = player.foreheadHitbox ? Math.hypot(ball.x - player.foreheadHitbox.x, ball.y - player.foreheadHitbox.y) : 999;
+    const isHeadHit = distHead < ball.radius + player.headHitbox.radius || (player.foreheadHitbox && distForehead < ball.radius + player.foreheadHitbox.radius);
+
+    if (isHeadHit) {
+      player.hitFlashTimer = 0.12;
+      const isRivalSuper = (ball.isSuper && ball.lastKickedBy === 'rival') || ball.superType === 'laser';
       const isViolentRivalShot = ball.lastKickedBy === 'rival' && ball.vx < -550;
 
       if (isRivalSuper) {
@@ -434,26 +487,68 @@ export class CollisionSystem {
         const isKickAttempt = isKicking;
 
         if (isHeaderAttempt || isKickAttempt) {
-          // CLUTCH PARRY! Deflect super shot back with high skill!
-          ball.isSuper = false;
-          ball.lastKickedBy = 'player';
-          ball.vx = 820; // Powerful counter-strike back towards rival!
-          ball.vy = -240;
-          powerSystem?.addPower(25); // Reward player with +25% Super Meter!
-          this.soundManager.playSubBassKick();
-          this.particleSystem.spawnSonicBoom(player.headHitbox.x, player.headHitbox.y, 1, '#ffd700');
-          this.particleSystem.spawnSparks(ball.x, ball.y, 35, '#00ffff');
-          this.triggerShake(14);
-          this.triggerHitStop(0.065); // 65ms dramatic hitstop!
-          this.addFloatingText('⚡ ¡PARRY PERFECTO! 🛡️', player.x, player.y - 100, '#00f0ff', 24);
+          const isLaser = ball.superType === 'laser';
+          if (isLaser) {
+            // OPTION 1: REFLEJO PRISMATICO ON FOREHEAD HEADER!
+            ball.isSuper = true;
+            ball.superType = 'laser_reflected';
+            ball.superColors = ['#ffd700', '#ffffff', '#00f0ff'];
+            ball.lastKickedBy = 'player';
+            ball.vx = 1580;
+            ball.vy = -25;
+            powerSystem?.addPower(35);
+
+            if (this.superShots) {
+              const activeLaser = this.superShots.activeAbilities.find(a => a.type === 'laser');
+              if (activeLaser) {
+                activeLaser.dir = 1;
+                activeLaser.owner = 'player';
+                activeLaser.x = player.x;
+                activeLaser.colors = ['#ffd700', '#ffffff', '#00f0ff'];
+                activeLaser.isReflected = true;
+                activeLaser.hasHitOpponent = false;
+                activeLaser.hasSuperchargedBall = true;
+                activeLaser.life = 0.65;
+              }
+            }
+
+            this.soundManager.play('superPower');
+            this.soundManager.play('laser');
+            this.soundManager.playSubBassKick();
+            this.particleSystem.spawnSonicBoom(player.headHitbox.x, player.headHitbox.y, 1, '#ffd700');
+            this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#ffd700');
+            this.triggerShake(16);
+            this.triggerHitStop(0.09);
+            this.addFloatingText('🪞⚡ ¡REFLEJO PRISMÁTICO! ⚡🪞', player.x, player.y - 110, '#ffd700', 26);
+          } else {
+            // Standard Super Parry
+            ball.isSuper = false;
+            ball.lastKickedBy = 'player';
+            ball.vx = 820;
+            ball.vy = -240;
+            powerSystem?.addPower(25);
+            this.soundManager.playSubBassKick();
+            this.particleSystem.spawnSonicBoom(player.headHitbox.x, player.headHitbox.y, 1, '#ffd700');
+            this.particleSystem.spawnSparks(ball.x, ball.y, 35, '#00ffff');
+            this.triggerShake(14);
+            this.triggerHitStop(0.065);
+            this.addFloatingText('⚡ ¡PARRY PERFECTO! 🛡️', player.x, player.y - 100, '#00f0ff', 24);
+          }
         } else {
           // RIVAL ULTI BLAST HITS UNGUARDED PLAYER!
-          this.applyDamage(player, 25, ragdollSystem, -320, -360, true);
+          const isLaser = ball.superType === 'laser';
+          const stunDur = isLaser ? 2.6 : 0.65;
+          const dmg = isLaser ? 35 : 25;
+          this.applyDamage(player, dmg, ragdollSystem, -420, -380, true, stunDur);
           this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#ff3700');
           this.soundManager.play('superExplode');
+          this.soundManager.play('knockout');
           ball.isSuper = false;
-          ball.vx = Math.abs(ball.vx) * 0.35 + 80;
-          ball.vy = -Math.abs(ball.vy) * 0.5 - 120;
+          ball.superType = null;
+          // Ball collides with player, damages, and launches high into the air!
+          ball.vx = 380 + Math.random() * 100;
+          ball.vy = -720 - Math.random() * 120;
+          ball.spin = -14;
         }
       } else if (isViolentRivalShot) {
         // FAST RIVAL SHOT DEFLECTED BY FOREHEAD — REWARDING SOCCER BLOCK, NO DAMAGE, NO STUN!

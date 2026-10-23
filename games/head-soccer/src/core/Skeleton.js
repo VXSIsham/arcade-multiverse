@@ -15,8 +15,8 @@ export class Skeleton {
     // Torso: compact jersey #10 (pointing straight up)
     this.torso = new Bone('torso', this.hip, 26, 24, 0, 0);
 
-    // Head: rests directly on the jersey collar
-    this.head = new Bone('head', this.torso, 36, 24, 0, 0, 1.0, 1.0);
+    // Head: rests organically on the anatomical neck & jersey collar
+    this.head = new Bone('head', this.torso, 36, 28, 0, 0, 1.0, 1.0);
 
     // Headband fluttering ribbons
     this.hairRibbon = new Bone('hair_ribbon', this.head, 24, -20, 16, 35);

@@ -1,6 +1,6 @@
-import { StadiumRenderer } from './StadiumRenderer.js?v=sprites_hd_v31';
-import { CharacterRenderer } from './CharacterRenderer.js?v=sprites_hd_v31';
-import { SpineDebugger } from './SpineDebugger.js';
+import { StadiumRenderer } from './StadiumRenderer.js?v=char_overhaul_v40';
+import { CharacterRenderer } from './CharacterRenderer.js?v=char_overhaul_v40';
+import { SpineDebugger } from './SpineDebugger.js?v=char_overhaul_v40';
 
 /**
  * Main game rendering pipeline coordinator with dynamic camera juice (shake & flash).
@@ -259,7 +259,15 @@ export class GameRenderer {
       character: player.character,
       facing: player.direction || 1,
       hp: player.hp,
-      isSuperReady: sceneState.isPlayerSuperReady
+      isSuperReady: sceneState.isPlayerSuperReady,
+      ball: ball,
+      isGrounded: player.isGrounded,
+      isDashing: player.isDashing,
+      isStunned: player.isStunned,
+      currentAnim: player.animController?.currentAnim,
+      hitFlashTimer: player.hitFlashTimer || 0,
+      vx: player.vx || 0,
+      vy: player.vy || 0
     });
     ctx.restore();
 
@@ -274,11 +282,19 @@ export class GameRenderer {
       this.characterRenderer.render(ctx, sceneState.rivalBot.skeleton, sceneState.rivalAnimState || { face: 'idle' }, {
         showSkin: options.showSkin,
         showMesh: options.showMesh,
-        headScale: 1.0,
+        headScale: sceneState.rivalBot.giantHeadMultiplier || 1.0,
         character: sceneState.rivalBot.character,
         facing: sceneState.rivalBot.direction || -1,
         hp: sceneState.rivalBot.hp,
-        isSuperReady: sceneState.rivalBot.power >= 100
+        isSuperReady: sceneState.rivalBot.power >= 100,
+        ball: ball,
+        isGrounded: sceneState.rivalBot.isGrounded,
+        isDashing: sceneState.rivalBot.isDashing,
+        isStunned: sceneState.rivalBot.isStunned,
+        currentAnim: sceneState.rivalBot.animController?.currentAnim,
+        hitFlashTimer: sceneState.rivalBot.hitFlashTimer || 0,
+        vx: sceneState.rivalBot.vx || 0,
+        vy: sceneState.rivalBot.vy || 0
       });
       ctx.restore();
 

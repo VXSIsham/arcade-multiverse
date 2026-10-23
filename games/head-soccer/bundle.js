@@ -576,7 +576,16 @@ class AnimationController {
     this.lookTarget = null; // { x, y }
     this.currentLookAngle = 0;
 
+    // Athletic momentum velocity tracking
+    this.vx = 0;
+    this.vy = 0;
+
     this.onStateChangeCallbacks = [];
+  }
+
+  setVelocity(vx, vy) {
+    this.vx = vx || 0;
+    this.vy = vy || 0;
   }
 
   onStateChange(fn) {
@@ -702,11 +711,21 @@ class AnimationController {
     if (state.hipY !== undefined) {
       hip.y = state.hipY + this.squashY * 18.0;
     }
-    if (state.torsoRot !== undefined) torso.rotation = state.torsoRot;
+
+    // Dynamic athletic momentum lean (forward sprint pitch & airborne diving posture)
+    const facing = this.skeleton.facing || 1;
+    const speedRatio = Math.max(-1.0, Math.min(1.0, (this.vx || 0) / 360));
+    const forwardLean = speedRatio * 5.5 * facing;
+    const vertRatio = Math.max(-1.0, Math.min(1.0, (this.vy || 0) / 600));
+    const airTilt = vertRatio * 4.0;
+
+    if (state.torsoRot !== undefined) {
+      torso.rotation = state.torsoRot + forwardLean * 0.75 + airTilt * 0.45;
+    }
     
     // Apply Head with Look-At tracking and dynamic stretch
     if (state.headRot !== undefined) {
-      head.rotation = state.headRot + this.currentLookAngle;
+      head.rotation = state.headRot + this.currentLookAngle + forwardLean * 0.40 - airTilt * 0.25;
     }
 
     const baseScaleX = (state.headScaleX || 1.0) * this.headScaleMultiplier;
@@ -1397,8 +1416,8 @@ class Skeleton {
     // Torso: compact jersey #10 (pointing straight up)
     this.torso = new Bone('torso', this.hip, 26, 24, 0, 0);
 
-    // Head: rests directly on the jersey collar
-    this.head = new Bone('head', this.torso, 36, 24, 0, 0, 1.0, 1.0);
+    // Head: rests organically on the anatomical neck & jersey collar
+    this.head = new Bone('head', this.torso, 36, 28, 0, 0, 1.0, 1.0);
 
     // Headband fluttering ribbons
     this.hairRibbon = new Bone('hair_ribbon', this.head, 24, -20, 16, 35);
@@ -1869,9 +1888,10 @@ async function bootstrap() {
     userHeadScale: 1.0,
     animController: animController,
     character: getCharacter('kenta'), // Defaults to Kenta 🇯🇵
-    kickHitbox: { x: 0, y: 0, radius: 18 },
-    headHitbox: { x: 0, y: 0, radius: 26 },
-    torsoHitbox: { x: 0, y: 0, radius: 20 },
+    kickHitbox: { x: 0, y: 0, radius: 26 },
+    headHitbox: { x: 0, y: 0, radius: 48 },
+    foreheadHitbox: { x: 0, y: 0, radius: 30 },
+    torsoHitbox: { x: 0, y: 0, radius: 24 },
     hp: 100,
     maxHp: 100,
     isKnockedOut: false,
@@ -2662,12 +2682,15 @@ async function bootstrap() {
         }
       }
 
+      player.vx = player.isDashing ? player.dashVx : (isMoving ? player.direction * moveSpeed : 0);
+
       // Synchronize Skeleton Root Transform
       skeleton.setPosition(player.x, player.y);
       skeleton.setFacing(player.direction);
 
-      // Procedural Gaze / Look-At tracking towards ball
+      // Procedural Gaze / Look-At tracking towards ball & athletic momentum
       animController.setLookTarget(ball.x, ball.y);
+      animController.setVelocity(player.vx, player.vy);
 
       // Update Animation State & Skeleton
       animState = animController.update(player.isFrozen ? 0 : dt);
@@ -2719,7 +2742,7 @@ async function bootstrap() {
 
     // Update Physics, Air Drops & Interactions
     ball.update(dt, renderer.groundY, renderer.stageWidth);
-    collisionSystem.update(player, skeleton, ball, renderer.stageWidth, renderer.groundY, dt, ragdollSystem, powerSystem, rivalBot, inputManager, isMatchOver);
+    collisionSystem.update(player, skeleton, ball, renderer.stageWidth, renderer.groundY, dt, ragdollSystem, powerSystem, rivalBot, inputManager, isMatchOver, superShots);
     powerUpSystem.update(dt, renderer.stageWidth, renderer.groundY, player, rivalBot, ball, collisionSystem);
     superShots.update(dt, renderer.stageWidth, renderer.groundY, ball, player, rivalBot, collisionSystem);
     particleSystem.update(dt);
@@ -2747,10 +2770,10 @@ async function bootstrap() {
       soundManager,
       dt,
       options: {
-        showBones: uiManager.toggles.showBones,
+        showBones: document.getElementById('dbgBones')?.checked ?? uiManager.toggles.showBones,
         showJoints: uiManager.toggles.showJoints,
-        showMesh: uiManager.toggles.showMesh,
-        showHitboxes: uiManager.toggles.showHitboxes,
+        showMesh: document.getElementById('dbgMesh')?.checked ?? uiManager.toggles.showMesh,
+        showHitboxes: document.getElementById('dbgHitboxes')?.checked ?? uiManager.toggles.showHitboxes,
         showSkin: uiManager.toggles.showSkin
       }
     });
@@ -3313,7 +3336,7 @@ class CollisionSystem {
     });
   }
 
-  applyDamage(player, amount, ragdollSystem, impulseX = -280, impulseY = -380, isHeavyBlast = false) {
+  applyDamage(player, amount, ragdollSystem, impulseX = -280, impulseY = -380, isHeavyBlast = false, customStunTimer = null) {
     if (player.hasShield) {
       this.soundManager.play('bounce');
       this.particleSystem.spawnSparks(player.x, player.y - 50, 20, '#ffd700');
@@ -3338,13 +3361,10 @@ class CollisionSystem {
 
     this.onDamageCallbacks.forEach(fn => fn(player.hp));
 
-    // Stun logic: NO MORE RANDOM STUNS!
-    // Stun occurs ONLY on:
-    // 1. Direct Super Shot / Heavy Blast / Bomb / Glove (isHeavyBlast === true)
-    // 2. Critical Guard Break (player.hp <= 15 and amount >= 25)
+    // Stun logic: Heavy blasts or critical guard break
     const isGuardBroken = player.hp <= 15 && amount >= 25;
     if (isHeavyBlast || isGuardBroken) {
-      this.triggerStun(player, ragdollSystem, impulseX, impulseY, isHeavyBlast);
+      this.triggerStun(player, ragdollSystem, impulseX, impulseY, isHeavyBlast, customStunTimer);
     } else {
       // Normal combat pushback — player stays agile and retains full control!
       player.x += Math.sign(impulseX) * 20;
@@ -3361,11 +3381,12 @@ class CollisionSystem {
     this.addFloatingText('🧊 ¡CONGELADO! 🧊', player.x, player.y - 110, '#00ffff', 24);
   }
 
-  triggerStun(player, ragdollSystem, impulseX = -280, impulseY = -380, isHeavyBlast = false) {
+  triggerStun(player, ragdollSystem, impulseX = -280, impulseY = -380, isHeavyBlast = false, customStunTimer = null) {
     player.isStunned = true;
-    player.stunTimer = 0.65; // Snappy 0.65s stun, quick recovery!
+    player.stunTimer = customStunTimer != null ? customStunTimer : 0.65;
     this.soundManager.play('knockout');
-    this.addFloatingText('😵 ¡STUNNED!', player.x, player.y - 110, '#00f0ff', 22);
+    const stunLabel = customStunTimer && customStunTimer > 1.5 ? `😵 ¡STUN CRÍTICO (${customStunTimer.toFixed(1)}s)!` : '😵 ¡STUNNED!';
+    this.addFloatingText(stunLabel, player.x, player.y - 110, '#00f0ff', 22);
 
     this.onStunCallbacks.forEach(fn => fn(true));
 
@@ -3377,8 +3398,9 @@ class CollisionSystem {
     }
   }
 
-  update(player, skeleton, ball, stageWidth, groundY, dt, ragdollSystem, powerSystem, rivalBot, inputManager = null, isMatchOver = false) {
+  update(player, skeleton, ball, stageWidth, groundY, dt, ragdollSystem, powerSystem, rivalBot, inputManager = null, isMatchOver = false, superShots = null) {
     this.isMatchOver = isMatchOver;
+    this.superShots = superShots;
     if (this.isMatchOver) {
       // Smoothly bring the ball to rest after the final whistle
       ball.vx *= 0.94;
@@ -3390,6 +3412,7 @@ class CollisionSystem {
     if (this.goalCooldown > 0) this.goalCooldown -= dt;
     if (this.damageCooldown > 0) this.damageCooldown -= dt;
     if (this.kickCooldown > 0) this.kickCooldown -= dt;
+    if (player.hitFlashTimer > 0) player.hitFlashTimer = Math.max(0, player.hitFlashTimer - dt);
 
     if (!player.freeze) {
       player.freeze = (dur) => this.freezePlayer(player, dur);
@@ -3446,26 +3469,32 @@ class CollisionSystem {
       return;
     }
 
-    // 1. Precise Hitbox Updates
-    // Kick Foot Hitbox (Toe / Cleat: radius 18px)
+    // 1. Anatomically Calibrated Hitbox Updates (Matches Chibi 1.25x caricature proportion)
+    const headScale = (player.userHeadScale || 1.0) * 1.25;
+
+    // Head Hitbox (Full skull cranium mass from crown to jaw: radius 48px scaled)
+    player.headHitbox.x = skeleton.head.worldX + player.direction * (14 * headScale);
+    player.headHitbox.y = skeleton.head.worldY - (50 * headScale);
+    player.headHitbox.radius = Math.round(48 * headScale);
+
+    // Dedicated Forehead Strike Sweetspot (Forehead/brow header impact zone: radius 30px)
+    if (!player.foreheadHitbox) player.foreheadHitbox = { x: 0, y: 0, radius: 30 };
+    player.foreheadHitbox.x = skeleton.head.worldX + player.direction * (28 * headScale);
+    player.foreheadHitbox.y = skeleton.head.worldY - (58 * headScale);
+    player.foreheadHitbox.radius = Math.round(30 * headScale);
+
+    // Kick Foot Hitbox (Covers Cleat Instep, Sole & Extended Toe: radius 26px)
     const footTip = skeleton.footFront.getWorldTip();
     const footOffsetX = Math.abs(footTip.x - skeleton.root.x);
-    player.kickHitbox.x = player.x + player.direction * footOffsetX;
-    player.kickHitbox.y = footTip.y;
-    player.kickHitbox.radius = 18;
+    player.kickHitbox.x = player.x + player.direction * (footOffsetX + 4);
+    player.kickHitbox.y = footTip.y - 2;
+    player.kickHitbox.radius = 26;
 
-    // Head Hitbox (Forehead / Crown: radius 26px)
-    const headX = skeleton.head.worldX + player.direction * 12;
-    const headY = skeleton.head.worldY - 32;
-    player.headHitbox.x = headX;
-    player.headHitbox.y = headY;
-    player.headHitbox.radius = 26;
-
-    // Torso Hitbox (Chest / Body trap: radius 20px)
-    if (!player.torsoHitbox) player.torsoHitbox = { x: 0, y: 0, radius: 20 };
-    player.torsoHitbox.x = skeleton.torso.worldX;
-    player.torsoHitbox.y = skeleton.torso.worldY - 14;
-    player.torsoHitbox.radius = 20;
+    // Torso Hitbox (Chest / Body trap: radius 24px)
+    if (!player.torsoHitbox) player.torsoHitbox = { x: 0, y: 0, radius: 24 };
+    player.torsoHitbox.x = skeleton.torso.worldX + player.direction * 4;
+    player.torsoHitbox.y = skeleton.torso.worldY - 12;
+    player.torsoHitbox.radius = 24;
 
     const curAnim = player.animController.currentAnim;
     const isSpecialKick = ['bicycle_kick', 'rocket_kick', 'diving_header', 'scorpion_kick', 'smash_header'].includes(curAnim);
@@ -3477,13 +3506,49 @@ class CollisionSystem {
     // --- A. KICK FOOT COLLISION ---
     const distFoot = Math.hypot(ball.x - player.kickHitbox.x, ball.y - player.kickHitbox.y);
     if (distFoot < ball.radius + player.kickHitbox.radius) {
-      const isRivalSuper = ball.isSuper && ball.lastKickedBy === 'rival';
+      const isRivalSuper = (ball.isSuper && ball.lastKickedBy === 'rival') || ball.superType === 'laser';
       if (isRivalSuper) {
         if (isKicking || isJumping) {
-          // CLUTCH PARRY WITH ACTIVE KICK / CLEAT!
+          const isLaser = ball.superType === 'laser';
+          if (isLaser) {
+            // OPTION 1: REFLEJO PRISMATICO ON FOOT KICK!
+            ball.isSuper = true;
+            ball.superType = 'laser_reflected';
+            ball.superColors = ['#ffd700', '#ffffff', '#00f0ff'];
+            ball.lastKickedBy = 'player';
+            ball.vx = 1580;
+            ball.vy = -25;
+            powerSystem?.addPower(35);
+
+            if (this.superShots) {
+              const activeLaser = this.superShots.activeAbilities.find(a => a.type === 'laser');
+              if (activeLaser) {
+                activeLaser.dir = 1;
+                activeLaser.owner = 'player';
+                activeLaser.x = player.x;
+                activeLaser.colors = ['#ffd700', '#ffffff', '#00f0ff'];
+                activeLaser.isReflected = true;
+                activeLaser.hasHitOpponent = false;
+                activeLaser.hasSuperchargedBall = true;
+                activeLaser.life = 0.65;
+              }
+            }
+
+            this.soundManager.play('superPower');
+            this.soundManager.play('laser');
+            this.soundManager.playSubBassKick();
+            this.particleSystem.spawnSonicBoom(footTip.x, footTip.y, 1, '#ffd700');
+            this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#ffd700');
+            this.triggerShake(16);
+            this.triggerHitStop(0.09);
+            this.addFloatingText('🪞⚡ ¡REFLEJO PRISMÁTICO! ⚡🪞', player.x, player.y - 110, '#ffd700', 26);
+            return;
+          }
+
+          // Standard Super Parry
           ball.isSuper = false;
           ball.lastKickedBy = 'player';
-          ball.vx = 880; // Rocket counter-strike back towards rival!
+          ball.vx = 880;
           ball.vy = -260;
           powerSystem?.addPower(25);
           this.soundManager.playSubBassKick();
@@ -3495,12 +3560,19 @@ class CollisionSystem {
           return;
         } else {
           // UNGUARDED PLAYER STRUCK BY BLAST!
-          this.applyDamage(player, 25, ragdollSystem, -320, -360, true);
+          const isLaser = ball.superType === 'laser';
+          const stunDur = isLaser ? 2.6 : 0.65;
+          const dmg = isLaser ? 35 : 25;
+          this.applyDamage(player, dmg, ragdollSystem, -420, -380, true, stunDur);
           this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#ff3700');
           this.soundManager.play('superExplode');
+          this.soundManager.play('knockout');
           ball.isSuper = false;
-          ball.vx = Math.abs(ball.vx) * 0.35 + 80;
-          ball.vy = -Math.abs(ball.vy) * 0.5 - 120;
+          ball.superType = null;
+          // Ball collides with player, damages, and launches high into the air!
+          ball.vx = 380 + Math.random() * 100;
+          ball.vy = -720 - Math.random() * 120;
+          ball.spin = -14;
           return;
         }
       }
@@ -3653,8 +3725,12 @@ class CollisionSystem {
 
     // --- B. HEAD COLLISION (NEVER self-damages on headers) ---
     const distHead = Math.hypot(ball.x - player.headHitbox.x, ball.y - player.headHitbox.y);
-    if (distHead < ball.radius + player.headHitbox.radius) {
-      const isRivalSuper = ball.isSuper && ball.lastKickedBy === 'rival';
+    const distForehead = player.foreheadHitbox ? Math.hypot(ball.x - player.foreheadHitbox.x, ball.y - player.foreheadHitbox.y) : 999;
+    const isHeadHit = distHead < ball.radius + player.headHitbox.radius || (player.foreheadHitbox && distForehead < ball.radius + player.foreheadHitbox.radius);
+
+    if (isHeadHit) {
+      player.hitFlashTimer = 0.12;
+      const isRivalSuper = (ball.isSuper && ball.lastKickedBy === 'rival') || ball.superType === 'laser';
       const isViolentRivalShot = ball.lastKickedBy === 'rival' && ball.vx < -550;
 
       if (isRivalSuper) {
@@ -3663,26 +3739,68 @@ class CollisionSystem {
         const isKickAttempt = isKicking;
 
         if (isHeaderAttempt || isKickAttempt) {
-          // CLUTCH PARRY! Deflect super shot back with high skill!
-          ball.isSuper = false;
-          ball.lastKickedBy = 'player';
-          ball.vx = 820; // Powerful counter-strike back towards rival!
-          ball.vy = -240;
-          powerSystem?.addPower(25); // Reward player with +25% Super Meter!
-          this.soundManager.playSubBassKick();
-          this.particleSystem.spawnSonicBoom(player.headHitbox.x, player.headHitbox.y, 1, '#ffd700');
-          this.particleSystem.spawnSparks(ball.x, ball.y, 35, '#00ffff');
-          this.triggerShake(14);
-          this.triggerHitStop(0.065); // 65ms dramatic hitstop!
-          this.addFloatingText('⚡ ¡PARRY PERFECTO! 🛡️', player.x, player.y - 100, '#00f0ff', 24);
+          const isLaser = ball.superType === 'laser';
+          if (isLaser) {
+            // OPTION 1: REFLEJO PRISMATICO ON FOREHEAD HEADER!
+            ball.isSuper = true;
+            ball.superType = 'laser_reflected';
+            ball.superColors = ['#ffd700', '#ffffff', '#00f0ff'];
+            ball.lastKickedBy = 'player';
+            ball.vx = 1580;
+            ball.vy = -25;
+            powerSystem?.addPower(35);
+
+            if (this.superShots) {
+              const activeLaser = this.superShots.activeAbilities.find(a => a.type === 'laser');
+              if (activeLaser) {
+                activeLaser.dir = 1;
+                activeLaser.owner = 'player';
+                activeLaser.x = player.x;
+                activeLaser.colors = ['#ffd700', '#ffffff', '#00f0ff'];
+                activeLaser.isReflected = true;
+                activeLaser.hasHitOpponent = false;
+                activeLaser.hasSuperchargedBall = true;
+                activeLaser.life = 0.65;
+              }
+            }
+
+            this.soundManager.play('superPower');
+            this.soundManager.play('laser');
+            this.soundManager.playSubBassKick();
+            this.particleSystem.spawnSonicBoom(player.headHitbox.x, player.headHitbox.y, 1, '#ffd700');
+            this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#ffd700');
+            this.triggerShake(16);
+            this.triggerHitStop(0.09);
+            this.addFloatingText('🪞⚡ ¡REFLEJO PRISMÁTICO! ⚡🪞', player.x, player.y - 110, '#ffd700', 26);
+          } else {
+            // Standard Super Parry
+            ball.isSuper = false;
+            ball.lastKickedBy = 'player';
+            ball.vx = 820;
+            ball.vy = -240;
+            powerSystem?.addPower(25);
+            this.soundManager.playSubBassKick();
+            this.particleSystem.spawnSonicBoom(player.headHitbox.x, player.headHitbox.y, 1, '#ffd700');
+            this.particleSystem.spawnSparks(ball.x, ball.y, 35, '#00ffff');
+            this.triggerShake(14);
+            this.triggerHitStop(0.065);
+            this.addFloatingText('⚡ ¡PARRY PERFECTO! 🛡️', player.x, player.y - 100, '#00f0ff', 24);
+          }
         } else {
           // RIVAL ULTI BLAST HITS UNGUARDED PLAYER!
-          this.applyDamage(player, 25, ragdollSystem, -320, -360, true);
+          const isLaser = ball.superType === 'laser';
+          const stunDur = isLaser ? 2.6 : 0.65;
+          const dmg = isLaser ? 35 : 25;
+          this.applyDamage(player, dmg, ragdollSystem, -420, -380, true, stunDur);
           this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#ff3700');
           this.soundManager.play('superExplode');
+          this.soundManager.play('knockout');
           ball.isSuper = false;
-          ball.vx = Math.abs(ball.vx) * 0.35 + 80;
-          ball.vy = -Math.abs(ball.vy) * 0.5 - 120;
+          ball.superType = null;
+          // Ball collides with player, damages, and launches high into the air!
+          ball.vx = 380 + Math.random() * 100;
+          ball.vy = -720 - Math.random() * 120;
+          ball.spin = -14;
         }
       } else if (isViolentRivalShot) {
         // FAST RIVAL SHOT DEFLECTED BY FOREHEAD — REWARDING SOCCER BLOCK, NO DAMAGE, NO STUN!
@@ -5261,9 +5379,11 @@ class RivalBot {
     this.hp = 100;
     this.maxHp = 100;
     this.power = 30; // Starts with partial super gauge
-    this.kickHitbox = { x: 0, y: 0, radius: 18 };
-    this.headHitbox = { x: 0, y: 0, radius: 26 };
-    this.torsoHitbox = { x: 0, y: 0, radius: 20 };
+    this.kickHitbox = { x: 0, y: 0, radius: 26 };
+    this.headHitbox = { x: 0, y: 0, radius: 48 };
+    this.foreheadHitbox = { x: 0, y: 0, radius: 30 };
+    this.torsoHitbox = { x: 0, y: 0, radius: 24 };
+    this.hitFlashTimer = 0;
     this.isFrozen = false;
     this.freezeTimer = 0;
     this.hasShield = false;
@@ -5567,6 +5687,7 @@ class RivalBot {
     if (this.kickCooldown > 0) this.kickCooldown -= dt;
     if (this.tackleCooldown > 0) this.tackleCooldown -= dt;
     if (this.jumpCooldown > 0) this.jumpCooldown -= dt;
+    if (this.hitFlashTimer > 0) this.hitFlashTimer = Math.max(0, this.hitFlashTimer - dt);
 
     // Freeze recovery
     if (this.isFrozen) {
@@ -5692,17 +5813,27 @@ class RivalBot {
         this.canDoubleJump = true;
       }
 
-      // Hitboxes updates
+      // Hitboxes updates (Anatomically calibrated for Chibi 1.25x caricature proportion)
+      const headScale = (this.userHeadScale || 1.0) * (this.giantHeadMultiplier || 1.0) * 1.25;
       const footTip = this.skeleton.footFront.getWorldTip();
       const footOffsetX = Math.abs(footTip.x - this.skeleton.root.x);
-      this.kickHitbox.x = this.x + this.direction * footOffsetX;
-      this.kickHitbox.y = footTip.y;
+      this.kickHitbox.x = this.x + this.direction * (footOffsetX + 4);
+      this.kickHitbox.y = footTip.y - 2;
+      this.kickHitbox.radius = 26;
 
-      this.headHitbox.x = this.skeleton.head.worldX + this.direction * 12;
-      this.headHitbox.y = this.skeleton.head.worldY - 32;
+      this.headHitbox.x = this.skeleton.head.worldX + this.direction * (14 * headScale);
+      this.headHitbox.y = this.skeleton.head.worldY - (50 * headScale);
+      this.headHitbox.radius = Math.round(48 * headScale);
 
-      this.torsoHitbox.x = this.skeleton.torso.worldX;
-      this.torsoHitbox.y = this.skeleton.torso.worldY - 14;
+      if (!this.foreheadHitbox) this.foreheadHitbox = { x: 0, y: 0, radius: 30 };
+      this.foreheadHitbox.x = this.skeleton.head.worldX + this.direction * (28 * headScale);
+      this.foreheadHitbox.y = this.skeleton.head.worldY - (58 * headScale);
+      this.foreheadHitbox.radius = Math.round(30 * headScale);
+
+      if (!this.torsoHitbox) this.torsoHitbox = { x: 0, y: 0, radius: 24 };
+      this.torsoHitbox.x = this.skeleton.torso.worldX + this.direction * 4;
+      this.torsoHitbox.y = this.skeleton.torso.worldY - 12;
+      this.torsoHitbox.radius = 24;
 
       // Continuous collision check if kick animation is active
       const curAnim = this.animController.currentAnim;
@@ -5712,12 +5843,33 @@ class RivalBot {
         this.performHitCheck(ball, player, collisionSystem);
       }
 
-      // Header collision check
+      // Header collision check (Forehead sweetspot + Cranium mass)
       const distHeadBall = Math.hypot(ball.x - this.headHitbox.x, ball.y - this.headHitbox.y);
-      if (this.kickCooldown <= 0 && distHeadBall < ball.radius + this.headHitbox.radius) {
+      const distForeheadBall = this.foreheadHitbox ? Math.hypot(ball.x - this.foreheadHitbox.x, ball.y - this.foreheadHitbox.y) : 999;
+      const isHeadHit = distHeadBall < ball.radius + this.headHitbox.radius || (this.foreheadHitbox && distForeheadBall < ball.radius + this.foreheadHitbox.radius);
+      if (this.kickCooldown <= 0 && isHeadHit) {
+        this.hitFlashTimer = 0.12;
         this.kickCooldown = 0.22;
         const powerMult = (this.character?.stats?.power || 1.0) * (this.activePowerMultiplier || 1.0);
         const dir = this.direction;
+
+        const isLaser = (ball.superType === 'laser' || ball.superType === 'laser_reflected') && ball.lastKickedBy === 'player';
+        if (isLaser && (!this.isGrounded || curAnim === 'smash_header' || isOneShotKick)) {
+          // OPTION 1: P2 REFLEJO PRISMATICO!
+          ball.isSuper = true;
+          ball.superType = 'laser_reflected';
+          ball.superColors = ['#ffd700', '#ffffff', '#00f0ff'];
+          ball.lastKickedBy = 'rival';
+          ball.kick(dir * 1580, -25, true, 'rival');
+          this.particleSystem.spawnSonicBoom(this.headHitbox.x, this.headHitbox.y, dir, '#ffd700');
+          this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#ffd700');
+          this.soundManager.play('superPower');
+          this.soundManager.play('laser');
+          collisionSystem?.triggerHitStop(0.09);
+          collisionSystem?.triggerShake(16);
+          collisionSystem?.addFloatingText('🪞⚡ ¡REFLEJO P2! ⚡🪞', this.x, this.y - 110, '#ffd700', 26);
+          return;
+        }
 
         if (!this.isGrounded && curAnim === 'smash_header') {
           ball.kick(dir * (880 + Math.random() * 60) * powerMult, 360 * powerMult, false, 'rival', 'smash', dir * 2.6);
@@ -5828,15 +5980,17 @@ class RivalBot {
       this.vy = 0;
     }
 
-    // 2. Kicking Strike Logic
+    // 2. Kicking Strike Logic (Anatomically calibrated)
     const footTip = this.skeleton.footFront.getWorldTip();
     const footOffsetX = Math.abs(footTip.x - this.skeleton.root.x);
-    this.kickHitbox.x = this.x + this.direction * footOffsetX;
-    this.kickHitbox.y = footTip.y;
+    this.kickHitbox.x = this.x + this.direction * (footOffsetX + 4);
+    this.kickHitbox.y = footTip.y - 2;
+    this.kickHitbox.radius = 26;
 
-    if (!this.torsoHitbox) this.torsoHitbox = { x: 0, y: 0, radius: 20 };
-    this.torsoHitbox.x = this.skeleton.torso.worldX;
-    this.torsoHitbox.y = this.skeleton.torso.worldY - 14;
+    if (!this.torsoHitbox) this.torsoHitbox = { x: 0, y: 0, radius: 24 };
+    this.torsoHitbox.x = this.skeleton.torso.worldX + this.direction * 4;
+    this.torsoHitbox.y = this.skeleton.torso.worldY - 12;
+    this.torsoHitbox.radius = 24;
 
     // Remote / Ranged Super Ability cast:
     // If RivalBot has full power (100) and ball is in attacking half, unleash special ability with telegraph!
@@ -5918,14 +6072,42 @@ class RivalBot {
       }
     }
 
-    // 3. Header Strike Logic for Rival
-    this.headHitbox.x = this.skeleton.head.worldX + this.direction * 12;
-    this.headHitbox.y = this.skeleton.head.worldY - 32;
+    // 3. Header Strike Logic for Rival (Anatomically calibrated for Chibi proportion)
+    const headScale = (this.userHeadScale || 1.0) * (this.giantHeadMultiplier || 1.0) * 1.25;
+    this.headHitbox.x = this.skeleton.head.worldX + this.direction * (14 * headScale);
+    this.headHitbox.y = this.skeleton.head.worldY - (50 * headScale);
+    this.headHitbox.radius = Math.round(48 * headScale);
+
+    if (!this.foreheadHitbox) this.foreheadHitbox = { x: 0, y: 0, radius: 30 };
+    this.foreheadHitbox.x = this.skeleton.head.worldX + this.direction * (28 * headScale);
+    this.foreheadHitbox.y = this.skeleton.head.worldY - (58 * headScale);
+    this.foreheadHitbox.radius = Math.round(30 * headScale);
 
     const distHeadBall = Math.hypot(ball.x - this.headHitbox.x, ball.y - this.headHitbox.y);
-    if (this.kickCooldown <= 0 && distHeadBall < ball.radius + this.headHitbox.radius) {
+    const distForeheadBall = this.foreheadHitbox ? Math.hypot(ball.x - this.foreheadHitbox.x, ball.y - this.foreheadHitbox.y) : 999;
+    const isHeadHit = distHeadBall < ball.radius + this.headHitbox.radius || (this.foreheadHitbox && distForeheadBall < ball.radius + this.foreheadHitbox.radius);
+    if (this.kickCooldown <= 0 && isHeadHit) {
+      this.hitFlashTimer = 0.12;
       this.kickCooldown = 0.32;
       const powerMult = this.character?.stats?.power || 1.0;
+      const isLaser = (ball.superType === 'laser' || ball.superType === 'laser_reflected') && ball.lastKickedBy === 'player';
+      if (isLaser && (!this.isGrounded || curAnim === 'smash_header' || Math.random() < 0.65)) {
+        // OPTION 1: AI REFLEJO PRISMATICO!
+        ball.isSuper = true;
+        ball.superType = 'laser_reflected';
+        ball.superColors = ['#ffd700', '#ffffff', '#00f0ff'];
+        ball.lastKickedBy = 'rival';
+        ball.kick(-1580, -25, true, 'rival');
+        this.particleSystem.spawnSonicBoom(this.headHitbox.x, this.headHitbox.y, -1, '#ffd700');
+        this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#ffd700');
+        this.soundManager.play('superPower');
+        this.soundManager.play('laser');
+        collisionSystem?.triggerHitStop(0.09);
+        collisionSystem?.triggerShake(16);
+        collisionSystem?.addFloatingText('🪞⚡ ¡REFLEJO RIVAL! ⚡🪞', this.x, this.y - 110, '#ffd700', 26);
+        return;
+      }
+
       if (!this.isGrounded && ball.y > this.y - 45) {
         this.animController.play('smash_header');
         ball.kick((-820 - Math.random() * 80) * powerMult, 320 * powerMult, false, 'rival', 'smash');
@@ -5971,6 +6153,7 @@ class RivalBot {
     this.skeleton.setPosition(this.x, this.y);
     this.skeleton.setFacing(this.direction);
     this.animController.setLookTarget(ball.x, ball.y);
+    this.animController.setVelocity(this.vx, this.vy);
     const animState = this.animController.update(dt);
 
     if (animState.aura || cur === 'super_shot') {
@@ -5981,7 +6164,7 @@ class RivalBot {
     return animState;
   }
 
-  takeDamage(amount, impulseX = 320, impulseY = -380, isHeavyBlast = false) {
+  takeDamage(amount, impulseX = 320, impulseY = -380, isHeavyBlast = false, customStunTimer = null) {
     if (this.hasShield) {
       this.soundManager.play('bounce');
       this.particleSystem.spawnSparks(this.x, this.y - 60, 20, '#ffd700');
@@ -5996,7 +6179,7 @@ class RivalBot {
     const isGuardBroken = this.hp <= 15 && amount >= 25;
     if (isHeavyBlast || isGuardBroken) {
       this.isStunned = true;
-      this.stunTimer = 0.65; // Snappy 0.65s recovery
+      this.stunTimer = customStunTimer != null ? customStunTimer : 0.65;
       this.animController.play('stun');
       this.soundManager.play('knockout');
     } else {
@@ -6056,7 +6239,7 @@ class SuperShots {
       case 'laser': {
         this.soundManager.play('laser');
         this.cameraFx?.shake(10);
-        this.activeAbilities.push({
+        const newAbility = {
           type: 'laser',
           owner,
           x: caster ? caster.x : (dir > 0 ? 100 : 900),
@@ -6064,8 +6247,20 @@ class SuperShots {
           dir,
           life: 0.65,
           maxLife: 0.65,
+          hasSuperchargedBall: false,
+          hasHitOpponent: false,
+          isReflected: false,
           colors: ['#00f0ff', '#ffffff', '#ff0055']
-        });
+        };
+
+        // Opción 3: Si ya hay un poder activo del rival en el campo -> ¡CHOQUE DE PODERES INSTANTÁNEO!
+        const opposingAbility = this.activeAbilities.find(ab => ab.owner !== owner);
+        if (opposingAbility) {
+          this.triggerBeamClash(1200, 520, ball, resolvedTargets.player, resolvedTargets.rivalBot, null, newAbility, opposingAbility);
+          return;
+        }
+
+        this.activeAbilities.push(newAbility);
         break;
       }
 
@@ -6391,30 +6586,76 @@ class SuperShots {
         // --- LASER BEAM ---
         case 'laser': {
           // Particle sparks along beam
-          this.particleSystem.spawnSparks(a.x + dir * Math.random() * (stageWidth * 0.8), a.y + (Math.random() - 0.5) * 20, 2, '#00f0ff');
+          this.particleSystem.spawnSparks(a.x + dir * Math.random() * (stageWidth * 0.8), a.y + (Math.random() - 0.5) * 20, 2, a.isReflected ? '#ffd700' : '#00f0ff');
 
-          // Check Ball intersection
-          const inRayX = (dir > 0 && ball.x > a.x) || (dir < 0 && ball.x < a.x);
-          const inRayY = Math.abs(ball.y - a.y) < 42;
-          if (inRayX && inRayY) {
-            ball.kick(dir * 1420, -15, true, a.owner);
-            ball.superType = 'laser';
-            ball.superColors = a.colors;
-            this.soundManager.play('superExplode');
-            this.cameraFx?.shake(10);
-            this.particleSystem.spawnSparks(ball.x, ball.y, 25, '#00f0ff');
-            collisionSystem?.addFloatingText('⚡ ¡SUPERCARGA LÁSER! 🤖', ball.x, ball.y - 70, '#00f0ff', 20);
+          // 1. BEAM CLASH CHECK (Opción 3: choque de poderes con otra habilidad activa opuesta)
+          for (let j = this.activeAbilities.length - 1; j >= 0; j--) {
+            if (j === i) continue;
+            const other = this.activeAbilities[j];
+            if (other && other.owner !== a.owner) {
+              const clashDist = Math.abs(a.x - other.x);
+              const clashY = Math.abs(a.y - (other.y || groundY - 100));
+              if (clashDist < stageWidth && clashY < 120) {
+                this.triggerBeamClash(stageWidth, groundY, ball, player, rivalBot, collisionSystem, a, other);
+                return;
+              }
+            }
           }
 
-          // Check Opponent intersection
+          // 2. Check Ball intersection (Only supercharge once so it never gets stuck or dragged!)
+          const inRayX = (dir > 0 && ball.x >= a.x - 20) || (dir < 0 && ball.x <= a.x + 20);
+          const inRayY = Math.abs(ball.y - a.y) < 55;
+          if (!a.hasSuperchargedBall && inRayX && inRayY) {
+            a.hasSuperchargedBall = true;
+            ball.kick(dir * 1480, -22, true, a.owner);
+            ball.superType = a.isReflected ? 'laser_reflected' : 'laser';
+            ball.superColors = a.colors;
+            this.soundManager.play('superExplode');
+            this.soundManager.play('laser');
+            this.cameraFx?.shake(12);
+            this.particleSystem.spawnSonicBoom(ball.x, ball.y, dir, a.isReflected ? '#ffd700' : '#00f0ff');
+            this.particleSystem.spawnSparks(ball.x, ball.y, 35, a.isReflected ? '#ffd700' : '#00f0ff');
+            collisionSystem?.addFloatingText(a.isReflected ? '🪞⚡ ¡LÁSER REFLEJADO! ⚡' : '⚡ ¡SUPERCARGA LÁSER! 🤖', ball.x, ball.y - 70, a.isReflected ? '#ffd700' : '#00f0ff', 22);
+          }
+
+          // 3. Check Opponent intersection (Damage + Stun largo 2.6s + Balón rebota y sale volando)
           if (opponent && !a.hasHitOpponent) {
             const oppInX = (dir > 0 && opponent.x > a.x) || (dir < 0 && opponent.x < a.x);
-            const oppInY = Math.abs((opponent.y - 45) - a.y) < 55;
-            if (oppInX && oppInY) {
+            const oppInY = Math.abs((opponent.y - 45) - a.y) < 60;
+            const distBallOpp = Math.hypot(ball.x - opponent.x, ball.y - (opponent.y - 45));
+
+            if (oppInX && oppInY && (distBallOpp < 90 || a.life < 0.40)) {
               a.hasHitOpponent = true;
-              opponent.takeDamage ? opponent.takeDamage(30, dir * 320, -280, true) : collisionSystem?.applyDamage(player, 30, null, dir * 320, -280, true);
-              this.particleSystem.spawnSparks(opponent.x, opponent.y - 45, 30, '#00f0ff');
-              collisionSystem?.addFloatingText('⚡ ¡IMPACTO LÁSER!', opponent.x, opponent.y - 90, '#00f0ff', 22);
+              a.life = Math.min(a.life, 0.08); // Beam finishes and dissipates
+
+              const stunDuration = 2.6; // Stun largo como pidió el usuario!
+              const dmg = a.isReflected ? 38 : 35;
+              if (opponent.takeDamage) {
+                opponent.takeDamage(dmg, dir * 420, -380, true, stunDuration);
+              } else if (collisionSystem) {
+                collisionSystem.applyDamage(player, dmg, null, dir * 420, -380, true, stunDuration);
+              }
+
+              // BALL COLLISION & REBOUND:
+              // "choque con el rival, le haga daño y salga volando la pelota"
+              ball.isSuper = false;
+              ball.superType = null;
+              ball.vx = -dir * (380 + Math.random() * 120); // Rebounds backwards
+              ball.vy = -720 - Math.random() * 140; // Launches high into the air!
+              ball.spin = -dir * 18;
+
+              this.soundManager.play('superExplode');
+              this.soundManager.play('knockout');
+              this.soundManager.playSubBassKick();
+              this.cameraFx?.shake(18);
+              this.cameraFx?.flash('#00f0ff');
+              collisionSystem?.triggerHitStop(0.08);
+              this.particleSystem.spawnSonicBoom(opponent.x, opponent.y - 45, -dir, '#00f0ff');
+              this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#00ffff');
+              this.particleSystem.spawnTurfSpray(opponent.x, groundY, -dir, 20);
+
+              collisionSystem?.addFloatingText(`💥 ¡IMPACTO DEMOLEDOR! (-${dmg} HP)`, opponent.x, opponent.y - 95, '#00f0ff', 24);
+              collisionSystem?.addFloatingText('😵 ¡STUN CRÍTICO! (2.6s)', opponent.x, opponent.y - 68, '#ffd700', 18);
             }
           }
           break;
@@ -6764,6 +7005,51 @@ class SuperShots {
     }
   }
 
+  triggerBeamClash(stageWidth, groundY, ball, player, rivalBot, collisionSystem, a1, a2) {
+    const clashX = (a1.x + a2.x) * 0.5 || stageWidth * 0.5;
+    const clashY = groundY - 110;
+
+    const idx1 = this.activeAbilities.indexOf(a1);
+    if (idx1 !== -1) this.activeAbilities.splice(idx1, 1);
+    const idx2 = this.activeAbilities.indexOf(a2);
+    if (idx2 !== -1) this.activeAbilities.splice(idx2, 1);
+
+    // Ball blasted skyward into the stratosphere!
+    ball.x = clashX;
+    ball.y = clashY;
+    ball.vx = (Math.random() - 0.5) * 160;
+    ball.vy = -980; // Launches vertically skyward!
+    ball.spin = 24;
+    ball.isSuper = false;
+    ball.superType = null;
+
+    if (player) {
+      player.x = Math.max(130, player.x - 70 * (player.direction || 1));
+      collisionSystem?.applyDamage(player, 15, null, -200, -180, true, 1.2);
+    }
+    if (rivalBot) {
+      rivalBot.x = Math.min(stageWidth - 130, rivalBot.x - 70 * (rivalBot.direction || -1));
+      rivalBot.takeDamage?.(15, 200, -180, true, 1.2);
+    }
+
+    this.soundManager.play('superExplode');
+    this.soundManager.play('chargedBlast');
+    this.soundManager.playSubBassKick();
+    this.cameraFx?.shake(24);
+    this.cameraFx?.flash('#ffffff');
+    collisionSystem?.triggerHitStop(0.12);
+
+    this.particleSystem.spawnSonicBoom(clashX, clashY, 1, '#ffd700');
+    this.particleSystem.spawnSonicBoom(clashX, clashY, -1, '#00f0ff');
+    this.particleSystem.spawnSparks(clashX, clashY, 60, '#ffd700');
+    this.particleSystem.spawnSparks(clashX, clashY, 60, '#00f0ff');
+    this.particleSystem.spawnTurfSpray(clashX, groundY, 1, 25);
+    this.particleSystem.spawnTurfSpray(clashX, groundY, -1, 25);
+
+    collisionSystem?.addFloatingText('💥⚔️ ¡CHOQUE DE PODERES! ⚔️💥', clashX, clashY - 60, '#ffd700', 28);
+    collisionSystem?.addFloatingText('⚡ ¡ENERGÍA SOBRECARGADA! ⚡', clashX, clashY - 25, '#00ffff', 20);
+  }
+
   /**
    * Renders all active special abilities onto the canvas with rich procedural aesthetics.
    */
@@ -6778,11 +7064,12 @@ class SuperShots {
           ctx.globalAlpha = alpha;
           const beamLen = stageWidth + 100;
           const startX = a.dir > 0 ? a.x : a.x - beamLen;
+          const isReflected = !!a.isReflected;
 
           // Outer plasma glow
-          ctx.shadowColor = '#00f0ff';
+          ctx.shadowColor = isReflected ? '#ffd700' : '#00f0ff';
           ctx.shadowBlur = 40;
-          ctx.fillStyle = 'rgba(0, 240, 255, 0.45)';
+          ctx.fillStyle = isReflected ? 'rgba(255, 215, 0, 0.45)' : 'rgba(0, 240, 255, 0.45)';
           ctx.fillRect(startX, a.y - 20, beamLen, 40);
 
           // Inner laser core
@@ -6791,7 +7078,7 @@ class SuperShots {
           ctx.fillRect(startX, a.y - 7, beamLen, 14);
 
           // Digital laser scanlines
-          ctx.strokeStyle = 'rgba(255, 0, 85, 0.7)';
+          ctx.strokeStyle = isReflected ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 0, 85, 0.7)';
           ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.moveTo(startX, a.y - 12);
@@ -7331,18 +7618,25 @@ class CharacterRenderer {
     }
 
     if (showSkin) {
-      this.drawBoot(ctx, skeleton.footBack, false);
-      this.drawLeg(ctx, skeleton.legBack, false, kit);
-      this.drawArm(ctx, skeleton.armBack, false, kit);
-      this.drawJersey(ctx, skeleton.torso, kit, character, facing);
-      this.drawLeg(ctx, skeleton.legFront, true, kit);
-      this.drawBoot(ctx, skeleton.footFront, true);
-      this.drawArm(ctx, skeleton.armFront, true, kit);
+      this.drawBoot(ctx, skeleton.footBack, false, options);
+      this.drawLeg(ctx, skeleton.legBack, false, kit, character, options);
+      this.drawArm(ctx, skeleton.armBack, false, kit, character, options);
+      this.drawJersey(ctx, skeleton.torso, kit, character, facing, options);
+      this.drawNeck(ctx, skeleton.torso, skeleton.head, kit, character, options);
+      this.drawLeg(ctx, skeleton.legFront, true, kit, character, options);
+      this.drawBoot(ctx, skeleton.footFront, true, options);
+      this.drawArm(ctx, skeleton.armFront, true, kit, character, options);
       if (animState?.face === 'strain' || animState?.face === 'power' || animState?.face === 'dragon') {
         this.drawKickSwoosh(ctx, skeleton.footFront, character);
       }
     }
-    this.drawHead(ctx, skeleton.head, animState, headScale, showSkin, showMesh, character, options.hp);
+    this.drawHead(ctx, skeleton.head, animState, headScale, showSkin, showMesh, character, {
+      ...options,
+      headWorldX: skeleton.head.worldX,
+      headWorldY: skeleton.head.worldY,
+      torsoWorldX: skeleton.torso.worldX,
+      torsoWorldY: skeleton.torso.worldY
+    });
 
     ctx.restore();
   }
@@ -7485,7 +7779,7 @@ class CharacterRenderer {
     ctx.restore();
   }
 
-  drawJersey(ctx, bone, kit, character, facing) {
+  drawJersey(ctx, bone, kit, character, facing, options = {}) {
     const torsoImg = this.assetLoader.get('torso');
     if (!this.isReady(torsoImg)) return;
 
@@ -7493,6 +7787,15 @@ class CharacterRenderer {
     ctx.translate(bone.worldX, bone.worldY);
     // Torso bone points upward (-90°); +90° compensation aligns sprite upright
     ctx.rotate((bone.worldRotation + 90) * Math.PI / 180);
+
+    // Dynamic Athletic Breathing Cycle (Natural chest rise & fall)
+    const time = performance.now() * 0.0035;
+    const isExerted = options.currentAnim === 'run' || options.isDashing || !options.isGrounded;
+    const breathRate = isExerted ? 6.5 : 3.2;
+    const breathAmount = isExerted ? 0.045 : 0.026;
+    const breathe = Math.sin(time * breathRate) * breathAmount;
+    ctx.scale(1.0 + breathe * 0.5, 1.0 + breathe);
+
     if (kit && kit !== 'none') ctx.filter = kit;
 
     // Torso calibrated to 2:1 Chibi bobblehead proportion (width 64)
@@ -7503,21 +7806,62 @@ class CharacterRenderer {
     // Pivot centered on chest, neck collar sits right under head chin
     ctx.drawImage(torsoImg, -w * 0.50, -h * 0.36, w, h);
 
-    // Reset filter for layered uniform detailing (number)
+    // Reset filter for layered uniform detailing
     ctx.filter = 'none';
+
+    // Athletic Fabric Highlights & Ribcage Depth
+    const chestGrad = ctx.createRadialGradient(0, -h * 0.06, 4, 0, -h * 0.06, 22);
+    chestGrad.addColorStop(0, 'rgba(255, 255, 255, 0.16)');
+    chestGrad.addColorStop(0.7, 'rgba(255, 255, 255, 0.04)');
+    chestGrad.addColorStop(1, 'rgba(0, 0, 0, 0.12)');
+    ctx.fillStyle = chestGrad;
+    ctx.beginPath();
+    ctx.ellipse(0, -h * 0.06, 22, 14, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 3D Ribbed V-Neck / Crew Collar Front Rim
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2.0;
+    ctx.beginPath();
+    ctx.ellipse(0, -h * 0.34, 15, 5, 0, 0, Math.PI);
+    ctx.stroke();
+
+    // Team Championship Crest Badge on right chest
+    ctx.save();
+    ctx.translate(w * 0.22, -h * 0.14);
+    if (facing < 0) ctx.scale(-1, 1);
+    ctx.fillStyle = '#ffd700';
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, -5);
+    ctx.lineTo(4, -2);
+    ctx.lineTo(4, 3);
+    ctx.lineTo(0, 6);
+    ctx.lineTo(-4, 3);
+    ctx.lineTo(-4, -2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // Star glint on crest
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(0, -1, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
 
     // Detailed Team Number badge on jersey chest (NEVER mirrored backwards)
     const num = (character?.id === 'kenta' || !character) ? '10' : (character?.id === 'luchador' ? '7' : (character?.number || '9'));
     ctx.save();
-    ctx.translate(0, -h * 0.04);
+    ctx.translate(0, -h * 0.02);
     if (facing < 0) {
       ctx.scale(-1, 1); // Un-mirror so number is never backwards
     }
-    ctx.font = '900 12px "Outfit", sans-serif';
+    ctx.font = '900 13px "Outfit", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.strokeStyle = '#0f172a';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.2;
     ctx.strokeText(num, 0, 0);
     ctx.fillStyle = '#ffffff';
     ctx.fillText(num, 0, 0);
@@ -7526,7 +7870,185 @@ class CharacterRenderer {
     ctx.restore();
   }
 
-  drawArm(ctx, bone, isFront, kit) {
+  drawNeck(ctx, torsoBone, headBone, kit, character, options = {}) {
+    if (!headBone || !torsoBone) return;
+
+    ctx.save();
+    // Anchor directly at head bone pivot (chin/jaw base)
+    ctx.translate(headBone.worldX, headBone.worldY);
+    ctx.rotate((torsoBone.worldRotation + 90) * Math.PI / 180);
+
+    const time = performance.now() * 0.003;
+    const breathe = Math.sin(time * 3.4) * 0.03;
+
+    // Muscular neck geometry linking chin down into collar
+    // Local coords: (0,0) is base of head bone. Chin extends down to ~12-14px. Torso collar is at ~22-26px.
+    const neckTopW = 24;
+    const neckBottomW = 32 * (1.0 + breathe * 0.4);
+    const neckTopY = 2;
+    const neckBottomY = 24;
+
+    // Character-specific anatomical neck skin & collar design
+    const id = character?.id || 'kenta';
+    let skinBase = '#fed7aa'; // Anime warm peach skin
+    let skinShadow = '#ea580c';
+    let collarAccent = '#ffffff';
+
+    switch (id) {
+      case 'kenta':
+        skinBase = '#ffedd5';
+        skinShadow = '#ea580c';
+        collarAccent = '#ffffff';
+        break;
+      case 'luchador':
+        skinBase = '#16a34a'; // Emerald lucha cowl
+        skinShadow = '#14532d';
+        collarAccent = '#facc15';
+        break;
+      case 'viking':
+        skinBase = '#fef08a';
+        skinShadow = '#b45309';
+        collarAccent = '#94a3b8';
+        break;
+      case 'samba':
+        skinBase = '#f59e0b';
+        skinShadow = '#92400e';
+        collarAccent = '#00e676';
+        break;
+      case 'ninja':
+        skinBase = '#0f172a'; // Full dark ninja cowl
+        skinShadow = '#020617';
+        collarAccent = '#7c3aed';
+        break;
+      case 'cyborg':
+        skinBase = '#334155'; // Dark titanium chassis
+        skinShadow = '#0f172a';
+        collarAccent = '#00f0ff';
+        break;
+      case 'frost':
+        skinBase = '#e0f2fe';
+        skinShadow = '#0284c7';
+        collarAccent = '#00ffff';
+        break;
+      case 'knight':
+        skinBase = '#94a3b8'; // Steel gorget armor
+        skinShadow = '#475569';
+        collarAccent = '#ffd700';
+        break;
+      case 'anubis':
+        skinBase = '#09090b'; // Jet black jackal neck
+        skinShadow = '#000000';
+        collarAccent = '#eab308';
+        break;
+      case 'alien':
+        skinBase = '#c084fc';
+        skinShadow = '#581c87';
+        collarAccent = '#22d3ee';
+        break;
+      case 'phoenix':
+        skinBase = '#fb923c';
+        skinShadow = '#9a3412';
+        collarAccent = '#ffd700';
+        break;
+      case 'titan':
+        skinBase = '#292524'; // Volcanic basalt rock
+        skinShadow = '#1c1917';
+        collarAccent = '#f97316';
+        break;
+    }
+
+    // 1. Shaded Muscular Neck Column
+    const neckGrad = ctx.createLinearGradient(-neckBottomW * 0.5, neckTopY, neckBottomW * 0.5, neckBottomY);
+    neckGrad.addColorStop(0, skinShadow);
+    neckGrad.addColorStop(0.35, skinBase);
+    neckGrad.addColorStop(0.7, skinBase);
+    neckGrad.addColorStop(1, skinShadow);
+
+    ctx.fillStyle = neckGrad;
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 1.6;
+
+    ctx.beginPath();
+    ctx.moveTo(-neckTopW * 0.5, neckTopY);
+    ctx.lineTo(neckTopW * 0.5, neckTopY);
+    ctx.lineTo(neckBottomW * 0.5, neckBottomY);
+    ctx.lineTo(-neckBottomW * 0.5, neckBottomY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Sternocleidomastoid Tendon / Throat Depth Line
+    if (id !== 'ninja' && id !== 'cyborg') {
+      ctx.strokeStyle = skinShadow;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(-4, neckTopY + 2);
+      ctx.lineTo(-5, neckBottomY - 4);
+      ctx.moveTo(4, neckTopY + 2);
+      ctx.lineTo(5, neckBottomY - 4);
+      ctx.stroke();
+    }
+
+    // Special Cyborg Hydraulic Piston Neck Core
+    if (id === 'cyborg') {
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(-6, neckTopY, 12, neckBottomY - neckTopY);
+      // Glowing Cyan Plasma Power Conduit
+      ctx.fillStyle = '#00f0ff';
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 8;
+      ctx.fillRect(-2, neckTopY + 2, 4, neckBottomY - neckTopY - 4);
+      ctx.shadowBlur = 0;
+    }
+
+    // Special Anubis Golden Pharaonic Collar (Usekh)
+    if (id === 'anubis') {
+      ctx.fillStyle = '#ffd700';
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(0, neckBottomY - 4, 15, Math.PI, 0, true);
+      ctx.fill();
+      ctx.stroke();
+      // Turquoise jewel insets
+      ctx.fillStyle = '#06b6d4';
+      ctx.fillRect(-8, neckBottomY - 7, 3, 3);
+      ctx.fillRect(5, neckBottomY - 7, 3, 3);
+    }
+
+    // 2. Ribbed Jersey Collar Socket (Wraps base of neck)
+    ctx.fillStyle = collarAccent;
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.ellipse(0, neckBottomY - 2, neckBottomW * 0.52, 5.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Dark collar inner recess
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
+    ctx.beginPath();
+    ctx.ellipse(0, neckBottomY - 3, neckBottomW * 0.42, 3.0, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 3. Organic Ambient Occlusion Shadow Cast by the Massive Chibi Jaw
+    const chinShadow = ctx.createLinearGradient(0, neckTopY, 0, neckBottomY - 4);
+    chinShadow.addColorStop(0, 'rgba(15, 23, 42, 0.65)');
+    chinShadow.addColorStop(0.55, 'rgba(15, 23, 42, 0.24)');
+    chinShadow.addColorStop(1, 'rgba(15, 23, 42, 0.0)');
+    ctx.fillStyle = chinShadow;
+    ctx.beginPath();
+    ctx.moveTo(-neckTopW * 0.5, neckTopY);
+    ctx.lineTo(neckTopW * 0.5, neckTopY);
+    ctx.lineTo(neckBottomW * 0.5, neckBottomY - 4);
+    ctx.lineTo(-neckBottomW * 0.5, neckBottomY - 4);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  drawArm(ctx, bone, isFront, kit, character, options = {}) {
     const armImg = this.assetLoader.get('arm');
     if (!bone || !this.isReady(armImg)) return;
 
@@ -7543,30 +8065,58 @@ class CharacterRenderer {
     if (filters.length) ctx.filter = filters.join(' ');
     // Shoulder sleeve pivot at top center
     ctx.drawImage(armImg, -w * 0.50, -h * 0.12, w, h);
+    ctx.filter = 'none';
+
+    // Athletic Terrycloth Wristband (Muñequera Deportiva) near wrist
+    const wristY = h * 0.58;
+    const wristW = w * 0.85;
+    ctx.fillStyle = isFront ? '#ffffff' : '#e2e8f0';
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.roundRect(-wristW * 0.5, wristY, wristW, 5.5, [2]);
+    ctx.fill();
+    ctx.stroke();
+
+    // Contrasting team color stripe on wristband
+    ctx.fillStyle = character?.super?.colors?.[0] || '#2563eb';
+    ctx.fillRect(-wristW * 0.5 + 1, wristY + 2, wristW - 2, 1.8);
 
     ctx.restore();
   }
 
-  drawHead(ctx, bone, animState, headScaleMultiplier, showSkin, showMesh, character, hp = 100) {
+  drawHead(ctx, bone, animState, headScaleMultiplier, showSkin, showMesh, character, options = {}) {
     ctx.save();
     ctx.translate(bone.worldX, bone.worldY);
     // Head bone points upward (-90°); +90° compensation aligns head upright
     ctx.rotate((bone.worldRotation + 90) * Math.PI / 180);
 
-    // Natural living arcade blink (140ms duration every ~3.8s)
-    const nowSec = performance.now() * 0.001;
-    const charSeed = character ? character.id.charCodeAt(0) * 0.6 : 0;
-    const blinkCycle = (nowSec + charSeed) % 4.2;
-    const isBlinking = blinkCycle > 4.06 && (animState.face === 'idle' || !animState.face);
+    const hitFlash = options.hitFlashTimer || 0;
+    const isStunned = options.isStunned || animState.face === 'ko' || (options.hp != null && options.hp < 40);
 
-    // Apply authentic 1.25x Chibi caricature multiplier so head is 2x wider than torso
-    const blinkSquash = isBlinking ? 0.86 : 1.0;
-    const sX = 1.25 * headScaleMultiplier * (animState.headScaleX || 1.0) * (isBlinking ? 1.04 : 1.0);
-    const sY = 1.25 * headScaleMultiplier * (animState.headScaleY || 1.0) * blinkSquash;
+    // Apply authentic 1.25x Chibi caricature multiplier (Stable skull structure, no whole-head squashing on blinks)
+    let sX = 1.25 * headScaleMultiplier * (animState.headScaleX || 1.0);
+    let sY = 1.25 * headScaleMultiplier * (animState.headScaleY || 1.0);
+
+    // Dynamic Header Contact Impact Squash & Rebound Stretch
+    if (hitFlash > 0) {
+      const flashRatio = hitFlash / 0.12;
+      sX *= (1.0 + flashRatio * 0.16);
+      sY *= (1.0 - flashRatio * 0.12);
+    }
+
+    // Stunned / Low-HP Jitter Tremble
+    if (isStunned) {
+      const time = performance.now() * 0.05;
+      const jitterX = Math.sin(time) * 1.5;
+      const jitterY = Math.cos(time * 1.3) * 1.0;
+      ctx.translate(jitterX, jitterY);
+    }
+
     ctx.scale(sX, sY);
 
     if (showSkin) {
-      const headImg = this.pickHead(character, animState.face);
+      const headImg = this.pickHead(character, animState.face, options);
       if (this.isReady(headImg)) {
         const cfg = character?.head || { width: 104, pivotX: 0.50, pivotY: 0.88 };
         const w = cfg.width;
@@ -7578,27 +8128,23 @@ class CharacterRenderer {
         ctx.drawImage(headImg, -w * (cfg.pivotX ?? 0.50), -h * (cfg.pivotY ?? 0.88), w, h);
         ctx.shadowColor = 'transparent';
 
-        // Expressive low-HP sweat droplets
-        if (hp < 45 || animState.face === 'ko') {
-          const t = performance.now() * 0.005;
-          const dropY = -h * 0.55 + (t % 1) * 12;
-          ctx.fillStyle = 'rgba(125, 249, 255, 0.9)';
-          ctx.beginPath();
-          ctx.arc(-w * 0.28, dropY, 3, 0, Math.PI * 2);
-          ctx.fill();
-        }
+        // 1. 2.5D Volumetric Cranium & Jawline Depth Shading (Applied directly onto sprite via source-atop!)
+        this.drawVolumetricHeadShading(ctx, w, h, cfg);
 
-        // Flaring Eye Glint when in super power state
-        if (animState.face === 'power') {
-          ctx.shadowColor = '#00ffff';
-          ctx.shadowBlur = 16;
-          ctx.fillStyle = '#ffffff';
-          ctx.beginPath();
-          ctx.arc(8, -h * 0.48, 4, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        // Character-specific Head Accessories / Glow overlays
-        this.drawCharacterHeadOverlay(ctx, character, w, h, animState);
+        // 2. Stadium Floodlight Rim Lighting (Fresnel specular highlight clipped to sprite hair crest)
+        this.drawStadiumRimLight(ctx, w, h, cfg, character, options);
+
+        // 3. Anime Hair Sheen & Specular Strata (Lustrous arcade hair glow on sprite)
+        this.drawAnimeHairSheen(ctx, w, h, cfg, character);
+
+        // 4. Dynamic Hair & Bangs Secondary Spring Physics (Elastic swaying in response to speed & jumps)
+        this.drawHairSecondaryPhysics(ctx, w, h, character, animState, options);
+
+        // 5. Living dynamic facial animations (Pupil ball-tracking, organic eyelids, dizzy spirals, cheek blush, nose bridge)
+        this.drawDynamicFaceFeatures(ctx, w, h, character, animState, options);
+
+        // 6. Character-specific Head Accessories & Signature Overlays (Bandana ribbons, horns, crowns)
+        this.drawCharacterHeadOverlay(ctx, character, w, h, animState, options);
       }
     }
 
@@ -7623,13 +8169,254 @@ class CharacterRenderer {
     ctx.restore();
   }
 
-  drawCharacterHeadOverlay(ctx, character, w, h, animState) {
+  drawVolumetricHeadShading(ctx, w, h, cfg) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-atop';
+
+    const pivotX = cfg?.pivotX ?? 0.50;
+    const pivotY = cfg?.pivotY ?? 0.88;
+    const bottomY = h * (1.0 - pivotY);
+    const leftX = -w * pivotX;
+
+    // Spherical ambient occlusion around lower jaw and cheek perimeter
+    const jawGrad = ctx.createLinearGradient(0, bottomY - h * 0.28, 0, bottomY);
+    jawGrad.addColorStop(0, 'rgba(15, 23, 42, 0.0)');
+    jawGrad.addColorStop(0.6, 'rgba(15, 23, 42, 0.16)');
+    jawGrad.addColorStop(1, 'rgba(15, 23, 42, 0.38)');
+    ctx.fillStyle = jawGrad;
+    ctx.fillRect(leftX, bottomY - h * 0.28, w, h * 0.28);
+    ctx.restore();
+  }
+
+  drawStadiumRimLight(ctx, w, h, cfg, character, options) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-atop';
+
+    const pivotX = cfg?.pivotX ?? 0.50;
+    const pivotY = cfg?.pivotY ?? 0.88;
+    const topY = -h * pivotY;
+    const leftX = -w * pivotX;
+
+    // Upper hair crest floodlight rim gradient (illuminated by overhead stadium floodlights)
+    const rimGrad = ctx.createLinearGradient(0, topY, 0, topY + h * 0.34);
+    rimGrad.addColorStop(0, 'rgba(255, 255, 255, 0.65)');
+    rimGrad.addColorStop(0.35, 'rgba(255, 255, 255, 0.22)');
+    rimGrad.addColorStop(0.75, 'rgba(255, 255, 255, 0.06)');
+    rimGrad.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
+    ctx.fillStyle = rimGrad;
+    ctx.fillRect(leftX, topY, w, h * 0.34);
+
+    // Subtle elemental aura hue along top hair tips
+    const auraColor = character?.super?.colors?.[0];
+    if (auraColor) {
+      const auraGrad = ctx.createLinearGradient(0, topY, 0, topY + h * 0.18);
+      auraGrad.addColorStop(0, auraColor.startsWith('#') ? `${auraColor}55` : 'rgba(0, 240, 255, 0.35)');
+      auraGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = auraGrad;
+      ctx.fillRect(leftX, topY, w, h * 0.18);
+    }
+
+    ctx.restore();
+  }
+
+  drawAnimeHairSheen(ctx, w, h, cfg, character) {
+    const id = character?.id || 'kenta';
+    if (id === 'ninja' || id === 'cyborg' || id === 'alien') return; // Handled with custom overlays
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-atop';
+
+    const pivotY = cfg?.pivotY ?? 0.88;
+    const topY = -h * pivotY;
+    const sheenY = topY + h * 0.18;
+
+    // Iconic fighting-game hair specular sheen band
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+    ctx.beginPath();
+    ctx.ellipse(-w * 0.10, sheenY, w * 0.28, 5, -0.15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(w * 0.18, sheenY + 4, w * 0.16, 4, 0.15, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Specular micro-dots
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.beginPath();
+    ctx.arc(-w * 0.06, sheenY, 1.8, 0, Math.PI * 2);
+    ctx.arc(w * 0.14, sheenY + 4, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  drawHairSecondaryPhysics(ctx, w, h, character, animState, options) {
+    const vx = options.vx || 0;
+    const vy = options.vy || 0;
+    const facing = options.facing || 1;
+    const airVx = vx * facing;
+    // Aerodynamic hair drag (opposes horizontal movement)
+    const dragX = -Math.max(-12, Math.min(12, airVx * 0.028));
+    // Air resistance vertical lift (falling pushes hair tips UP, jumping compresses down)
+    const liftY = -Math.max(-10, Math.min(10, vy * 0.022));
+    const time = performance.now() * 0.006;
+    const wind = Math.sin(time * 3.5) * 2.0;
+
+    const id = character?.id || 'kenta';
+
+    ctx.save();
+
+    if (id === 'kenta') {
+      // 3 Dynamic Spiky Anime Bangs swaying over forehead with spring physics
+      const drawBang = (baseX, baseY, length, angleOffset, color) => {
+        ctx.save();
+        ctx.translate(baseX, baseY);
+        const sway = (dragX + wind) * 0.45;
+        const lift = liftY * 0.4;
+        ctx.fillStyle = color;
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(-4, 0);
+        ctx.quadraticCurveTo(-2 + sway * 0.5, length * 0.5 + lift * 0.5, sway, length + lift);
+        ctx.quadraticCurveTo(2 + sway * 0.5, length * 0.5 + lift * 0.5, 4, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      };
+
+      // Spiky anime bangs along forehead rim
+      drawBang(-w * 0.22, -h * 0.62, 14, 0, '#1e293b');
+      drawBang(-w * 0.05, -h * 0.64, 16, 0, '#0f172a');
+      drawBang(w * 0.12, -h * 0.60, 13, 0, '#1e293b');
+    }
+
+    if (id === 'ninja') {
+      // Long Flowing Shinobi Scarf (Bufanda Ninja)
+      ctx.save();
+      ctx.translate(-w * 0.28, -h * 0.32);
+      const scarfLength = 65;
+      const nodes = 6;
+      ctx.fillStyle = '#7c3aed';
+      ctx.strokeStyle = '#4c1d95';
+      ctx.lineWidth = 1.6;
+
+      ctx.beginPath();
+      ctx.moveTo(0, -5);
+      for (let i = 1; i <= nodes; i++) {
+        const t = i / nodes;
+        const wave = Math.sin(time * 5 + i * 0.8) * (4 + i * 2.2);
+        const nx = -t * scarfLength + dragX * t * 1.8;
+        const ny = t * 12 + wave + liftY * t;
+        ctx.lineTo(nx, ny - 4);
+      }
+      for (let i = nodes; i >= 1; i--) {
+        const t = i / nodes;
+        const wave = Math.sin(time * 5 + i * 0.8) * (4 + i * 2.2);
+        const nx = -t * scarfLength + dragX * t * 1.8;
+        const ny = t * 12 + wave + liftY * t;
+        ctx.lineTo(nx, ny + 5);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (id === 'viking') {
+      // Braided Golden Norse Beard swinging with pendulum inertia
+      ctx.save();
+      ctx.translate(w * 0.05, -h * 0.24);
+      const beardSway = (dragX + wind) * 0.55;
+      ctx.fillStyle = '#ca8a04';
+      ctx.strokeStyle = '#713f12';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(-10, 0);
+      ctx.quadraticCurveTo(-6 + beardSway, 14, beardSway, 24);
+      ctx.quadraticCurveTo(6 + beardSway, 14, 10, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // Steel beard ring
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(beardSway - 3, 16, 6, 3);
+      ctx.restore();
+    }
+
+    if (id === 'knight') {
+      // Crimson Feathered Helmet Plume waving in the wind
+      ctx.save();
+      ctx.translate(-w * 0.14, -h * 0.86);
+      const plumeWave = Math.sin(time * 4) * 6 + dragX * 0.8;
+      ctx.fillStyle = '#dc2626';
+      ctx.strokeStyle = '#991b1b';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(-18, -14 + plumeWave * 0.5, -34, -18 + plumeWave);
+      ctx.quadraticCurveTo(-16, -6, 0, 6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (id === 'alien') {
+      // Gelatinous bouncy antennae with glowing bobbles
+      const drawAntenna = (baseX, baseY) => {
+        ctx.save();
+        ctx.translate(baseX, baseY);
+        const bounce = Math.sin(time * 7) * 4 + dragX * 0.3;
+        ctx.strokeStyle = '#a855f7';
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(bounce * 0.5, -12, bounce, -22);
+        ctx.stroke();
+        // Luminous glowing orb
+        ctx.fillStyle = '#22d3ee';
+        ctx.shadowColor = '#06b6d4';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(bounce, -22, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      };
+      drawAntenna(-w * 0.22, -h * 0.82);
+      drawAntenna(w * 0.22, -h * 0.82);
+    }
+
+    if (id === 'cyborg') {
+      // Cyber Ear Exhaust Steam Puff when dashing / moving
+      if (options.isDashing || Math.abs(airVx) > 120) {
+        ctx.save();
+        ctx.translate(-w * 0.38, -h * 0.44);
+        const steamProgress = (time * 2) % 1;
+        ctx.fillStyle = `rgba(0, 240, 255, ${0.7 * (1 - steamProgress)})`;
+        ctx.beginPath();
+        ctx.arc(-steamProgress * 18, -steamProgress * 6, 3 + steamProgress * 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  drawCharacterHeadOverlay(ctx, character, w, h, animState, options = {}) {
+    if (!character || character.id === 'kenta') {
+      this.drawHeadbandRibbon(ctx, w, h, animState, options);
+    }
     if (!character) return;
     const time = performance.now() * 0.004;
     const id = character.id;
 
     ctx.save();
     switch (id) {
+      case 'kenta': {
+        // Headband ribbons handled above
+        break;
+      }
       case 'chrono': {
         // High-tech holographic scanline moving across cyber visor
         const scanY = -h * 0.46 + Math.sin(time * 3) * 12;
@@ -7715,17 +8502,26 @@ class CharacterRenderer {
     ctx.restore();
   }
 
-  pickHead(character, face) {
+  pickHead(character, face, options = {}) {
     let expr = 'idle';
-    if (face === 'ko') expr = 'ko';
-    else if (face === 'strain' || face === 'power' || face === 'dragon') expr = 'kick';
+    const isStunnedOrHurt = options.isStunned || (options.hp != null && options.hp < 40) || face === 'ko';
+    const isAction = !options.isGrounded || options.isDashing || options.currentAnim === 'kick' ||
+      ['rocket_kick', 'bicycle_kick', 'diving_header', 'scorpion_kick', 'smash_header', 'super_shot'].includes(options.currentAnim) ||
+      face === 'strain' || face === 'power' || face === 'dragon';
+
+    if (isStunnedOrHurt) {
+      expr = 'ko';
+    } else if (isAction) {
+      expr = 'kick';
+    }
+
     if (!character) {
       return this.assetLoader.get(expr === 'ko' ? 'headKo' : expr === 'kick' ? 'headKick' : 'headIdle');
     }
     return this.assetLoader.getHead(character.id, expr);
   }
 
-  drawBoot(ctx, bone, isFront) {
+  drawBoot(ctx, bone, isFront, options = {}) {
     const bootImg = this.assetLoader.get('boot');
     if (!this.isReady(bootImg)) return;
 
@@ -7740,11 +8536,23 @@ class CharacterRenderer {
     ctx.shadowBlur = 6;
     // Ankle collar pivot: sits right at ankle joint, cleat sole touches ground
     ctx.drawImage(bootImg, -w * 0.35, -h * 0.38, w, h);
+    ctx.filter = 'none';
+
+    // Molded High-Traction Cleat Studs (Tacos de Suela Deportivos)
+    ctx.fillStyle = '#0f172a';
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1;
+    const studY = h * 0.44;
+    // Heel and toe cleats
+    ctx.fillRect(-w * 0.22, studY, 4, 3.5);
+    ctx.fillRect(-w * 0.08, studY + 1, 4, 3.5);
+    ctx.fillRect(w * 0.14, studY + 1, 4, 3.5);
+    ctx.fillRect(w * 0.32, studY, 4, 3.5);
 
     ctx.restore();
   }
 
-  drawLeg(ctx, bone, isFront, kit) {
+  drawLeg(ctx, bone, isFront, kit, character, options = {}) {
     if (!bone) return;
     ctx.save();
     ctx.translate(bone.worldX, bone.worldY);
@@ -7758,49 +8566,63 @@ class CharacterRenderer {
     if (!isFront) filters.push('brightness(0.72) saturate(0.9)');
     if (filters.length) ctx.filter = filters.join(' ');
 
-    // Athletic soccer sock (matching kit shorts, e.g. blue or dark)
-    // Connecting shorts socket (x: 0) to boot collar (x: len)
-    ctx.fillStyle = '#1e3a8a'; // Deep athletic navy/blue matching uniform shorts
+    // Athletic soccer sock (matching kit shorts)
+    ctx.fillStyle = '#1e3a8a'; // Deep athletic navy/blue
     ctx.strokeStyle = '#0f172a';
     ctx.lineWidth = 1.6;
 
     ctx.beginPath();
-    // Tapered muscular soccer calf shape
+    // Tapered muscular soccer calf shape with anatomical curve
     ctx.moveTo(0, -w * 0.55);
-    ctx.lineTo(len + 2, -w * 0.42);
+    ctx.quadraticCurveTo(len * 0.5, -w * 0.62, len + 2, -w * 0.42);
     ctx.lineTo(len + 2, w * 0.42);
-    ctx.lineTo(0, w * 0.55);
+    ctx.quadraticCurveTo(len * 0.5, w * 0.62, 0, w * 0.55);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
     // Twin Championship White Accent Stripes on the sock
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(len * 0.35, -w * 0.48, 2.5, w * 0.96);
-    ctx.fillRect(len * 0.60, -w * 0.45, 2.5, w * 0.90);
+    ctx.fillRect(len * 0.35, -w * 0.50, 2.5, w * 1.0);
+    ctx.fillRect(len * 0.60, -w * 0.48, 2.5, w * 0.96);
+
+    // Athletic White Ankle Tape (Vendaje de compresión de tobillo)
+    ctx.fillStyle = isFront ? '#f8fafc' : '#e2e8f0';
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(len - 4, -w * 0.46, 5, w * 0.92, [1]);
+    ctx.fill();
+    ctx.stroke();
 
     ctx.restore();
   }
 
-  drawHeadbandRibbon(ctx, bone) {
-    if (!bone) return;
+  drawHeadbandRibbon(ctx, w, h, animState, options = {}) {
     ctx.save();
-    ctx.translate(bone.worldX, bone.worldY);
-    ctx.rotate(bone.worldRotation * Math.PI / 180);
+    ctx.translate(-w * 0.36, -h * 0.56);
 
-    const time = performance.now() * 0.008;
-    const wave1 = Math.sin(time) * 4;
-    const wave2 = Math.cos(time * 1.2) * 5;
+    const isFast = options.isDashing || options.currentAnim === 'run';
+    const speed = isFast ? 0.016 : 0.009;
+    const time = performance.now() * speed;
+    const wave1 = Math.sin(time) * (isFast ? 8 : 4);
+    const wave2 = Math.cos(time * 1.25) * (isFast ? 9 : 5);
 
-    // Ribbon 1 (Main Red Banner)
+    // Ribbon Knot
+    ctx.fillStyle = '#991b1b';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 4.5, 6, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Ribbon 1 (Main Upper Red Banner)
     ctx.fillStyle = '#dc2626';
     ctx.strokeStyle = '#7f1d1d';
     ctx.lineWidth = 1.2;
     ctx.beginPath();
     ctx.moveTo(0, -4);
-    ctx.quadraticCurveTo(-14, -8 + wave1, -28, -12 + wave1 * 1.5);
-    ctx.lineTo(-24, -4 + wave1);
-    ctx.quadraticCurveTo(-12, 0, 0, 4);
+    ctx.quadraticCurveTo(-16, -10 + wave1, -36, -14 + wave1 * 1.6);
+    ctx.lineTo(-30, -5 + wave1);
+    ctx.quadraticCurveTo(-14, 0, 0, 4);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
@@ -7809,14 +8631,332 @@ class CharacterRenderer {
     ctx.fillStyle = '#b91c1c';
     ctx.beginPath();
     ctx.moveTo(0, 0);
-    ctx.quadraticCurveTo(-12, 6 + wave2, -26, 8 + wave2 * 1.3);
-    ctx.lineTo(-22, 14 + wave2);
-    ctx.quadraticCurveTo(-10, 8, 0, 5);
+    ctx.quadraticCurveTo(-14, 8 + wave2, -32, 12 + wave2 * 1.4);
+    ctx.lineTo(-26, 18 + wave2);
+    ctx.quadraticCurveTo(-12, 10, 0, 5);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
     ctx.restore();
+  }
+
+  drawDynamicFaceFeatures(ctx, w, h, character, animState, options = {}) {
+    const isStunned = options.isStunned || animState.face === 'ko' || (options.hp != null && options.hp < 40);
+    const isAction = !options.isGrounded || options.isDashing || options.currentAnim === 'kick' ||
+      ['rocket_kick', 'bicycle_kick', 'diving_header', 'scorpion_kick', 'smash_header', 'super_shot'].includes(options.currentAnim) ||
+      animState.face === 'strain' || animState.face === 'power';
+    const isSuper = animState.face === 'power' || options.isSuperReady;
+    const hitFlash = options.hitFlashTimer || 0;
+
+    // Relative eye coordinates on Chibi caricature head
+    // Front eye (forward-facing in 3/4 view)
+    const eyeFrontX = w * 0.16;
+    const eyeFrontY = -h * 0.46;
+    // Back eye (nearer to center of face)
+    const eyeBackX = -w * 0.14;
+    const eyeBackY = -h * 0.46;
+
+    // 1. STUNNED / KO FACIAL EXPRESSIONS
+    if (isStunned) {
+      const time = performance.now() * 0.006;
+      // Animated Spinning Dizzy Spirals (@ @)
+      const drawSpiral = (cx, cy, r) => {
+        ctx.save();
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 1.8;
+        ctx.shadowColor = '#eab308';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        const loops = 3;
+        for (let a = 0; a <= Math.PI * 2 * loops; a += 0.25) {
+          const curR = (a / (Math.PI * 2 * loops)) * r;
+          const px = cx + Math.cos(a + time * 3) * curR;
+          const py = cy + Math.sin(a + time * 3) * curR;
+          if (a === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+      };
+
+      drawSpiral(eyeFrontX, eyeFrontY, 7);
+      drawSpiral(eyeBackX, eyeBackY, 6);
+
+      // Comical Wavy Dizzy Mouth
+      ctx.save();
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      const mouthY = -h * 0.26;
+      ctx.moveTo(-w * 0.12, mouthY);
+      ctx.quadraticCurveTo(-w * 0.06, mouthY - 4, 0, mouthY);
+      ctx.quadraticCurveTo(w * 0.06, mouthY + 4, w * 0.12, mouthY);
+      ctx.stroke();
+      ctx.restore();
+
+      // Dripping Animated Sweat Droplets
+      const t = performance.now() * 0.004;
+      const sweatProg = t % 1;
+      const sweatY = -h * 0.58 + sweatProg * 24;
+      const sweatAlpha = Math.sin(sweatProg * Math.PI);
+      ctx.save();
+      ctx.fillStyle = `rgba(103, 232, 249, ${0.9 * sweatAlpha})`;
+      ctx.strokeStyle = `rgba(6, 182, 212, ${0.8 * sweatAlpha})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.30, sweatY);
+      ctx.bezierCurveTo(-w * 0.33, sweatY + 5, -w * 0.33, sweatY + 11, -w * 0.30, sweatY + 12);
+      ctx.bezierCurveTo(-w * 0.27, sweatY + 11, -w * 0.27, sweatY + 5, -w * 0.30, sweatY);
+      ctx.fill();
+      ctx.stroke();
+      // Specular highlight on sweat
+      ctx.fillStyle = `rgba(255, 255, 255, ${sweatAlpha})`;
+      ctx.beginPath();
+      ctx.arc(-w * 0.31, sweatY + 8, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      return;
+    }
+
+    // Volumetric Athletic Cheek Blush / Exertion Glow (Adds warmth and organic vitality)
+    if (character?.id !== 'ninja' && character?.id !== 'cyborg') {
+      ctx.save();
+      ctx.fillStyle = 'rgba(244, 63, 94, 0.15)';
+      ctx.beginPath();
+      ctx.ellipse(eyeFrontX - 2, eyeFrontY + 13, 8, 4.5, 0.1, 0, Math.PI * 2);
+      ctx.ellipse(eyeBackX - 2, eyeBackY + 13, 7, 4.0, -0.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Chibi Nose Bridge Contour with Specular Highlight
+    if (character?.id !== 'ninja') {
+      ctx.save();
+      const noseX = w * 0.04;
+      const noseY = -h * 0.36;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
+      ctx.beginPath();
+      ctx.arc(noseX, noseY, 2.0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.beginPath();
+      ctx.arc(noseX - 0.6, noseY - 0.6, 0.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Athletic Perspiration Beads on Forehead during high-speed action
+    if (isAction && character?.id !== 'cyborg') {
+      const sweatTime = performance.now() * 0.003;
+      ctx.save();
+      ctx.fillStyle = 'rgba(186, 230, 253, 0.75)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.lineWidth = 0.8;
+      const sweatX = -w * 0.18 + Math.sin(sweatTime) * 2;
+      const sweatY = -h * 0.64;
+      ctx.beginPath();
+      ctx.arc(sweatX, sweatY, 1.8, 0, Math.PI * 2);
+      ctx.arc(w * 0.10, -h * 0.62, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 2. DYNAMIC PUPIL & IRIS TRACKING THE BALL (The characters actually WATCH the ball!)
+    let pupilShiftX = 0;
+    let pupilShiftY = 0;
+
+    if (options.ball) {
+      // Find ball direction relative to head bone
+      const headWorldX = options.headWorldX ?? 0;
+      const headWorldY = options.headWorldY ?? 0;
+      const facing = options.facing || 1;
+      const dx = (options.ball.x - headWorldX) * facing;
+      const dy = options.ball.y - headWorldY;
+      const dist = Math.hypot(dx, dy) || 1;
+      const maxShift = isAction ? 5.2 : 4.0;
+      pupilShiftX = Math.max(-maxShift, Math.min(maxShift, (dx / dist) * maxShift));
+      pupilShiftY = Math.max(-maxShift, Math.min(maxShift, (dy / dist) * maxShift));
+    }
+
+    // Natural Organic Blinking Cycle (140ms every 3.8s)
+    const nowSec = performance.now() * 0.001;
+    const charSeed = character ? character.id.charCodeAt(0) * 0.6 : 0;
+    const blinkCycle = (nowSec + charSeed) % 3.8;
+    const isBlinking = blinkCycle > 3.66;
+    const blinkAmount = isBlinking ? Math.sin(((blinkCycle - 3.66) / 0.14) * Math.PI) : 0;
+
+    // Draw Dynamic Pupils and Specular Eye Glints
+    const drawEyeDetails = (cx, cy, rx, ry, isFront) => {
+      ctx.save();
+      // If blinking, smoothly sweep organic eyelid
+      if (blinkAmount > 0.15) {
+        ctx.fillStyle = '#fbcfe8'; // Soft skin tone base
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        const drop = ry * blinkAmount * 1.8;
+        ctx.ellipse(cx, cy - ry + drop * 0.5, rx * 1.05, Math.max(1, drop * 0.6), 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(cx - rx, cy - ry + drop);
+        ctx.quadraticCurveTo(cx, cy - ry + drop + 2, cx + rx, cy - ry + drop);
+        ctx.stroke();
+        ctx.restore();
+        return;
+      }
+
+      // Dynamic Iris tracking
+      const px = cx + pupilShiftX * (isFront ? 1.0 : 0.85);
+      const py = cy + pupilShiftY * 0.85;
+
+      // Iris Color derived from character identity
+      let irisColor = '#0284c7'; // Vibrant athletic sky blue
+      if (character?.id === 'titan') irisColor = '#ea580c';
+      else if (character?.id === 'phoenix') irisColor = '#f59e0b';
+      else if (character?.id === 'viking') irisColor = '#06b6d4';
+      else if (character?.id === 'luchador') irisColor = '#16a34a';
+      else if (character?.id === 'chrono') irisColor = '#00f0ff';
+      else if (character?.id === 'alien') irisColor = '#a855f7';
+      else if (character?.id === 'samba') irisColor = '#d97706';
+
+      // Outer Iris Rim
+      ctx.fillStyle = irisColor;
+      ctx.beginPath();
+      ctx.arc(px, py, isFront ? 4.2 : 3.6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Inner Pupil (Deep Black)
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(px, py, isFront ? 2.4 : 2.0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Specular Starburst Eye Glint (Upper-Left Reflection)
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(px - 1.2, py - 1.2, isFront ? 1.4 : 1.1, 0, Math.PI * 2);
+      ctx.arc(px + 1.2, py + 1.0, 0.7, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Super Aura Eye Glow
+      if (isSuper) {
+        ctx.shadowColor = irisColor;
+        ctx.shadowBlur = 10;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    };
+
+    drawEyeDetails(eyeFrontX, eyeFrontY, 6, 8, true);
+    drawEyeDetails(eyeBackX, eyeBackY, 5, 7, false);
+
+    // 3. BATTLE SQUINT & FURROWED BROWS (Active in sprint, jump, or kicks)
+    if (isAction) {
+      ctx.save();
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = 'round';
+      // Front brow (steep angled fierce slant down towards nose bridge)
+      ctx.beginPath();
+      ctx.moveTo(eyeFrontX + 8, eyeFrontY - 10);
+      ctx.lineTo(eyeFrontX - 8, eyeFrontY - 6);
+      ctx.stroke();
+      // Back brow
+      ctx.beginPath();
+      ctx.moveTo(eyeBackX + 6, eyeBackY - 7);
+      ctx.lineTo(eyeBackX - 8, eyeBackY - 10);
+      ctx.stroke();
+
+      // Anime Exertion / Rage Symbol (💢 cross) on temple
+      const veinX = -w * 0.28;
+      const veinY = -h * 0.70;
+      const vTime = performance.now() * 0.008;
+      const vScale = 1.0 + Math.sin(vTime) * 0.15;
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.arc(veinX - 4 * vScale, veinY, 4 * vScale, -Math.PI * 0.5, Math.PI * 0.5);
+      ctx.arc(veinX + 4 * vScale, veinY, 4 * vScale, Math.PI * 0.5, -Math.PI * 0.5);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(veinX, veinY - 4 * vScale, 4 * vScale, 0, Math.PI);
+      ctx.arc(veinX, veinY + 4 * vScale, 4 * vScale, Math.PI, 0);
+      ctx.stroke();
+      ctx.restore();
+
+      // Open Shouting Action Mouth (During kicks / headers)
+      if (options.currentAnim === 'kick' || !options.isGrounded || animState.face === 'strain' || animState.face === 'power') {
+        ctx.save();
+        const mX = w * 0.04;
+        const mY = -h * 0.24;
+        // Mouth cavity (deep red)
+        ctx.fillStyle = '#991b1b';
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(mX, mY, 10, 7, 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        // Upper white teeth bar
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.ellipse(mX, mY - 3.5, 7.5, 2.5, 0.1, 0, Math.PI);
+        ctx.fill();
+        // Lower tongue curve
+        ctx.fillStyle = '#f87171';
+        ctx.beginPath();
+        ctx.arc(mX, mY + 3, 4.5, Math.PI, 0);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // 4. FOREHEAD IMPACT SWEETSPOT STARBURST (Triggered when ball hits forehead!)
+    if (hitFlash > 0) {
+      const flashRatio = hitFlash / 0.12;
+      const fx = w * 0.24;
+      const fy = -h * 0.60;
+      ctx.save();
+      ctx.translate(fx, fy);
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 24 * flashRatio;
+
+      // Shockwave Ring Expanding
+      ctx.strokeStyle = `rgba(255, 215, 0, ${flashRatio})`;
+      ctx.lineWidth = 3.5 * flashRatio;
+      ctx.beginPath();
+      ctx.arc(0, 0, (1 - flashRatio) * 36 + 8, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // 8-Point Impact Starburst
+      ctx.fillStyle = `rgba(255, 255, 255, ${flashRatio})`;
+      ctx.beginPath();
+      const spikes = 8;
+      const rOuter = 26 * flashRatio;
+      const rInner = 8 * flashRatio;
+      for (let s = 0; s < spikes * 2; s++) {
+        const radius = s % 2 === 0 ? rOuter : rInner;
+        const angle = (s * Math.PI) / spikes;
+        const sx = Math.cos(angle) * radius;
+        const sy = Math.sin(angle) * radius;
+        if (s === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      // Pure White Core
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(0, 0, 5 * flashRatio, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
   }
 
   drawKickSwoosh(ctx, bone, character) {
@@ -8125,7 +9265,15 @@ class GameRenderer {
       character: player.character,
       facing: player.direction || 1,
       hp: player.hp,
-      isSuperReady: sceneState.isPlayerSuperReady
+      isSuperReady: sceneState.isPlayerSuperReady,
+      ball: ball,
+      isGrounded: player.isGrounded,
+      isDashing: player.isDashing,
+      isStunned: player.isStunned,
+      currentAnim: player.animController?.currentAnim,
+      hitFlashTimer: player.hitFlashTimer || 0,
+      vx: player.vx || 0,
+      vy: player.vy || 0
     });
     ctx.restore();
 
@@ -8140,11 +9288,19 @@ class GameRenderer {
       this.characterRenderer.render(ctx, sceneState.rivalBot.skeleton, sceneState.rivalAnimState || { face: 'idle' }, {
         showSkin: options.showSkin,
         showMesh: options.showMesh,
-        headScale: 1.0,
+        headScale: sceneState.rivalBot.giantHeadMultiplier || 1.0,
         character: sceneState.rivalBot.character,
         facing: sceneState.rivalBot.direction || -1,
         hp: sceneState.rivalBot.hp,
-        isSuperReady: sceneState.rivalBot.power >= 100
+        isSuperReady: sceneState.rivalBot.power >= 100,
+        ball: ball,
+        isGrounded: sceneState.rivalBot.isGrounded,
+        isDashing: sceneState.rivalBot.isDashing,
+        isStunned: sceneState.rivalBot.isStunned,
+        currentAnim: sceneState.rivalBot.animController?.currentAnim,
+        hitFlashTimer: sceneState.rivalBot.hitFlashTimer || 0,
+        vx: sceneState.rivalBot.vx || 0,
+        vy: sceneState.rivalBot.vy || 0
       });
       ctx.restore();
 
@@ -8559,36 +9715,76 @@ class SpineDebugger {
   }
 
   drawHitboxes(ctx, player) {
+    if (!player) return;
     ctx.save();
 
     const isKicking = player.animController?.currentAnim === 'kick' || player.animController?.currentAnim === 'super_shot';
     const isJumping = player.animController?.currentAnim === 'jump' || !player.isGrounded;
+    const isHitActive = (player.hitFlashTimer || 0) > 0;
 
     // 1. Kick Hitbox (Toe / Cleat Strike Zone)
-    ctx.lineWidth = isKicking ? 3 : 1.5;
-    ctx.setLineDash(isKicking ? [] : [3, 3]);
-    ctx.strokeStyle = isKicking ? '#00f0ff' : 'rgba(0, 240, 255, 0.55)';
-    ctx.fillStyle = isKicking ? 'rgba(0, 240, 255, 0.3)' : 'rgba(0, 240, 255, 0.08)';
-    ctx.beginPath();
-    ctx.arc(player.kickHitbox.x, player.kickHitbox.y, player.kickHitbox.radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+    if (player.kickHitbox) {
+      ctx.lineWidth = isKicking ? 3 : 1.5;
+      ctx.setLineDash(isKicking ? [] : [3, 3]);
+      ctx.strokeStyle = isKicking ? '#00f0ff' : 'rgba(0, 240, 255, 0.65)';
+      ctx.fillStyle = isKicking ? 'rgba(0, 240, 255, 0.35)' : 'rgba(0, 240, 255, 0.08)';
+      ctx.beginPath();
+      ctx.arc(player.kickHitbox.x, player.kickHitbox.y, player.kickHitbox.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
 
-    // 2. Head Hitbox (Forehead / Header Strike Zone)
-    ctx.lineWidth = isJumping ? 3 : 1.5;
-    ctx.setLineDash(isJumping ? [] : [3, 3]);
-    ctx.strokeStyle = isJumping ? '#ffd700' : 'rgba(255, 215, 0, 0.55)';
-    ctx.fillStyle = isJumping ? 'rgba(255, 215, 0, 0.3)' : 'rgba(255, 215, 0, 0.08)';
-    ctx.beginPath();
-    ctx.arc(player.headHitbox.x, player.headHitbox.y, player.headHitbox.radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+      // Cleat center pip
+      ctx.fillStyle = '#00f0ff';
+      ctx.beginPath();
+      ctx.arc(player.kickHitbox.x, player.kickHitbox.y, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 2. Cranium Head Hitbox (Full Skull Mass: Crown to Jaw)
+    if (player.headHitbox) {
+      ctx.lineWidth = isJumping ? 2.5 : 1.5;
+      ctx.setLineDash(isJumping ? [] : [4, 4]);
+      ctx.strokeStyle = isHitActive ? '#ffffff' : isJumping ? '#ffd700' : 'rgba(255, 215, 0, 0.60)';
+      ctx.fillStyle = isHitActive ? 'rgba(255, 255, 255, 0.4)' : isJumping ? 'rgba(255, 215, 0, 0.25)' : 'rgba(255, 215, 0, 0.08)';
+      ctx.beginPath();
+      ctx.arc(player.headHitbox.x, player.headHitbox.y, player.headHitbox.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    // 2b. Forehead Header Sweetspot Reticle (Precision Impact Target)
+    if (player.foreheadHitbox) {
+      const fh = player.foreheadHitbox;
+      ctx.lineWidth = isJumping ? 2.5 : 1.5;
+      ctx.setLineDash([]);
+      ctx.strokeStyle = isHitActive ? '#ffffff' : '#ff9100';
+      ctx.fillStyle = isHitActive ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 145, 0, 0.22)';
+      ctx.beginPath();
+      ctx.arc(fh.x, fh.y, fh.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Precision Sweetspot Crosshair Target
+      ctx.strokeStyle = isHitActive ? '#ffffff' : 'rgba(255, 220, 100, 0.9)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(fh.x - fh.radius * 0.5, fh.y);
+      ctx.lineTo(fh.x + fh.radius * 0.5, fh.y);
+      ctx.moveTo(fh.x, fh.y - fh.radius * 0.5);
+      ctx.lineTo(fh.x, fh.y + fh.radius * 0.5);
+      ctx.stroke();
+
+      ctx.fillStyle = isHitActive ? '#ffffff' : '#ffd700';
+      ctx.beginPath();
+      ctx.arc(fh.x, fh.y, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // 3. Torso / Chest Hitbox (Control & Trap Zone)
     if (player.torsoHitbox) {
       ctx.lineWidth = 1.5;
       ctx.setLineDash([3, 3]);
-      ctx.strokeStyle = 'rgba(255, 120, 0, 0.55)';
+      ctx.strokeStyle = 'rgba(255, 120, 0, 0.65)';
       ctx.fillStyle = 'rgba(255, 120, 0, 0.08)';
       ctx.beginPath();
       ctx.arc(player.torsoHitbox.x, player.torsoHitbox.y, player.torsoHitbox.radius, 0, Math.PI * 2);
@@ -10157,9 +11353,10 @@ class UIManager {
       const el = document.getElementById(id);
       if (el) {
         el.checked = !!this.toggles[key];
-        el.addEventListener('change', (e) => {
-          this.toggles[key] = e.target.checked;
-        });
+        const update = () => { this.toggles[key] = el.checked; };
+        el.addEventListener('change', update);
+        el.addEventListener('input', update);
+        el.addEventListener('click', update);
       }
     };
     bindToggle('dbgHitboxes', 'showHitboxes');

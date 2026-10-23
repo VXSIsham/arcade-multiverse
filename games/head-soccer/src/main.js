@@ -1,21 +1,21 @@
-import { Skeleton } from './core/Skeleton.js?v=anim_hd_v33';
-import { AnimationController } from './animation/AnimationController.js?v=anim_hd_v33';
-import { Ball } from './physics/Ball.js?v=anim_hd_v33';
-import { CollisionSystem } from './physics/CollisionSystem.js?v=anim_hd_v33';
-import { ParticleSystem } from './physics/ParticleSystem.js?v=anim_hd_v33';
-import { RagdollSystem } from './physics/RagdollSystem.js?v=anim_hd_v33';
-import { PowerSystem } from './physics/PowerSystem.js?v=anim_hd_v33';
-import { PowerUpSystem } from './physics/PowerUpSystem.js?v=anim_hd_v33';
-import { RivalBot } from './physics/RivalBot.js?v=anim_hd_v33';
-import { SuperShots } from './physics/SuperShots.js?v=anim_hd_v33';
-import { CHARACTERS, getCharacter } from './data/Characters.js?v=anim_hd_v33';
-import { SoundManager } from './audio/SoundManager.js?v=anim_hd_v33';
-import { AssetLoader } from './renderer/AssetLoader.js?v=anim_hd_v33';
-import { GameRenderer } from './renderer/GameRenderer.js?v=anim_hd_v33';
-import { SpineExporter } from './export/SpineExporter.js?v=anim_hd_v33';
-import { InputManager } from './ui/InputManager.js?v=anim_hd_v33';
-import { UIManager } from './ui/UIManager.js?v=anim_hd_v33';
-import { TournamentManager, GAME_MODES } from './tournament/TournamentManager.js?v=anim_hd_v33';
+import { Skeleton } from './core/Skeleton.js?v=char_overhaul_v40';
+import { AnimationController } from './animation/AnimationController.js?v=char_overhaul_v40';
+import { Ball } from './physics/Ball.js?v=char_overhaul_v40';
+import { CollisionSystem } from './physics/CollisionSystem.js?v=char_overhaul_v40';
+import { ParticleSystem } from './physics/ParticleSystem.js?v=char_overhaul_v40';
+import { RagdollSystem } from './physics/RagdollSystem.js?v=char_overhaul_v40';
+import { PowerSystem } from './physics/PowerSystem.js?v=char_overhaul_v40';
+import { PowerUpSystem } from './physics/PowerUpSystem.js?v=char_overhaul_v40';
+import { RivalBot } from './physics/RivalBot.js?v=char_overhaul_v40';
+import { SuperShots } from './physics/SuperShots.js?v=char_overhaul_v40';
+import { CHARACTERS, getCharacter } from './data/Characters.js?v=char_overhaul_v40';
+import { SoundManager } from './audio/SoundManager.js?v=char_overhaul_v40';
+import { AssetLoader } from './renderer/AssetLoader.js?v=char_overhaul_v40';
+import { GameRenderer } from './renderer/GameRenderer.js?v=char_overhaul_v40';
+import { SpineExporter } from './export/SpineExporter.js?v=char_overhaul_v40';
+import { InputManager } from './ui/InputManager.js?v=char_overhaul_v40';
+import { UIManager } from './ui/UIManager.js?v=char_overhaul_v40';
+import { TournamentManager, GAME_MODES } from './tournament/TournamentManager.js?v=char_overhaul_v40';
 
 /**
  * Head Soccer 2D — Skeletal Rig, Ragdoll Stun, Multi-Character Roster & Super Power Engine
@@ -76,9 +76,10 @@ async function bootstrap() {
     userHeadScale: 1.0,
     animController: animController,
     character: getCharacter('kenta'), // Defaults to Kenta 🇯🇵
-    kickHitbox: { x: 0, y: 0, radius: 18 },
-    headHitbox: { x: 0, y: 0, radius: 26 },
-    torsoHitbox: { x: 0, y: 0, radius: 20 },
+    kickHitbox: { x: 0, y: 0, radius: 26 },
+    headHitbox: { x: 0, y: 0, radius: 48 },
+    foreheadHitbox: { x: 0, y: 0, radius: 30 },
+    torsoHitbox: { x: 0, y: 0, radius: 24 },
     hp: 100,
     maxHp: 100,
     isKnockedOut: false,
@@ -869,12 +870,15 @@ async function bootstrap() {
         }
       }
 
+      player.vx = player.isDashing ? player.dashVx : (isMoving ? player.direction * moveSpeed : 0);
+
       // Synchronize Skeleton Root Transform
       skeleton.setPosition(player.x, player.y);
       skeleton.setFacing(player.direction);
 
-      // Procedural Gaze / Look-At tracking towards ball
+      // Procedural Gaze / Look-At tracking towards ball & athletic momentum
       animController.setLookTarget(ball.x, ball.y);
+      animController.setVelocity(player.vx, player.vy);
 
       // Update Animation State & Skeleton
       animState = animController.update(player.isFrozen ? 0 : dt);
@@ -926,7 +930,7 @@ async function bootstrap() {
 
     // Update Physics, Air Drops & Interactions
     ball.update(dt, renderer.groundY, renderer.stageWidth);
-    collisionSystem.update(player, skeleton, ball, renderer.stageWidth, renderer.groundY, dt, ragdollSystem, powerSystem, rivalBot, inputManager, isMatchOver);
+    collisionSystem.update(player, skeleton, ball, renderer.stageWidth, renderer.groundY, dt, ragdollSystem, powerSystem, rivalBot, inputManager, isMatchOver, superShots);
     powerUpSystem.update(dt, renderer.stageWidth, renderer.groundY, player, rivalBot, ball, collisionSystem);
     superShots.update(dt, renderer.stageWidth, renderer.groundY, ball, player, rivalBot, collisionSystem);
     particleSystem.update(dt);
@@ -954,10 +958,10 @@ async function bootstrap() {
       soundManager,
       dt,
       options: {
-        showBones: uiManager.toggles.showBones,
+        showBones: document.getElementById('dbgBones')?.checked ?? uiManager.toggles.showBones,
         showJoints: uiManager.toggles.showJoints,
-        showMesh: uiManager.toggles.showMesh,
-        showHitboxes: uiManager.toggles.showHitboxes,
+        showMesh: document.getElementById('dbgMesh')?.checked ?? uiManager.toggles.showMesh,
+        showHitboxes: document.getElementById('dbgHitboxes')?.checked ?? uiManager.toggles.showHitboxes,
         showSkin: uiManager.toggles.showSkin
       }
     });

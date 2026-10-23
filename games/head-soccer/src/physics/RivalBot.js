@@ -1,6 +1,6 @@
-import { Skeleton } from '../core/Skeleton.js';
-import { AnimationController } from '../animation/AnimationController.js?v=anim_hd_v31';
-import { getCharacter } from '../data/Characters.js?v=anim_hd_v31';
+import { Skeleton } from '../core/Skeleton.js?v=char_overhaul_v40';
+import { AnimationController } from '../animation/AnimationController.js?v=char_overhaul_v40';
+import { getCharacter } from '../data/Characters.js?v=char_overhaul_v40';
 
 /**
  * Autonomous CPU Rival Opponent for 1v1 Head Soccer.
@@ -37,9 +37,11 @@ export class RivalBot {
     this.hp = 100;
     this.maxHp = 100;
     this.power = 30; // Starts with partial super gauge
-    this.kickHitbox = { x: 0, y: 0, radius: 18 };
-    this.headHitbox = { x: 0, y: 0, radius: 26 };
-    this.torsoHitbox = { x: 0, y: 0, radius: 20 };
+    this.kickHitbox = { x: 0, y: 0, radius: 26 };
+    this.headHitbox = { x: 0, y: 0, radius: 48 };
+    this.foreheadHitbox = { x: 0, y: 0, radius: 30 };
+    this.torsoHitbox = { x: 0, y: 0, radius: 24 };
+    this.hitFlashTimer = 0;
     this.isFrozen = false;
     this.freezeTimer = 0;
     this.hasShield = false;
@@ -343,6 +345,7 @@ export class RivalBot {
     if (this.kickCooldown > 0) this.kickCooldown -= dt;
     if (this.tackleCooldown > 0) this.tackleCooldown -= dt;
     if (this.jumpCooldown > 0) this.jumpCooldown -= dt;
+    if (this.hitFlashTimer > 0) this.hitFlashTimer = Math.max(0, this.hitFlashTimer - dt);
 
     // Freeze recovery
     if (this.isFrozen) {
@@ -468,17 +471,27 @@ export class RivalBot {
         this.canDoubleJump = true;
       }
 
-      // Hitboxes updates
+      // Hitboxes updates (Anatomically calibrated for Chibi 1.25x caricature proportion)
+      const headScale = (this.userHeadScale || 1.0) * (this.giantHeadMultiplier || 1.0) * 1.25;
       const footTip = this.skeleton.footFront.getWorldTip();
       const footOffsetX = Math.abs(footTip.x - this.skeleton.root.x);
-      this.kickHitbox.x = this.x + this.direction * footOffsetX;
-      this.kickHitbox.y = footTip.y;
+      this.kickHitbox.x = this.x + this.direction * (footOffsetX + 4);
+      this.kickHitbox.y = footTip.y - 2;
+      this.kickHitbox.radius = 26;
 
-      this.headHitbox.x = this.skeleton.head.worldX + this.direction * 12;
-      this.headHitbox.y = this.skeleton.head.worldY - 32;
+      this.headHitbox.x = this.skeleton.head.worldX + this.direction * (14 * headScale);
+      this.headHitbox.y = this.skeleton.head.worldY - (50 * headScale);
+      this.headHitbox.radius = Math.round(48 * headScale);
 
-      this.torsoHitbox.x = this.skeleton.torso.worldX;
-      this.torsoHitbox.y = this.skeleton.torso.worldY - 14;
+      if (!this.foreheadHitbox) this.foreheadHitbox = { x: 0, y: 0, radius: 30 };
+      this.foreheadHitbox.x = this.skeleton.head.worldX + this.direction * (28 * headScale);
+      this.foreheadHitbox.y = this.skeleton.head.worldY - (58 * headScale);
+      this.foreheadHitbox.radius = Math.round(30 * headScale);
+
+      if (!this.torsoHitbox) this.torsoHitbox = { x: 0, y: 0, radius: 24 };
+      this.torsoHitbox.x = this.skeleton.torso.worldX + this.direction * 4;
+      this.torsoHitbox.y = this.skeleton.torso.worldY - 12;
+      this.torsoHitbox.radius = 24;
 
       // Continuous collision check if kick animation is active
       const curAnim = this.animController.currentAnim;
@@ -488,12 +501,33 @@ export class RivalBot {
         this.performHitCheck(ball, player, collisionSystem);
       }
 
-      // Header collision check
+      // Header collision check (Forehead sweetspot + Cranium mass)
       const distHeadBall = Math.hypot(ball.x - this.headHitbox.x, ball.y - this.headHitbox.y);
-      if (this.kickCooldown <= 0 && distHeadBall < ball.radius + this.headHitbox.radius) {
+      const distForeheadBall = this.foreheadHitbox ? Math.hypot(ball.x - this.foreheadHitbox.x, ball.y - this.foreheadHitbox.y) : 999;
+      const isHeadHit = distHeadBall < ball.radius + this.headHitbox.radius || (this.foreheadHitbox && distForeheadBall < ball.radius + this.foreheadHitbox.radius);
+      if (this.kickCooldown <= 0 && isHeadHit) {
+        this.hitFlashTimer = 0.12;
         this.kickCooldown = 0.22;
         const powerMult = (this.character?.stats?.power || 1.0) * (this.activePowerMultiplier || 1.0);
         const dir = this.direction;
+
+        const isLaser = (ball.superType === 'laser' || ball.superType === 'laser_reflected') && ball.lastKickedBy === 'player';
+        if (isLaser && (!this.isGrounded || curAnim === 'smash_header' || isOneShotKick)) {
+          // OPTION 1: P2 REFLEJO PRISMATICO!
+          ball.isSuper = true;
+          ball.superType = 'laser_reflected';
+          ball.superColors = ['#ffd700', '#ffffff', '#00f0ff'];
+          ball.lastKickedBy = 'rival';
+          ball.kick(dir * 1580, -25, true, 'rival');
+          this.particleSystem.spawnSonicBoom(this.headHitbox.x, this.headHitbox.y, dir, '#ffd700');
+          this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#ffd700');
+          this.soundManager.play('superPower');
+          this.soundManager.play('laser');
+          collisionSystem?.triggerHitStop(0.09);
+          collisionSystem?.triggerShake(16);
+          collisionSystem?.addFloatingText('🪞⚡ ¡REFLEJO P2! ⚡🪞', this.x, this.y - 110, '#ffd700', 26);
+          return;
+        }
 
         if (!this.isGrounded && curAnim === 'smash_header') {
           ball.kick(dir * (880 + Math.random() * 60) * powerMult, 360 * powerMult, false, 'rival', 'smash', dir * 2.6);
@@ -604,15 +638,17 @@ export class RivalBot {
       this.vy = 0;
     }
 
-    // 2. Kicking Strike Logic
+    // 2. Kicking Strike Logic (Anatomically calibrated)
     const footTip = this.skeleton.footFront.getWorldTip();
     const footOffsetX = Math.abs(footTip.x - this.skeleton.root.x);
-    this.kickHitbox.x = this.x + this.direction * footOffsetX;
-    this.kickHitbox.y = footTip.y;
+    this.kickHitbox.x = this.x + this.direction * (footOffsetX + 4);
+    this.kickHitbox.y = footTip.y - 2;
+    this.kickHitbox.radius = 26;
 
-    if (!this.torsoHitbox) this.torsoHitbox = { x: 0, y: 0, radius: 20 };
-    this.torsoHitbox.x = this.skeleton.torso.worldX;
-    this.torsoHitbox.y = this.skeleton.torso.worldY - 14;
+    if (!this.torsoHitbox) this.torsoHitbox = { x: 0, y: 0, radius: 24 };
+    this.torsoHitbox.x = this.skeleton.torso.worldX + this.direction * 4;
+    this.torsoHitbox.y = this.skeleton.torso.worldY - 12;
+    this.torsoHitbox.radius = 24;
 
     // Remote / Ranged Super Ability cast:
     // If RivalBot has full power (100) and ball is in attacking half, unleash special ability with telegraph!
@@ -694,14 +730,42 @@ export class RivalBot {
       }
     }
 
-    // 3. Header Strike Logic for Rival
-    this.headHitbox.x = this.skeleton.head.worldX + this.direction * 12;
-    this.headHitbox.y = this.skeleton.head.worldY - 32;
+    // 3. Header Strike Logic for Rival (Anatomically calibrated for Chibi proportion)
+    const headScale = (this.userHeadScale || 1.0) * (this.giantHeadMultiplier || 1.0) * 1.25;
+    this.headHitbox.x = this.skeleton.head.worldX + this.direction * (14 * headScale);
+    this.headHitbox.y = this.skeleton.head.worldY - (50 * headScale);
+    this.headHitbox.radius = Math.round(48 * headScale);
+
+    if (!this.foreheadHitbox) this.foreheadHitbox = { x: 0, y: 0, radius: 30 };
+    this.foreheadHitbox.x = this.skeleton.head.worldX + this.direction * (28 * headScale);
+    this.foreheadHitbox.y = this.skeleton.head.worldY - (58 * headScale);
+    this.foreheadHitbox.radius = Math.round(30 * headScale);
 
     const distHeadBall = Math.hypot(ball.x - this.headHitbox.x, ball.y - this.headHitbox.y);
-    if (this.kickCooldown <= 0 && distHeadBall < ball.radius + this.headHitbox.radius) {
+    const distForeheadBall = this.foreheadHitbox ? Math.hypot(ball.x - this.foreheadHitbox.x, ball.y - this.foreheadHitbox.y) : 999;
+    const isHeadHit = distHeadBall < ball.radius + this.headHitbox.radius || (this.foreheadHitbox && distForeheadBall < ball.radius + this.foreheadHitbox.radius);
+    if (this.kickCooldown <= 0 && isHeadHit) {
+      this.hitFlashTimer = 0.12;
       this.kickCooldown = 0.32;
       const powerMult = this.character?.stats?.power || 1.0;
+      const isLaser = (ball.superType === 'laser' || ball.superType === 'laser_reflected') && ball.lastKickedBy === 'player';
+      if (isLaser && (!this.isGrounded || curAnim === 'smash_header' || Math.random() < 0.65)) {
+        // OPTION 1: AI REFLEJO PRISMATICO!
+        ball.isSuper = true;
+        ball.superType = 'laser_reflected';
+        ball.superColors = ['#ffd700', '#ffffff', '#00f0ff'];
+        ball.lastKickedBy = 'rival';
+        ball.kick(-1580, -25, true, 'rival');
+        this.particleSystem.spawnSonicBoom(this.headHitbox.x, this.headHitbox.y, -1, '#ffd700');
+        this.particleSystem.spawnSparks(ball.x, ball.y, 45, '#ffd700');
+        this.soundManager.play('superPower');
+        this.soundManager.play('laser');
+        collisionSystem?.triggerHitStop(0.09);
+        collisionSystem?.triggerShake(16);
+        collisionSystem?.addFloatingText('🪞⚡ ¡REFLEJO RIVAL! ⚡🪞', this.x, this.y - 110, '#ffd700', 26);
+        return;
+      }
+
       if (!this.isGrounded && ball.y > this.y - 45) {
         this.animController.play('smash_header');
         ball.kick((-820 - Math.random() * 80) * powerMult, 320 * powerMult, false, 'rival', 'smash');
@@ -747,6 +811,7 @@ export class RivalBot {
     this.skeleton.setPosition(this.x, this.y);
     this.skeleton.setFacing(this.direction);
     this.animController.setLookTarget(ball.x, ball.y);
+    this.animController.setVelocity(this.vx, this.vy);
     const animState = this.animController.update(dt);
 
     if (animState.aura || cur === 'super_shot') {
@@ -757,7 +822,7 @@ export class RivalBot {
     return animState;
   }
 
-  takeDamage(amount, impulseX = 320, impulseY = -380, isHeavyBlast = false) {
+  takeDamage(amount, impulseX = 320, impulseY = -380, isHeavyBlast = false, customStunTimer = null) {
     if (this.hasShield) {
       this.soundManager.play('bounce');
       this.particleSystem.spawnSparks(this.x, this.y - 60, 20, '#ffd700');
@@ -772,7 +837,7 @@ export class RivalBot {
     const isGuardBroken = this.hp <= 15 && amount >= 25;
     if (isHeavyBlast || isGuardBroken) {
       this.isStunned = true;
-      this.stunTimer = 0.65; // Snappy 0.65s recovery
+      this.stunTimer = customStunTimer != null ? customStunTimer : 0.65;
       this.animController.play('stun');
       this.soundManager.play('knockout');
     } else {
