@@ -1895,6 +1895,10 @@ class KingCrimsonStand {
         targetX = d.x + d.face * 18;
         targetY = d.y - 12;
         chosenRef = mf < 10 ? 'stand:2.1' : 'stand:2.2';
+      } else if (k === 'diavolo_dive' || (d.diavoloFighter && d.diavoloFighter.upSpecialIsDiving)) {
+        targetX = d.x + d.face * 18;
+        targetY = d.y - 10;
+        chosenRef = 'stand:1.5';
       } else if (k === 'ds') {
         // Time Erase Manifestation
         targetX = d.x + d.face * 6;
@@ -2018,6 +2022,10 @@ class DiavoloFighter {
     this.usedUltSinceLastGroundedCheckpoint = false;
     this.ambushDmgMult = 1.0;
     this.ambushKbMult = 1.0;
+    this.upSpecialMarker = null;
+    this.upSpecialHitOpponent = false;
+    this.upSpecialIsDiving = false;
+    this.usedSecondTimeSkip = false;
   }
 
   update() {
@@ -2030,6 +2038,10 @@ class DiavoloFighter {
 
     if (this.epitaphCounterWindow > 0) this.epitaphCounterWindow--;
     if (this.glassShatterTimer > 0) this.glassShatterTimer--;
+    if (this.upSpecialMarker) {
+      this.upSpecialMarker.timer--;
+      if (this.upSpecialMarker.timer <= 0) this.upSpecialMarker = null;
+    }
 
     if (this.activeEcho && this.activeEcho.life <= 0) {
       this.activeEcho = null;
@@ -2040,6 +2052,9 @@ class DiavoloFighter {
     if (f.ground && f.st !== 'hitstun' && !f.hitstun) {
       this.usedUltSinceLastGroundedCheckpoint = false;
       this.usedUltThisAirSequence = false;
+            this.usedSecondTimeSkip = false;
+      this.upSpecialHitOpponent = false;
+      this.upSpecialIsDiving = false;
       f.canceledFreefall = false;
     }
 
@@ -2287,6 +2302,64 @@ class DiavoloFighter {
       ctx.lineTo(cw, yy + Math.sin(G.frame * 0.2 + i) * 14);
       ctx.stroke();
     }
+    ctx.restore();
+  }
+
+  renderUpSpecialMarker(ctx) {
+    if (!this.upSpecialMarker) return;
+    const m = this.upSpecialMarker;
+    ctx.save();
+    ctx.translate(Math.round(m.x), Math.round(m.y));
+    const pulse = 0.5 + 0.5 * Math.sin(G.frame * 0.18);
+    const alpha = Math.min(1.0, m.timer / 30);
+    const beamGrad = ctx.createLinearGradient(0, 0, 0, -90);
+    beamGrad.addColorStop(0, `rgba(225, 29, 72, ${0.45 * alpha})`);
+    beamGrad.addColorStop(0.5, `rgba(251, 113, 133, ${0.25 * alpha})`);
+    beamGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
+    ctx.fillStyle = beamGrad;
+    ctx.fillRect(-14, -90, 28, 90);
+    ctx.save();
+    ctx.scale(1, 0.42);
+    ctx.strokeStyle = `rgba(225, 29, 72, ${0.75 * alpha})`;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 32 + pulse * 6, 0, TAU);
+    ctx.stroke();
+    ctx.strokeStyle = `rgba(255, 255, 255, ${0.85 * alpha})`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 18, 0, TAU);
+    ctx.stroke();
+    ctx.rotate(G.frame * 0.05);
+    ctx.strokeStyle = `rgba(251, 113, 133, ${0.6 * alpha})`;
+    for (let i = 0; i < 4; i++) {
+      ctx.rotate(Math.PI / 2);
+      ctx.beginPath();
+      ctx.moveTo(18, 0);
+      ctx.lineTo(34, 0);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = 0.45 * alpha;
+    ctx.scale(m.face, 1);
+    const R_echo = typeof fref === "function" ? fref("diavolo", "mov:0.0") : null;
+    if (R_echo && R_echo.S && R_echo.S.ready) {
+      ctx.shadowColor = "#dc2626";
+      ctx.shadowBlur = 12;
+      const fr = R_echo.fr, sc = R_echo.sc;
+      ctx.drawImage(R_echo.S.img, fr.sx, fr.sy, fr.w, fr.h, -fr.ax * sc, -fr.ay * sc, fr.w * sc, fr.h * sc);
+    }
+    ctx.restore();
+    ctx.save();
+    ctx.font = '900 13px "Impact", "Arial Black", sans-serif';
+    ctx.textAlign = "center";
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.9 * alpha})`;
+    ctx.strokeStyle = `rgba(136, 19, 55, ${0.9 * alpha})`;
+    ctx.lineWidth = 3;
+    ctx.strokeText("▼ RETORNO DE DESTINO (↓)", 0, -96);
+    ctx.fillText("▼ RETORNO DE DESTINO (↓)", 0, -96);
+    ctx.restore();
     ctx.restore();
   }
 
@@ -5327,8 +5400,10 @@ function stepAttack(f,spd){
       f.intan = Math.max(f.intan, 8);
       fx('streak',f.x,f.y-34,{dir:-Math.PI/2,len:100,col:'#dc2626',w:4});
       fx('text',f.x,f.y-90,{txt:'¡HACHAZO DESCENDENTE (METEOR)!',col:'#ef4444',dur:35});
+      f.mvKey = 'diavolo_dive';
       f.mv = {
        nm: 'Hachazo Descendente Carmesí', f: 40,
+       spr: [[0, B_DIA_M+'3.1'], [4, B_DIA_M+'3.2'], [16, B_DIA_M+'3.3']],
        hb: [{ s: 0, e: 40, x: 12, y: 15, r: 26, w: 52, h: 54, d: 15.0, a: 270, b: 58, g: 98, meteor: true, sweetspot: true, diavoloDive: true }]
       };
       f.mf = 0;
@@ -5356,7 +5431,7 @@ function stepAttack(f,spd){
      sfx('boom');G.shake=Math.max(G.shake,10);
      fx('shock',f.x,f.y,{r:60,col:'#dc2626',flat:1});
      fx('ring',f.x,f.y-20,{r:45,col:'#ffffff',dur:12});
-     f.st = 'land'; f.mv = null; f.mvKey = null; f.lag = 12;
+     f.st = 'land'; f.sf = 12; f.mv = null; f.mvKey = null;
      return;
     }
 
@@ -5366,6 +5441,26 @@ function stepAttack(f,spd){
       fx('text',f.x,f.y-80,{txt:'¡DESTINO CONSUMADO (COMBO)!',col:'#10b981',dur:30});
      }
     }
+  } else if(f.mvKey==='diavolo_dive'){
+    const df = f.diavoloFighter;
+    f.vy = Math.min(24.0, f.vy + 0.8);
+    f.vx = f.face * 4.5;
+    if(G.frame % 2 === 0){
+     fx('streak', f.x, f.y - 20, { dir: -Math.PI/2, len: 60, col: '#dc2626', w: 3 });
+    }
+    if(f.ground){
+     if(df) df.upSpecialIsDiving = false;
+     sfx('boom'); G.shake = Math.max(G.shake, 10);
+     fx('shock', f.x, f.y, { r: 60, col: '#dc2626', flat: 1 });
+     fx('ring', f.x, f.y - 20, { r: 45, col: '#ffffff', dur: 12 });
+     f.st = 'land'; f.sf = 12; f.mv = null; f.mvKey = null;
+     return;
+    }
+    if(f.mf >= f.mv.f - 1){
+     if(df) df.upSpecialIsDiving = false;
+     f.st = 'air'; f.mv = null; f.mvKey = null;
+     return;
+    }
   } else if(f.mvKey==='final'&&f.mf>=8&&f.mf<=14&&!G.diavoloCinematic){
    const xmin=f.x+(f.face>0?0:-120),xmax=f.x+(f.face>0?120:0),ymin=f.y-45,ymax=f.y+45;
    let captured=false;
@@ -5374,8 +5469,8 @@ function stepAttack(f,spd){
      if(echo.owner!==f&&echo.life>0){
       const er=echo.hurtRect();
       if(er.x2>xmin&&er.x1<xmax&&er.y2>ymin&&er.y1<ymax){
-       echo.state='hurt';f.intan=95;
-       G.diavoloCinematic={diavolo:f,victim:echo,timer:90,maxTimer:90};
+       echo.state='hurt';f.intan=275;
+       G.diavoloCinematic={diavolo:f,victim:echo,timer:260,maxTimer:260};
        captured=true;break;
       }
      }
@@ -5386,8 +5481,8 @@ function stepAttack(f,spd){
      if(victim===f||!canBeHit(victim))continue;
      const vr=hurtRect(victim);
      if(vr.x2>xmin&&vr.x1<xmax&&vr.y2>ymin&&vr.y1<ymax){
-      victim.st='CINEMATIC_LOCKED';victim.vx=0;victim.vy=0;victim.intan=95;f.intan=95;
-      G.diavoloCinematic={diavolo:f,victim,timer:90,maxTimer:90};
+      victim.st='CINEMATIC_LOCKED';victim.vx=0;victim.vy=0;victim.intan=275;f.intan=275;
+      G.diavoloCinematic={diavolo:f,victim,timer:260,maxTimer:260};
       break;
      }
     }
@@ -5785,6 +5880,15 @@ function applyHit(a,t,hb,sc,dir,hx,hy,proj){
  if(isDiavoloDashArmor){t.hitlag=Math.max(t.hitlag,Math.floor(hb.d*sc*.25)+2);fx('ring',t.x,t.y-34,{r:36,col:'#e11d48',dur:10});fx('text',t.x,t.y-120,{txt:'¡SUPER ARMOR!',col:'#e11d48',dur:25});return;}
  if(a&&a.C.id==='diavolo'&&a.mvKey==='dtilt'&&Math.random()<0.35){t.st='trip';t.sf=0;t.tripT=25;t.vx*=0.2;fx('text',t.x,t.y-60,{txt:'¡TROPIEZO!',col:'#f43f5e',dur:25});}
  if(a&&a.C.id==='diavolo'&&a.mvKey==='dair'){a.vy=-10;a.jumps=Math.max(a.jumps,1);fx('shock',a.x,a.y+10,{r:28,col:'#e11d48'});}
+  if(a&&a.C.id==='diavolo'&&a.diavoloFighter){
+   if(hb.diavoloUpHit) a.diavoloFighter.upSpecialHitOpponent = true;
+   if(hb.diavoloDive || a.mvKey==='diavolo_dive'){
+    a.diavoloFighter.upSpecialIsDiving = false;
+    a.mv = null; a.mvKey = null; a.st = 'air'; a.vy = -12.5; a.jumps = Math.max(a.jumps, 1);
+    fx('shock', a.x, a.y + 10, { r: 38, col: '#dc2626' });
+    sfx('boom');
+   }
+  }
  if(t.C.dangerSense&&!t.dsCd&&(t.st==='ground'||t.st==='air')&&own!==t&&Math.random()<.3){t.dsCd=420;t.intan=12;t.x-=dir*34;t.vx=-dir*6;
   fx('text',t.x,t.y-130,{txt:'¡SENTIDO DEL PELIGRO!',col:'#ffe14d'});fx('ring',t.x,t.y-40,{r:44,col:'#ffe14d',dur:12});sfx('vanish');return;}
  const GD=GAUGE[own.C.id],gs=GD&&GD.dmgScale?GD.dmgScale[0]+(own.gauge||0)/100*GD.dmgScale[1]:1,fj=own.fajinMv?1.4:1;
@@ -7247,12 +7351,7 @@ function drawCutin(){
 function renderDiavoloCinematic(ctx, canvas) {
   if (!G.diavoloCinematic) return;
   const C = G.diavoloCinematic;
-  C.timer--;
-  if (C.timer <= 0) {
-    resolveDiavoloCinematic(C);
-    G.diavoloCinematic = null;
-    return;
-  }
+  if (C.timer <= 0) return;
 
   const f = C.diavolo, victim = C.victim;
   const cw = canvas.width, ch = canvas.height;
@@ -7269,6 +7368,9 @@ function renderDiavoloCinematic(ctx, canvas) {
   } else if (frame > 242) {
     letterboxH = Math.max(0, ((260 - frame) / 18) * maxLetterboxH);
   }
+
+  const vicScreenX = cw / 2;
+  const vicScreenY = letterboxH + (ch - letterboxH * 2) * 0.65;
 
   // ==========================================
   // BACKGROUND: THE ERASED TIME CRIMSON VOID
@@ -7361,7 +7463,7 @@ function renderDiavoloCinematic(ctx, canvas) {
       const gAlpha = 0.42 * (1 - i * 0.18);
       ctx.save();
       ctx.globalAlpha = gAlpha;
-      ctx.translate(victim.x + ghostDist, victim.y);
+      ctx.translate(vicScreenX + ghostDist, vicScreenY);
       ctx.scale(victim.face, 1);
       if (R_vic && R_vic.S && R_vic.S.ready) {
         const fr = R_vic.fr, sc = R_vic.sc;
@@ -7384,8 +7486,8 @@ function renderDiavoloCinematic(ctx, canvas) {
     ctx.lineWidth = 2.5;
     ctx.setLineDash([8, 6]);
     ctx.beginPath();
-    ctx.moveTo(victim.x, victim.y - 34);
-    ctx.lineTo(victim.x + 160 * victim.face, victim.y - 34);
+    ctx.moveTo(vicScreenX, vicScreenY - 34);
+    ctx.lineTo(vicScreenX + 160 * victim.face, vicScreenY - 34);
     ctx.stroke();
     ctx.restore();
 
@@ -7657,14 +7759,14 @@ function renderDiavoloCinematic(ctx, canvas) {
       if (f.diavoloFighter) f.diavoloFighter.renderGlassShatterTrigger(14);
       if (typeof fx === 'function') {
         fx('flash', 0, 0, { screen: 1, dur: 16 });
-        fx('shock', victim.x, victim.y - 34, { r: 95, col: '#dc2626' });
-        fx('ring', victim.x, victim.y - 34, { r: 75, col: '#ffffff', dur: 22 });
+        fx('shock', vicScreenX, vicScreenY - 34, { r: 95, col: '#dc2626' });
+        fx('ring', vicScreenX, vicScreenY - 34, { r: 75, col: '#ffffff', dur: 22 });
       }
     }
 
     // Dynamic Radial Speedlines exploding from penetration point
     ctx.save();
-    ctx.translate(victim.x, victim.y - 34);
+    ctx.translate(vicScreenX, vicScreenY - 34);
     ctx.strokeStyle = strikeFrame % 2 === 0 ? 'rgba(254, 205, 211, 0.45)' : 'rgba(225, 29, 72, 0.65)';
     ctx.lineWidth = 2.5;
     for (let s = 0; s < 32; s++) {
@@ -7682,7 +7784,7 @@ function renderDiavoloCinematic(ctx, canvas) {
     if (R_KC && R_KC.S && R_KC.S.ready) {
       ctx.save();
       ctx.imageSmoothingEnabled = false;
-      ctx.translate(victim.x - victim.face * 18, victim.y);
+      ctx.translate(vicScreenX - victim.face * 18, vicScreenY);
       ctx.scale(victim.face, 1);
       ctx.shadowColor = '#dc2626';
       ctx.shadowBlur = 28;
@@ -7693,7 +7795,7 @@ function renderDiavoloCinematic(ctx, canvas) {
 
     // Penetrating punch beam & exit wound plasma shockwave
     ctx.save();
-    ctx.translate(victim.x, victim.y - 34);
+    ctx.translate(vicScreenX, vicScreenY - 34);
     ctx.strokeStyle = '#dc2626';
     ctx.lineWidth = 10;
     ctx.beginPath();
@@ -7748,7 +7850,7 @@ function renderDiavoloCinematic(ctx, canvas) {
     if (R_KC_retract && R_KC_retract.S && R_KC_retract.S.ready) {
       ctx.save();
       ctx.imageSmoothingEnabled = false;
-      ctx.translate(victim.x - victim.face * 26, victim.y);
+      ctx.translate(vicScreenX - victim.face * 26, vicScreenY);
       ctx.scale(victim.face, 1);
       ctx.shadowColor = '#e11d48';
       ctx.shadowBlur = 14;
@@ -7811,7 +7913,9 @@ function resolveDiavoloCinematic(C) {
     if (typeof sfx === 'function') sfx('boom');
   }
 
-  f.st = 'ground';
+  victim.x = f.x + f.face * 45;
+  victim.y = f.y;
+  f.st = f.ground ? 'ground' : 'air';
   f.mv = null;
   f.mvKey = null;
   f.intan = 30;
@@ -7833,6 +7937,9 @@ function render(){
  for(const f of G.fighters)if(f.rideAng!=null&&f.st==='attack'&&f.mv&&f.mv.ride)drawRide(f);
  for(const f of G.fighters)if(!f.out&&f.dead===0&&f.st!=='dead'&&modeOf(f).darkAura)drawDarkAura(f);
  if(G.shadows)for(const S of G.shadows){const f=S.owner;if(f.dead||f.out)continue;const ox=f.x;f.x=ox+S.dx;ctx.save();ctx.globalAlpha=.5;ctx.filter='sepia(1) hue-rotate(10deg) brightness(1.3)';drawFighter(f);ctx.restore();f.x=ox;}
+  for(const f of G.fighters){
+   if(f.diavoloFighter && f.diavoloFighter.upSpecialMarker) f.diavoloFighter.renderUpSpecialMarker(ctx);
+  }
  for(const f of G.fighters)if(!f.out&&f.dead===0&&f.st!=='dead')drawFighter(f);
  for(const f of G.fighters){
   if(f.C.id==='diavolo'&&f.diavoloFighter&&f.diavoloFighter.stand&&!f.dead)f.diavoloFighter.stand.render(ctx);
@@ -8184,6 +8291,16 @@ function toonStep(){
   const keep=f.hit;f.hit=new Map([...G.fighters].map(t=>[t.i,1e9]));stepFighter(f);f.hit=keep;}
 }
 function tick(){
+ if(G.diavoloCinematic){
+  const C = G.diavoloCinematic;
+  C.timer--;
+  stepFx();
+  if(C.timer <= 0){
+   resolveDiavoloCinematic(C);
+   G.diavoloCinematic = null;
+  }
+  return;
+ }
  for(const f of G.fighters)if(f.combo){const c=f.combo;if(c.v&&c.v.st!=='hitstun'&&c.v.st!=='grabbed')c.live--;if(c.show>0)c.show--;if(c.pop>0)c.pop--;}
  G.punch=(G.punch||0)*.88;G.dim=Math.max(0,(G.dim||0)-.02);if(G.lines){G.lines.t++;if(G.lines.t>=G.lines.dur)G.lines=null;}
  if(G.cutin){G.cutin.t++;stepFx();toonStep();if(G.cutin.t>=G.cutin.dur)G.cutin=null;return;}
