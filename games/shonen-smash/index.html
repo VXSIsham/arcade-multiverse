@@ -3327,7 +3327,7 @@ function stepAttack(f,spd){
  if(f.C.id==='diavolo'){
   if(f.mvKey==='ns'&&f.mf===10){
    for(const vy0 of [-2.5,-1.2,0.2]){
-    G.projs.push({owner:f,t:'blood',col:'#e11d48',x:f.x+f.face*24,y:f.y-38,vx:(8+Math.random()*1.5)*f.face,vy:vy0,grav:0.32,r:8,life:28,age:0,d:3.5,a:45,b:0,g:0,dir:f.face,hits:new Map()});
+    G.projs.push({owner:f,t:'blood',col:'#e11d48',x:f.x+f.face*24,y:f.y-38,vx:(8+Math.random()*1.5)*f.face,vy:vy0,grav:0.32,r:8,life:28,age:0,sc:1,d:3.5,a:45,b:10,g:15,dir:f.face,hits:new Map()});
    }
    sfx('slash');
   } else if(f.mvKey==='ss'){
@@ -3463,7 +3463,7 @@ function tether(f,range){
  f.mv=null;f.st='ledge';f.sf=0;f.ledgeK=best;G.ledges[best]=f;f.x=L.x+L.side*16;f.y=L.y+62;f.vx=f.vy=0;f.face=-L.side;f.jumps=1;f.usedUp=false;f.intan=20;f.ground=null;
 }
 function physics(f){
- if(isNaN(f.x)||isNaN(f.y)){f.x=200;f.y=400;f.vx=0;f.vy=0;}
+ if(isNaN(f.x)||isNaN(f.y)){f.x=0;f.y=G.stage.main.y-200;f.vx=f.vy=f.lvx=f.lvy=0;f.ground=null;}
  const C=stats(f);
  if(f.st==='ledge'||f.st==='hold'||f.st==='grabbed'||f.st==='respawn')return;
  const py=f.y;
@@ -3605,6 +3605,7 @@ function resolveDefense(a,t,hb,sc,dir,hx,hy,proj){
  return false;
 }
 function applyHit(a,t,hb,sc,dir,hx,hy,proj){
+ if(!(sc>0))sc=1; // un proyectil sin sc metía NaN al % del rival y de ahí al knockback, al hitstun y a la cámara
  {const BO=proj?proj.owner:a;const BM=BO&&modeOf(BO).burn;if(BM&&BO!==t){t.burnT=BM.t;t.burnBy=BO;t.burnCol=BM.col;}}
  {const NZ=proj?proj.owner:a;if(NZ&&NZ.mode==='demonio'&&NZ!==t&&G.frame-(NZ.nezT||0)>18){NZ.nezT=G.frame;const sd=Math.sign(t.x-NZ.x)||NZ.face;
   fx('sprfx',t.x-sd*70,t.y,{id:'tanjiro',ref:Math.random()<.5?'nezuko:1.3':'nezuko:3.6',face:sd,dur:22});fx('sprfx',t.x,t.y+10,{id:'tanjiro',ref:'nezuko:4.6',face:1,dur:26,grow:1,alpha:.9});
@@ -4705,16 +4706,6 @@ function drawFighter(f,ctx2){
  const SPok=spriteReady(f.C.id);
  drawLivingAuraBack(f);
  if(SPok)drawSpriteBody(f,null,flash);
- if(f.bloodBlindT>0){
-  ctx.save();ctx.translate(Math.round(f.x),Math.round(f.y-42));
-  const bAlpha=Math.min(1,f.bloodBlindT/15)*0.85;
-  ctx.fillStyle='rgba(190, 18, 60, '+bAlpha+')';
-  for(let i=0;i<5;i++){
-   const bx=Math.sin(i*1.8+1)*15,by=Math.cos(i*2.2+2)*12;
-   ctx.beginPath();ctx.arc(bx,by,4+(i%3)*1.5,0,TAU);ctx.fill();
-  }
-  ctx.restore();
- }
  else{
  ctx.save();ctx.translate(f.x,f.y);
  if(f.buff){ctx.globalAlpha=.35+.15*Math.sin(G.frame*.3);ctx.fillStyle=f.buff.aura;ctx.beginPath();ctx.ellipse(0,-34,34+Math.sin(G.frame*.5)*3,46,0,0,TAU);ctx.fill();ctx.globalAlpha=1;}
@@ -4756,6 +4747,16 @@ function drawFighter(f,ctx2){
   if(mv.fx==='water'||mv.fx==='fire'){const h=curHb(f);if(h&&h.on){ctx.strokeStyle=mv.fx==='water'?'rgba(90,180,255,.8)':'rgba(255,120,40,.85)';ctx.lineWidth=8;ctx.beginPath();ctx.arc(h.x*.4,h.y*.9,h.h.r,G.frame*.4,G.frame*.4+4.4);ctx.stroke();}}
  }
  ctx.restore();
+ }
+ if(f.bloodBlindT>0){
+  ctx.save();ctx.translate(Math.round(f.x),Math.round(f.y-42));
+  const bAlpha=Math.min(1,f.bloodBlindT/15)*0.85;
+  ctx.fillStyle='rgba(190, 18, 60, '+bAlpha+')';
+  for(let i=0;i<5;i++){
+   const bx=Math.sin(i*1.8+1)*15,by=Math.cos(i*2.2+2)*12;
+   ctx.beginPath();ctx.arc(bx,by,4+(i%3)*1.5,0,TAU);ctx.fill();
+  }
+  ctx.restore();
  }
  drawSlashArc(f);
  drawLivingAuraFront(f);
