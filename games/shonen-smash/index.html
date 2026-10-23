@@ -1150,7 +1150,7 @@ const MODES={naruto:{
   ssj:{nm:'Super Saiyajin',run:1.1,air:1.08,jump:1.04,dj:1.04,dmg:1.2,w:2,aura:'#ffd23f',glow:1},
   dios:{nm:'Super Saiyajin Dios',run:1.16,air:1.12,jump:1.07,dj:1.07,dmg:1.35,w:6,aura:'#ff3b3b',glow:'sepia(1) saturate(6) hue-rotate(-38deg) brightness(1.05)'}},
  mob:{cien:{nm:'¡100 % Desatado!',run:1.25,walk:1.12,air:1.2,jump:1.1,dj:1.1,dmg:1.25,w:4,aura:'#d946ef',glow:'saturate(2) contrast(1.2)',gDrain:100/(60*15),after:'alivio'},alivio:{nm:'Aliviado',run:.65,walk:.7,air:.8,jump:.8,dj:.8,dmg:.7,w:0,spd:.8,dur:120,aura:'#9aa3b5'}},
- denji:{motosierra:{nm:'¡Demonio Motosierra!',run:1.3,walk:1.16,air:1.22,jump:1.1,dj:1.1,dmg:1.32,spd:1.18,w:10,armor:8,regen:75,burn:{t:90,col:'#ff1e38'},aura:'#ff2a3a',own:['motosierra'],gDrain:100/(60*16)}}};
+ denji:{motosierra:{nm:'¡Demonio Motosierra!',run:1.45,walk:1.24,air:1.35,jump:1.20,dj:1.20,dmg:1.62,spd:1.28,w:26,armor:14,dmgTaken:.80,kbTaken:.78,jumps:1,regen:42,burn:{t:130,col:'#ff1e38'},fear:180,blink:32,aura:'#ff1e38',own:['motosierra'],gDrain:100/(60*18)}}};
 const statCache=new Map();
 function modeOf(f){return f.mode&&MODES[f.C.id]&&MODES[f.C.id][f.mode]||{};}
 function stats(f){const base=f.C.st,kk=f.kaioken>0,fear=f.fearT>0;if(!f.mode&&!kk&&!fear)return base;const k=f.C.id+'|'+f.mode+'|'+kk+'|'+fear;let v=statCache.get(k);if(v)return v;
@@ -1359,59 +1359,72 @@ const DENJI_MV={
   ds_despertar:{nm:'¡Despertar Motosierra!',f:42,intan:[0,26],toMode:'motosierra',modeAt:14,heal:10,spr:[[0,B_E+'3.2'],[8,B_E+'3.3'],[14,B_DM+'0.0'],[26,B_DM+'2.0']],
    hb:[S(12,20,0,-38,64,13,65,52,92)]},
 
-  // ===== MODO DEMONIO MOTOSIERRA (DESATADO, AGRESIVO, MULTI-HIT Y SANGRIENTO) =====
-  jab_motosierra:{f:11,spr:[[0,B_DM+'0.0'],[3,B_DM+'2.1'],[7,B_DM+'2.2']],hb:[S(2,6,42,-36,24,2.5,80,16,20,{multi:2})],next:'jab2_motosierra',chainAt:5},
-  jab2_motosierra:{f:11,spr:[[0,B_DM+'2.2'],[3,B_DM+'2.3'],[7,B_DM+'2.4']],hb:[S(2,6,44,-36,24,2.5,80,16,20,{multi:2})],next:'jab3_motosierra',chainAt:5},
-  jab3_motosierra:{f:22,spr:[[0,B_DM+'2.4'],[4,B_DM+'2.5'],[10,B_DM+'2.6'],[16,B_DM+'0.0']],lunge:10,
-   hb:[S(3,11,48,-36,30,2.4,45,16,18,{multi:4}),S(11,15,54,-36,34,7,38,48,94)]},
-  ftilt_motosierra:{f:22,spr:[[0,B_DM+'2.0'],[4,B_DM+'2.2'],[9,B_DM+'2.3'],[16,B_DM+'2.4']],lunge:8,
-   hb:[S(4,10,48,-36,28,3,40,18,18,{multi:2}),S(10,14,54,-36,32,8.5,38,42,92)]},
-  utilt_motosierra:{f:22,spr:[[0,B_DM+'2.1'],[4,B_DM+'2.2'],[9,B_DM+'2.3'],[16,B_DM+'0.0']],
-   hb:[S(4,12,18,-72,34,11.5,86,42,94)]},
-  dtilt_motosierra:{f:18,crouch:1,spr:[[0,B_DM+'2.0'],[4,B_DM+'3.1'],[10,B_DM+'3.2']],
-   hb:[S(4,10,48,-14,26,9.5,72,36,68)]},
-  dash_motosierra:{f:28,spr:[[0,B_DM+'1.0'],[4,B_DM+'1.2'],[8,B_DM+'1.4'],[16,B_DM+'1.5']],imp:[{f:3,to:16,vx:19}],
-   hb:[S(4,14,44,-34,30,2.8,45,18,18,{multi:4}),S(14,18,48,-34,34,7,40,46,88)]},
-  fsmash_motosierra:{f:48,smash:1,charge:{at:6,max:55,btn:'attack',k:.5},spr:[[0,B_DM+'2.0'],[6,B_DM+'2.2'],[12,B_DM+'2.4'],[22,B_DM+'2.5']],lunge:14,
-   full:{f:10,nm:'¡CORTE DEMONÍACO!',shake:12,p:[{t:'crescent',x:44,y:-38,vx:17,r:42,life:40,d:14,a:38,b:48,g:96,pierce:1,col:'#ff1e38'}]},
-   hb:[S(8,14,48,-36,34,4,45,20,20,{multi:3}),S(14,20,62,-36,42,18,38,50,112)]},
-  usmash_motosierra:{f:46,smash:1,charge:{at:6,max:55,btn:'attack',k:.5},spr:[[0,B_DM+'2.0'],[6,B_DM+'2.2'],[14,B_DM+'2.3'],[24,B_DM+'2.4']],
-   hb:[S(6,12,32,-32,34,5,86,32,25,{multi:3}),S(12,20,16,-84,46,19,88,50,112)]},
-  dsmash_motosierra:{f:46,smash:1,charge:{at:6,max:55,btn:'attack',k:.5},spr:[[0,B_DM+'3.0'],[6,B_DM+'3.1'],[14,B_DM+'3.2'],[24,B_DM+'3.3']],
-   hb:[S(8,16,54,-14,34,17,30,44,106),S(8,16,-54,-14,34,17,150,44,106)]},
+  // ===== MODO DEMONIO MOTOSIERRA (DESATADO, AGRESIVO, MULTI-HIT, AÉREOS BESPOKE Y SANGRIENTO) =====
+  jab_motosierra:{f:10,spr:[[0,B_DM+'0.0'],[2,B_DM+'2.1'],[6,B_DM+'2.2']],hb:[S(2,5,44,-36,26,3.6,80,18,22,{multi:2})],next:'jab2_motosierra',chainAt:4},
+  jab2_motosierra:{f:10,spr:[[0,B_DM+'2.2'],[2,B_DM+'2.3'],[6,B_DM+'2.4']],hb:[S(2,5,46,-36,26,3.6,80,18,22,{multi:2})],next:'jab3_motosierra',chainAt:4},
+  jab3_motosierra:{f:22,spr:[[0,B_DM+'2.4'],[4,B_DM+'2.5'],[10,B_DM+'2.6'],[16,B_DM+'0.0']],lunge:12,
+   hb:[S(3,11,50,-36,32,3.2,45,18,20,{multi:4}),S(11,15,58,-36,40,10.0,38,56,108)]},
+  ftilt_motosierra:{f:20,spr:[[0,B_DM+'2.0'],[3,B_DM+'2.2'],[8,B_DM+'2.3'],[14,B_DM+'2.4']],lunge:10,
+   hb:[S(3,9,50,-36,30,3.6,40,20,20,{multi:3}),S(9,14,58,-36,38,11.5,36,50,102)]},
+  utilt_motosierra:{f:20,spr:[[0,B_DM+'2.1'],[3,B_DM+'2.2'],[8,B_DM+'2.3'],[14,B_DM+'0.0']],
+   hb:[S(3,7,20,-50,32,3.2,88,20,20,{multi:2}),S(7,13,18,-78,40,13.5,88,50,106)]},
+  dtilt_motosierra:{f:16,crouch:1,spr:[[0,B_DM+'2.0'],[3,B_DM+'3.1'],[8,B_DM+'3.2']],
+   hb:[S(3,9,52,-14,28,11.5,76,44,85)]},
+  dash_motosierra:{f:26,spr:[[0,B_DM+'1.0'],[3,B_DM+'1.2'],[7,B_DM+'1.4'],[15,B_DM+'1.5']],imp:[{f:2,to:15,vx:22}],armor:14,
+   hb:[S(3,13,48,-34,32,3.5,45,20,20,{multi:4}),S(13,17,54,-34,40,11.0,40,54,102)]},
+
+  fsmash_motosierra:{f:46,smash:1,charge:{at:5,max:55,btn:'attack',k:.55},spr:[[0,B_DM+'2.0'],[5,B_DM+'2.2'],[11,B_DM+'2.4'],[20,B_DM+'2.5']],lunge:16,
+   full:{f:10,nm:'¡CORTE DEMONÍACO!',shake:16,p:[{t:'crescent',x:44,y:-38,vx:18,r:46,life:42,d:16,a:36,b:54,g:108,pierce:1,col:'#ff1e38'}]},
+   hb:[S(7,13,52,-36,36,4.5,45,22,22,{multi:3}),S(13,19,66,-36,46,21.5,36,58,122)]},
+  usmash_motosierra:{f:44,smash:1,charge:{at:5,max:55,btn:'attack',k:.55},spr:[[0,B_DM+'2.0'],[5,B_DM+'2.2'],[12,B_DM+'2.3'],[22,B_DM+'2.4']],
+   hb:[S(5,11,32,-32,36,5.5,86,34,28,{multi:3}),S(11,19,16,-88,48,22.0,88,58,124)]},
+  dsmash_motosierra:{f:44,smash:1,charge:{at:5,max:55,btn:'attack',k:.55},spr:[[0,B_DM+'3.0'],[5,B_DM+'3.1'],[12,B_DM+'3.2'],[22,B_DM+'3.3']],
+   hb:[S(7,15,58,-14,38,19.5,30,50,116),S(7,15,-58,-14,38,19.5,150,50,116)]},
+
+  // Nuevos Aéreos Demoníacos (Chainsaw Devil Aerials)
+  nair_motosierra:{f:30,air:1,land:6,spr:[[0,B_DM+'2.1',{spin:.8}],[8,B_DM+'2.3',{spin:.8}],[16,B_DM+'2.5']],
+   hb:[S(3,15,0,-36,38,3.2,45,16,12,{multi:3}),S(15,20,0,-36,42,9.5,45,44,98)]},
+  fair_motosierra:{f:32,air:1,land:8,spr:[[0,B_DM+'2.0'],[4,B_DM+'2.2'],[10,B_DM+'2.4']],lunge:8,
+   hb:[S(5,13,46,-34,36,15.5,38,50,110)]},
+  bair_motosierra:{f:30,air:1,land:8,spr:[[0,B_DM+'2.0'],[4,B_DM+'2.3'],[10,B_DM+'2.4']],
+   hb:[S(5,11,-46,-34,36,17.0,142,54,115)]},
+  uair_motosierra:{f:28,air:1,land:6,spr:[[0,B_DM+'2.0'],[4,B_DM+'2.1'],[9,B_DM+'2.2']],
+   hb:[S(4,9,0,-78,34,3.5,88,18,18,{multi:3}),S(9,14,0,-86,40,11.5,88,48,106)]},
+  dair_motosierra:{f:36,air:1,land:10,spr:[[0,B_DM+'3.0'],[5,B_DM+'3.2'],[12,B_DM+'3.3']],
+   hb:[S(7,16,0,12,34,17.5,270,46,112)]},
 
   // Especiales Transformados en Modo Demonio Motosierra
-  // Neutral Special (Demonio): ¡Ráfaga Desgarradora! Denji embiste con sus motosierras destrozando al rival con impactos continuos de sierra
-  ns_motosierra:{nm:'Ráfaga Desgarradora',f:38,lunge:14,say:{f:4,txt:'¡DESGARRA!',col:'#ff1e38'},
-   spr:[[0,B_DM+'2.0'],[4,B_DM+'2.1'],[8,B_DM+'2.2'],[14,B_DM+'2.3'],[20,B_DM+'2.4'],[28,B_DM+'2.5']],
-   fxa:[{f:6,name:'slash',dx:45,dy:-36,sc:1.4},{f:14,name:'slash',dx:55,dy:-36,sc:1.5}],
+  // Neutral Special (Demonio): ¡Ráfaga Desgarradora! Denji embiste con sus motosierras destrozando al rival
+  ns_motosierra:{nm:'Ráfaga Desgarradora',f:36,lunge:16,armor:12,say:{f:3,txt:'¡DESGARRA!',col:'#ff1e38'},
+   spr:[[0,B_DM+'2.0'],[3,B_DM+'2.1'],[7,B_DM+'2.2'],[12,B_DM+'2.3'],[18,B_DM+'2.4'],[25,B_DM+'2.5']],
+   fxa:[{f:5,name:'slash',dx:45,dy:-36,sc:1.5},{f:12,name:'slash',dx:55,dy:-36,sc:1.6}],
    hb:[
-     S(4,8,46,-36,34,2.5,45,12,12,{multi:3}),
-     S(8,14,52,-36,36,2.5,45,14,14,{multi:3}),
-     S(14,20,56,-36,38,3.0,45,16,16,{multi:3}),
-     S(20,26,62,-36,44,9.5,38,54,108)
+     S(3,7,48,-36,34,3.4,45,14,14,{multi:3}),
+     S(7,12,54,-36,36,3.4,45,16,16,{multi:3}),
+     S(12,18,58,-36,40,4.0,45,18,18,{multi:3}),
+     S(18,24,66,-36,46,13.0,36,62,120)
    ]},
 
   // ↔+Especial (Demonio): ¡Gancho de Cadenas!
-  ss_motosierra:{nm:'¡Gancho de Cadenas!',f:44,spr:[[0,B_DM+'2.0'],[4,B_DM+'2.1'],[8,B_DM+'2.2'],[18,B_DM+'2.3'],[26,B_DM+'2.4'],[36,B_DM+'0.0']],
-   whip:{f:6,to:22,range:380,spd:22,style:'chain',txt:'¡VEN AQUÍ!',col:'#ff2a3a'},
-   hb:[S(18,30,46,-36,34,2.4,45,8,0,{multi:3}),S(31,35,52,-36,40,8.5,38,54,98)]},
+  ss_motosierra:{nm:'¡Gancho de Cadenas!',f:40,spr:[[0,B_DM+'2.0'],[4,B_DM+'2.1'],[8,B_DM+'2.2'],[16,B_DM+'2.3'],[24,B_DM+'2.4'],[32,B_DM+'0.0']],
+   whip:{f:5,to:20,range:420,spd:25,style:'chain',txt:'¡VEN AQUÍ!',col:'#ff2a3a'},
+   hb:[S(16,28,48,-36,36,3.5,45,10,0,{multi:4}),S(28,33,56,-36,44,12.5,36,60,112)]},
 
   // ↑+Especial (Demonio): ¡Persecución Sangrienta!
-  us_motosierra:{nm:'Persecución Sangrienta',f:40,helpless:1,intan:[4,8],armor:8,say:{f:5,txt:'¡TE ATRAPÉ!',col:'#ff2a3a'},
-   spr:[[0,B_DM+'2.1'],[5,B_DM+'3.0',{spin:.55}],[24,B_DM+'3.3']],home:{f:5,to:22,spd:17.5,range:460,col:'#ff2a3a',up:1},tether:{f:23,range:400},
-   hb:[S(5,22,0,-40,38,2.4,70,14,0,{multi:4}),S(22,26,10,-50,44,9.5,80,52,94)]},
+  us_motosierra:{nm:'Persecución Sangrienta',f:38,helpless:1,intan:[3,8],armor:14,say:{f:4,txt:'¡TE ATRAPÉ!',col:'#ff2a3a'},
+   spr:[[0,B_DM+'2.1'],[4,B_DM+'3.0',{spin:.55}],[22,B_DM+'3.3']],home:{f:4,to:20,spd:20,range:520,col:'#ff2a3a',up:1},tether:{f:21,range:440},
+   hb:[S(4,20,0,-40,40,3.2,70,16,0,{multi:5}),S(20,25,10,-50,48,13.5,80,58,108)]},
 
-  // ↓+Especial (Demonio): ¡Festín de Sangre! Contraataque visceral: si recibe un golpe, despedaza al agresor al grito de ¡MÁS SANGRE! y recupera vida absorbiendo su sangre
-  ds_motosierra:{nm:'Festín de Sangre (Contraataque)',f:38,heal:6,
-   spr:[[0,B_DM+'3.0'],[5,B_DM+'3.1'],[10,B_DM+'3.2'],[18,B_DM+'3.5'],[28,B_DM+'3.7']],
-   counter:{s:3,e:24,d:17.5,a:40,b:62,g:112,style:'slash',txt:'¡JAJAJA! ¡MÁS SANGRE!',txtCol:'#ff1e38',heal:12},
-   hb:[S(10,18,46,-24,48,11.5,65,48,88)]},
+  // ↓+Especial (Demonio): ¡Festín de Sangre!
+  ds_motosierra:{nm:'Festín de Sangre (Contraataque)',f:36,heal:8,
+   spr:[[0,B_DM+'3.0'],[4,B_DM+'3.1'],[9,B_DM+'3.2'],[16,B_DM+'3.5'],[25,B_DM+'3.7']],
+   counter:{s:2,e:24,d:22.0,a:40,b:68,g:120,style:'slash',txt:'¡JAJAJA! ¡MÁS SANGRE!',txtCol:'#ff1e38',heal:15},
+   hb:[S(8,16,50,-22,52,14.5,68,56,102)]},
 
   final:{nm:'¡Demonio de la Motosierra: Masacre Total!',sup:{at:1,nm:'¡DEMONIO DE LA MOTOSIERRA!',col:'#ff1e38'},f:110,
-   spr:[[0,B_DM+'3.0'],[10,B_DM+'3.2'],[22,B_DM+'3.5'],[36,B_DM+'3.7']],intan:[0,110],toMode:'motosierra',modeAt:30,heal:20,
-   hb:[S(10,36,0,-40,125,36,42,82,142)],
-   full:{f:10,shake:22,p:[{t:'beam',x:0,y:-40,len:880,h:58,life:48,multi:5,d:5.8,a:42,b:78,g:138,col:'#ff1e38'}]}}
+   spr:[[0,B_DM+'3.0'],[10,B_DM+'3.2'],[22,B_DM+'3.5'],[36,B_DM+'3.7']],intan:[0,110],toMode:'motosierra',modeAt:30,heal:30,
+   hb:[S(10,36,0,-40,135,42,40,95,155)],
+   full:{f:10,shake:26,p:[{t:'beam',x:0,y:-40,len:950,h:68,life:52,multi:6,d:6.8,a:40,b:88,g:150,col:'#ff1e38'}]}}
 };
 if(CH.denji)Object.assign(CH.denji.mv,DENJI_MV);
 
@@ -3872,6 +3885,7 @@ function applyHit(a,t,hb,sc,dir,hx,hy,proj){
  if(t.st==='attack'&&t.mv&&t.mv.kiCharge&&t.mv.charge&&t.mf===t.mv.charge.at){t.pct=Math.min(999,t.pct+d*.5);t.kaioken=480;t.mv=null;t.st='ground';t.intan=20;
   fx('text',t.x,t.y-120,{txt:'¡KAIO-KEN!',col:'#ff3b3b'});fx('ring',t.x,t.y-40,{r:90,col:'#ff3b3b',thick:1,dur:24});fx('flash',0,0,{screen:1,dur:8});G.shake=Math.max(G.shake,9);sfx('hit',8);return;}
  const dT=d*(modeOf(t).dmgTaken||1);t.pct=Math.min(999,t.pct+dT);own.dmgDone+=d;t.shakeHud=12;if(own!==t){gaugeAdd(own,d*((GAUGE[own.C.id]||{}).hit||0));gaugeAdd(t,d*((GAUGE[t.C.id]||{}).take||0));}
+ if(own&&own.C.id==='denji'&&own.mode==='motosierra'&&own!==t){const bloodHeal=Math.min(4.8,Math.max(0.5,d*0.15));own.pct=Math.max(0,own.pct-bloodHeal);if(d>=5)fx('text',own.x,own.y-110,{txt:'+SANGRE',col:'#ff1e38',dur:25});for(let i=0;i<4;i++)fx('blood',hx+rnd(-18,18),hy+rnd(-18,18),{col:'#ff1e38'});gaugeAdd(own,2.4);}
  if(own!==t){if(own.combo&&own.combo.v===t&&wasStun&&own.combo.live>0){own.combo.n++;own.combo.dmg+=d;}else own.combo={n:1,dmg:d,v:t,show:0};own.combo.live=50;if(own.combo.n>=2)own.combo.show=90;own.combo.pop=8;
   own.meter=Math.min(100,(own.meter||0)+d*1.15);t.meter=Math.min(100,(t.meter||0)+d*.7);}
  {const AR=modeOf(t).armor;if(AR&&d<AR&&!wasStun&&t.st!=='grabbed'&&t.st!=='ledge'){t.hitlag=Math.max(t.hitlag||0,6);if(!proj)a.hitlag=Math.max(a.hitlag||0,6);fx('ring',t.x,t.y-50,{r:46,col:'#ff5a6a',dur:12});fx('text',t.x,t.y-110,{txt:'¡ARMADURA!',col:'#ff8a96'});sfx('shield');return;}}
