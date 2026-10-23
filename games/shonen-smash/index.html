@@ -3014,6 +3014,7 @@ function readInput(f){
  else if(f.voidT>0||G.domain&&G.domain.owner!==f&&!f.dead){if(f.voidT>0)f.voidT--;f.in=blank();}
  const I=f.in,P=f.pin;
  if(f.invertInputT>0){f.invertInputT--;I.x*=-1;if(I.cx)I.cx*=-1;}
+ if(f.bloodBlindT>0)f.bloodBlindT--;
  if(Math.abs(I.x)>.75&&Math.abs(P.x)<.4)f.tapX=0;else f.tapX++;
  if(Math.abs(I.y)>.75&&Math.abs(P.y)<.4)f.tapY=0;else f.tapY++;
  f.pr={jump:I.jump&&!P.jump,attack:I.attack&&!P.attack,special:I.special&&!P.special,shield:I.shield&&!P.shield,grab:I.grab&&!P.grab,
@@ -3325,8 +3326,8 @@ function stepAttack(f,spd){
  const isSmash=mv.smash||/fsmash|usmash|dsmash/.test(f.mvKey||'');
  if(f.C.id==='diavolo'){
   if(f.mvKey==='ns'&&f.mf===10){
-   for(const vy0 of [-2,-1,0]){
-    G.projs.push({owner:f,t:'blood',x:f.x+f.face*20,y:f.y-38,vx:7*f.face,vy:vy0,grav:0.25,r:8,life:25,age:0,d:2.5,b:0,g:0,dir:f.face,hits:new Map()});
+   for(const vy0 of [-2.5,-1.2,0.2]){
+    G.projs.push({owner:f,t:'blood',col:'#e11d48',x:f.x+f.face*24,y:f.y-38,vx:(8+Math.random()*1.5)*f.face,vy:vy0,grav:0.32,r:8,life:28,age:0,d:3.5,b:10,g:15,dir:f.face,hits:new Map()});
    }
    sfx('slash');
   } else if(f.mvKey==='ss'){
@@ -3747,25 +3748,17 @@ function stepProjs(){
   if(p.ruin){G.dim=Math.max(G.dim||0,.55);G.shake=Math.max(G.shake,5);if(G.frame%2===0){fx('ember',p.x+rnd(-60,60),p.y+rnd(-60,60),{col:G.frame%4?'#a05aff':'#ffffff',dur:28,vx:-p.vx*.05});}if(G.frame%6===0)rocks(p.x,G.stage.main.y,2,'#6a4a9a');}
   if(p.t==='clone'&&G.frame%3===0)fx('smoke',p.x,p.y-30,{col:'#ffffff'});
   if(p.t==='shamac'){
-  ctx.save();
-  // Vórtice exterior de miasma
-  ctx.fillStyle = 'rgba(38, 4, 60, 0.55)';
-  ctx.shadowColor = '#9333ea'; ctx.shadowBlur = 35;
-  ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.fill();
-  // Núcleo denso de sombras negras
-  ctx.fillStyle = 'rgba(18, 2, 30, 0.85)';
-  ctx.beginPath(); ctx.arc(p.x + Math.sin(G.frame * 0.12) * 8, p.y + Math.cos(G.frame * 0.12) * 8, p.r * 0.75, 0, TAU); ctx.fill();
-  // Espirales de niebla púrpura
-  ctx.strokeStyle = 'rgba(192, 132, 252, 0.45)'; ctx.lineWidth = 3;
-  ctx.beginPath();
-  for(let i = 0; i < 8; i++){
-    const an = i * TAU / 8 + G.frame * 0.08;
-    ctx.moveTo(p.x + Math.cos(an) * (p.r * 0.3), p.y + Math.sin(an) * (p.r * 0.3));
-    ctx.lineTo(p.x + Math.cos(an + 0.8) * (p.r * 0.85), p.y + Math.sin(an + 0.8) * (p.r * 0.85));
+   p.vx*=0.94; p.r=Math.min(75,(p.r||38)+0.4);
+   for(const f of G.fighters){
+    if(f.dead||f.out||f===p.owner)continue;
+    if(Math.hypot(f.x-p.x,(f.y-35)-p.y)<p.r){
+     f.buff={dmg:0.7,spd:0.45,t:90,aura:'#581c87'};
+     f.blindT=Math.max(f.blindT||0,90); f.vx*=0.88;
+    }
+   }
+  } else if(p.t==='blood'){
+   if(G.frame%3===0)fx('ember',p.x,p.y,{col:'#991b1b',dur:10,vx:-p.vx*0.1});
   }
-  ctx.stroke();
-  ctx.restore();
-} else if(p.t==='blood'){ctx.save();ctx.translate(p.x,p.y);ctx.fillStyle='#991b1b';ctx.beginPath();ctx.arc(0,0,4.5,0,TAU);ctx.fill();ctx.fillStyle='#dc2626';ctx.beginPath();ctx.arc(-p.dir*1.5,-1,2,0,TAU);ctx.fill();ctx.restore();return;}
   else if(p.t==='pochita'){
    p.vy=Math.min(10,(p.vy||0)+0.58);p.x+=p.vx;p.y+=p.vy;
    const sm=G.stage.main;
@@ -4711,6 +4704,16 @@ function drawFighter(f,ctx2){
  const SPok=spriteReady(f.C.id);
  drawLivingAuraBack(f);
  if(SPok)drawSpriteBody(f,null,flash);
+ if(f.bloodBlindT>0){
+  ctx.save();ctx.translate(Math.round(f.x),Math.round(f.y-42));
+  const bAlpha=Math.min(1,f.bloodBlindT/15)*0.85;
+  ctx.fillStyle='rgba(190, 18, 60, '+bAlpha+')';
+  for(let i=0;i<5;i++){
+   const bx=Math.sin(i*1.8+1)*15,by=Math.cos(i*2.2+2)*12;
+   ctx.beginPath();ctx.arc(bx,by,4+(i%3)*1.5,0,TAU);ctx.fill();
+  }
+  ctx.restore();
+ }
  else{
  ctx.save();ctx.translate(f.x,f.y);
  if(f.buff){ctx.globalAlpha=.35+.15*Math.sin(G.frame*.3);ctx.fillStyle=f.buff.aura;ctx.beginPath();ctx.ellipse(0,-34,34+Math.sin(G.frame*.5)*3,46,0,0,TAU);ctx.fill();ctx.globalAlpha=1;}
@@ -4788,16 +4791,33 @@ function drawProj(p){
  else if(p.t==='sprproj'){const R=fref(p.owner.C.id,p.spr);if(R&&R.S.ready){ctx.translate(Math.round(p.x),Math.round(p.y));if(p.filter)ctx.filter=p.filter;if(p.spin)ctx.rotate(p.age*p.spin*p.dir);if(p.rot)ctx.rotate(p.rot*p.dir);const k=R.sc*(p.vs||1)*(1+.06*Math.sin(G.frame*.8));ctx.scale(p.dir*k,k);ctx.imageSmoothingEnabled=false;const fr=R.fr;ctx.drawImage(R.S.img,fr.sx,fr.sy,fr.w,fr.h,-fr.w/2,-fr.h/2,fr.w,fr.h);}}
  else if(p.t==='genki'&&p.fx&&fxRows(p.owner.C.id,p.fx)){const FR=fxRows(p.owner.C.id,p.fx),lp=FR[1]&&FR[1].length?FR[1]:FR[0];ctx.restore();drawFxFrame(p.owner.C.id,lp[Math.floor(p.age/3)%lp.length],p.x,p.y,p.r*2.6,1);ctx.save();}
  else if(p.t==='genki'){drawGenki(p.x,p.y,p.r);}
-   else if(p.t==='shamac'){
-  p.vx *= 0.94; p.r = Math.min(75, p.r + 0.4);
-  for(const f of G.fighters){
-    if(f.dead || f.out || f === p.owner) continue;
-    if(Math.hypot(f.x - p.x, (f.y - 35) - p.y) < p.r){
-      f.buff = { dmg: 0.7, spd: 0.45, t: 90, aura: '#581c87' };
-      f.blindT = Math.max(f.blindT || 0, 90); f.vx *= 0.88;
-    }
+ else if(p.t==='shamac'){
+  ctx.save();
+  ctx.fillStyle='rgba(38, 4, 60, 0.55)';
+  ctx.shadowColor='#9333ea'; ctx.shadowBlur=35;
+  ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.fill();
+  ctx.fillStyle='rgba(18, 2, 30, 0.85)';
+  ctx.beginPath(); ctx.arc(p.x+Math.sin(G.frame*0.12)*8, p.y+Math.cos(G.frame*0.12)*8, p.r*0.75, 0, TAU); ctx.fill();
+  ctx.strokeStyle='rgba(192, 132, 252, 0.45)'; ctx.lineWidth=3;
+  ctx.beginPath();
+  for(let i=0; i<8; i++){
+   const an=i*TAU/8+G.frame*0.08;
+   ctx.moveTo(p.x+Math.cos(an)*(p.r*0.3), p.y+Math.sin(an)*(p.r*0.3));
+   ctx.lineTo(p.x+Math.cos(an+0.8)*(p.r*0.85), p.y+Math.sin(an+0.8)*(p.r*0.85));
   }
-} else if(p.t==='pochita'){
+  ctx.stroke();
+  ctx.restore();
+ } else if(p.t==='blood'){
+  ctx.save();
+  ctx.translate(Math.round(p.x), Math.round(p.y));
+  ctx.fillStyle='#881337';
+  ctx.beginPath(); ctx.arc(0, 0, 5.5, 0, TAU); ctx.fill();
+  ctx.fillStyle='#e11d48';
+  ctx.beginPath(); ctx.arc(-p.dir*1.5, -1, 3.2, 0, TAU); ctx.fill();
+  ctx.fillStyle='#fecdd3';
+  ctx.beginPath(); ctx.arc(-p.dir*0.8, -2, 1.2, 0, TAU); ctx.fill();
+  ctx.restore();
+ } else if(p.t==='pochita'){
    ctx.save();ctx.translate(Math.round(p.x),Math.round(p.y));ctx.scale(p.dir,1);
    // Pochita pixel-art style body: cute orange dog with handle, tail-cord and chainsaw forehead
    // Shadow on floor
@@ -4853,7 +4873,7 @@ function drawProj(p){
    ctx.moveTo(pts[1][0],pts[1][1]);ctx.lineTo(0,-pr*.2);ctx.lineTo(pts[0][0],pts[0][1]);ctx.closePath();ctx.fill();
    if(G.frame%2===0)fx('ember',p.x+rnd(-5,5),p.y+rnd(-5,5),{col:p.col||'#ec4899',dur:12,vx:-p.vx*.15});
   }
- else{const g=ctx.createRadialGradient(p.x,p.y,2,p.x,p.y,p.r*1.3);g.addColorStop(0,'#ffffff');g.addColorStop(.45,p.col);g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,p.r*1.3,0,TAU);ctx.fill();}
+ else{const pCol=p.col||'#ffffff';const g=ctx.createRadialGradient(p.x,p.y,2,p.x,p.y,p.r*1.3);g.addColorStop(0,'#ffffff');g.addColorStop(.45,pCol);g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,p.r*1.3,0,TAU);ctx.fill();}
  ctx.restore();
 }
 function drawFxWorld(){
