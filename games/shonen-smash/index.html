@@ -1466,13 +1466,28 @@ const COLLISION_MASK = {
 };
 
 class EpitaphEcho {
-  constructor(x, y, facing, anim, animF, look, drawSize) {
+  constructor(a1, a2, a3, a4, a5, a6, a7) {
+    let owner, x, y, facing, drawSize;
+    if (typeof a1 === 'object' && a1 !== null && a1.x != null) {
+      owner = a1;
+      x = a2 != null ? a2 : a1.x;
+      y = a3 != null ? a3 : a1.y;
+      facing = a4 != null ? a4 : a1.face;
+      drawSize = a5 != null ? a5 : (a1.drawSize || 1);
+    } else {
+      x = a1;
+      y = a2;
+      facing = a3 != null ? a3 : 1;
+      drawSize = a7 || 1;
+      owner = null;
+    }
+    this.owner = owner;
+    this.id = 'epitaph_echo_' + (typeof G !== 'undefined' ? G.frame : 0) + '_' + Math.random().toString(36).slice(2, 6);
     this.x = x;
     this.y = y;
+    this.vx = 0;
+    this.vy = 0;
     this.facing = facing;
-    this.anim = anim;
-    this.animF = animF;
-    this.look = look;
     this.drawSize = drawSize || 1;
     this.life = 120;
     this.maxLife = 120;
@@ -1480,54 +1495,179 @@ class EpitaphEcho {
     this.shakeX = 0;
     this.shakeY = 0;
     this.col = '#dc143c';
+    this.anim = 'walk';
+    this.ground = true;
+    this.fakeDmg = 0;
+    this.st = 'ground';
+    this.state = 'walk';
+    this.stateTimer = 0;
   }
+
+  hurtRect() {
+    return {
+      x1: this.x - 22,
+      x2: this.x + 22,
+      y1: this.y - 68,
+      y2: this.y
+    };
+  }
+
   update() {
+    this.life--;
     if (this.hitstop > 0) {
       this.hitstop--;
       this.shakeX = (Math.random() - 0.5) * 8;
       this.shakeY = (Math.random() - 0.5) * 8;
+      return;
     } else {
       this.shakeX = 0;
       this.shakeY = 0;
     }
-    this.life--;
+
+    this.x += this.vx;
+    this.y += this.vy;
+
+    if (typeof G !== 'undefined' && G.stage && G.stage.main) {
+      const sm = G.stage.main;
+      if (this.y >= sm.y && this.x >= sm.x1 - 30 && this.x <= sm.x2 + 30) {
+        this.y = sm.y;
+        this.vy = 0;
+        this.ground = true;
+      } else {
+        this.vy = Math.min(11.5, this.vy + 0.55);
+        this.ground = false;
+      }
+    }
+
+    let target = null, bd = 1e9;
+    if (typeof G !== 'undefined' && G.fighters) {
+      for (const o of G.fighters) {
+        if (o !== this.owner && !o.dead && !o.out) {
+          const d = Math.hypot(o.x - this.x, o.y - this.y);
+          if (d < bd) { bd = d; target = o; }
+        }
+      }
+    }
+
+    this.stateTimer++;
+    if (this.state === 'hurt') {
+      this.vx *= 0.88;
+      if (this.stateTimer > 20) {
+        this.state = 'walk';
+        this.stateTimer = 0;
+      }
+    } else if (target) {
+      const dx = target.x - this.x;
+      const dist = Math.abs(dx);
+      this.facing = Math.sign(dx) || this.facing;
+      if (dist > 45) {
+        this.state = 'walk';
+        this.vx = this.facing * 3.6;
+        this.st = 'ground';
+      } else {
+        this.vx *= 0.65;
+        if (this.stateTimer >= 36) {
+          this.state = 'jab';
+          this.stateTimer = 0;
+          this.st = 'attack';
+          if (typeof sfx === 'function') sfx('swish');
+          if (typeof fx === 'function') fx('spark', this.x + this.facing * 28, this.y - 38, { d: 2, col: '#f43f5e' });
+        }
+      }
+    } else {
+      this.vx *= 0.8;
+      this.state = 'idle';
+      this.st = 'ground';
+    }
+
+    if (typeof G !== 'undefined' && G.frame % 4 === 0 && typeof fx === 'function') {
+      fx('ember', this.x + (Math.random() - 0.5) * 24, this.y - Math.random() * 55, {
+        col: G.frame % 2 ? '#dc143c' : '#fb7185',
+        dur: 12, vx: -this.facing * 0.4, vy: -0.5
+      });
+    }
   }
-  onHit(damage) {
-    this.hitstop = Math.min(14, Math.floor(damage * 0.45) + 4);
-    fx('spark', this.x + this.shakeX, this.y - 34 + this.shakeY, { d: damage, col: '#f43f5e' });
-    fx('ring', this.x, this.y - 34, { r: 36, col: '#dc143c', dur: 10 });
+
+  onHit(a1, a2, a3, a4, a5, a6, a7) {
+    let attacker = null, hb = null, sc = 1, dir = 1, hx = this.x, hy = this.y - 34, proj = null;
+    let damage = 5;
+    if (typeof a1 === 'number') {
+      damage = a1;
+    } else {
+      attacker = a1;
+      hb = a2;
+      sc = a3 || 1;
+      dir = a4 != null ? a4 : 1;
+      hx = a5 != null ? a5 : this.x;
+      hy = a6 != null ? a6 : this.y - 34;
+      proj = a7 || null;
+      damage = (hb && hb.d ? hb.d : 5) * sc;
+    }
+    this.fakeDmg += damage;
+    this.hitstop = Math.min(18, Math.floor(damage * 0.45) + 4);
+    if (attacker && !proj && attacker.hitlag != null) {
+      attacker.hitlag = Math.max(attacker.hitlag, this.hitstop);
+    }
+    if (typeof sfx === 'function') sfx('hit', Math.min(8, Math.floor(damage * 0.5) + 2));
+    if (typeof fx === 'function') {
+      fx('spark', hx, hy, { d: damage, col: '#f43f5e' });
+      fx('shock', hx, hy, { r: 24 + damage * 2, col: '#ffffff', dur: 12 });
+      fx('ring', this.x, this.y - 34, { r: 40, col: '#dc143c', dur: 14 });
+      fx('text', this.x, this.y - 95, { txt: '¡DESTINO ILUSORIO! 0%', col: '#f43f5e', dur: 35 });
+    }
+    const kb = (hb && hb.b ? hb.b : 25) * 0.12;
+    const ang = (hb && hb.a != null ? hb.a : 45) * D2R;
+    this.vx = Math.cos(ang) * dir * kb;
+    this.vy = -Math.sin(ang) * kb;
+    this.ground = false;
+    this.state = 'hurt';
+    this.stateTimer = 0;
   }
+
   render(ctx) {
     if (this.life <= 0) return;
     ctx.save();
-    const flick = (Math.sin(G.frame * 0.5) * 0.15 + 0.6);
-    ctx.globalAlpha = flick;
     ctx.translate(Math.round(this.x + this.shakeX), Math.round(this.y + this.shakeY));
     ctx.scale(this.facing, 1);
-    const R = typeof fref === 'function' ? fref('diavolo', this.anim || 'mov:0.0') : null;
+
+    let frameRef = 'mov:0.0';
+    if (this.state === 'hurt') {
+      frameRef = 'mov:3.5';
+    } else if (this.state === 'jab') {
+      const p = Math.floor((this.stateTimer / 25) * 4);
+      frameRef = ['suelo:0.0', 'suelo:0.1', 'suelo:0.2', 'suelo:0.1'][p] || 'suelo:0.1';
+    } else if (this.state === 'walk') {
+      const walkFrames = ['mov:2.0', 'mov:2.1', 'mov:2.2', 'mov:2.3', 'mov:2.4', 'mov:2.5', 'mov:2.6', 'mov:2.7'];
+      frameRef = walkFrames[Math.floor(G.frame * 0.2) % walkFrames.length];
+    } else {
+      const idleFrames = ['mov:0.0', 'mov:0.1', 'mov:0.2', 'mov:0.3', 'mov:0.4', 'mov:0.5'];
+      frameRef = idleFrames[Math.floor(G.frame * 0.12) % idleFrames.length];
+    }
+
+    const R = typeof fref === 'function' ? fref('diavolo', frameRef) : null;
     if (R && R.S && R.S.ready) {
       const sc = R.sc * (this.drawSize || 1);
+      ctx.imageSmoothingEnabled = false;
       ctx.shadowColor = '#dc143c';
-      ctx.shadowBlur = 10;
+      ctx.shadowBlur = 8;
       ctx.drawImage(R.S.img, R.fr.sx, R.fr.sy, R.fr.w, R.fr.h, -R.fr.ax * sc, -R.fr.ay * sc, R.fr.w * sc, R.fr.h * sc);
     } else {
       ctx.fillStyle = this.col;
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.ellipse(0, -34, 18, 38, 0, 0, TAU);
       ctx.fill();
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(0, -58, 12, 0, TAU);
-      ctx.fill();
-      ctx.stroke();
     }
-    ctx.fillStyle = '#f43f5e';
-    for (let i = 0; i < 4; i++) {
-      const an = (G.frame * 0.1 + i * (TAU / 4));
-      ctx.fillRect(Math.cos(an) * 22 - 2, -34 + Math.sin(an) * 28 - 2, 4, 4);
-    }
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(Math.round(this.x), Math.round(this.y - 96));
+    ctx.font = '700 13px Ubuntu,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#dc143c';
+    ctx.shadowColor = '#000000';
+    ctx.shadowBlur = 4;
+    const tag = this.owner && this.owner.ai ? 'CPU (DESTINO)' : 'P' + ((this.owner ? this.owner.i : 0) + 1) + ' (DESTINO)';
+    ctx.fillText(tag, 0, 0);
     ctx.restore();
   }
 }
@@ -1717,7 +1857,7 @@ class DiavoloFighter {
     f.collisionMask = COLLISION_MASK.ENVIRONMENT;
     this.queuedAmbushAttack = null;
 
-    this.activeEcho = new EpitaphEcho(f.x, f.y, f.face, f.anim, f.animF, f.C.look, f.drawSize);
+    this.activeEcho = new EpitaphEcho(f, f.x, f.y, f.face, f.drawSize);
     G.epitaphEchoes = G.epitaphEchoes || [];
     G.epitaphEchoes.push(this.activeEcho);
 
@@ -1767,9 +1907,15 @@ class DiavoloFighter {
     const f = this.f;
     this.timeEraseTimer = 0;
     f.collisionMask = 15;
+    if (this.activeEcho) {
+      if (typeof fx === 'function') {
+        fx('vanish', this.activeEcho.x, this.activeEcho.y - 34, {});
+        fx('flash', 0, 0, { screen: 1, dur: 4 });
+      }
+    }
     this.activeEcho = null;
     if (G.epitaphEchoes) {
-      G.epitaphEchoes = G.epitaphEchoes.filter(e => e !== this.activeEcho);
+      G.epitaphEchoes = G.epitaphEchoes.filter(e => e !== this.activeEcho && e.life > 0);
     }
 
     for (const o of G.fighters) {
@@ -1784,13 +1930,13 @@ class DiavoloFighter {
     if (this.queuedAmbushAttack) {
       const atk = this.queuedAmbushAttack;
       this.queuedAmbushAttack = null;
-      this.ambushDmgMult = 1.2;
-      this.ambushKbMult = 1.2;
+      this.ambushDmgMult = 1.25;
+      this.ambushKbMult = 1.25;
       startMove(f, atk);
       if (f.mv && f.mv.hb && f.mv.hb[0]) {
         f.mf = f.mv.hb[0].s;
       }
-      fx('text', f.x, f.y - 120, { txt: '¡EMBOSCADA DE DESTINO!', col: '#dc2626', dur: 40 });
+      fx('text', f.x, f.y - 120, { txt: '¡EMBOSCADA DE DESTINO (1.25x)!', col: '#dc2626', dur: 40 });
     }
   }
 
@@ -2003,16 +2149,21 @@ const DIAVOLO_MV = {
     spr: [[0, B_DIA_E+'0.0'], [4, B_DIA_E+'0.1'], [9, B_DIA_E+'0.2'], [15, B_DIA_E+'0.3'], [20, B_DIA_E+'0.4']]
   },
   ss: {
-    nm: 'Crimson Lunge', f: 40, limb: 'body', stand: true,
-    phaseWarp: { s: 8, dur: 8, vx: 18 },
-    spr: [[0, B_DIA_E+'1.0'], [6, B_DIA_E+'1.1'], [12, B_DIA_E+'1.2'], [16, B_DIA_E+'1.3'], [24, B_DIA_E+'1.4'], [32, B_DIA_E+'1.5']],
-    hb: [{ s: 16, e: 20, x: 40, y: -10, r: 24, w: 48, h: 36, d: 13.0, a: 38, b: 50, g: 85 }]
+    nm: 'Zarpazo Espacial', f: 42, limb: 'arm', stand: true,
+    spr: [[0, B_DIA_E+'1.0'], [5, B_DIA_E+'1.1'], [10, B_DIA_E+'1.2'], [15, B_DIA_E+'1.3'], [22, B_DIA_E+'1.4'], [32, B_DIA_E+'1.5']],
+    hb: [
+      { s: 16, e: 21, x: 52, y: -40, r: 28, w: 56, h: 42, d: 15.0, a: 32, b: 60, g: 95, sweetspot: true },
+      { s: 16, e: 21, x: 26, y: -40, r: 22, w: 42, h: 36, d: 10.5, a: 38, b: 42, g: 72, sourspot: true }
+    ]
   },
   us: {
-    nm: 'Epitaph Leap', f: 42, limb: 'leg', helpless: 1, stand: true,
-    imp: [{ f: 5, vy: -16.5 }],
-    spr: [[0, B_DIA_E+'2.0'], [5, B_DIA_E+'2.1'], [11, B_DIA_E+'2.2'], [18, B_DIA_E+'2.3'], [26, B_DIA_E+'2.4'], [34, B_DIA_E+'2.5']],
-    hb: [{ s: 18, e: 24, x: 0, y: -20, r: 34, w: 68, h: 68, d: 10.0, a: 70, b: 45, g: 75 }],
+    nm: 'Ascensión del Destino', f: 46, limb: 'leg', helpless: 1, stand: true,
+    spr: [[0, B_DIA_E+'2.0'], [5, B_DIA_E+'2.1'], [10, B_DIA_E+'2.2'], [16, B_DIA_E+'2.3'], [22, B_DIA_E+'2.4'], [30, B_DIA_E+'2.5'], [38, B_DIA_E+'2.6']],
+    hb: [
+      { s: 5, e: 15, x: 12, y: -38, r: 32, w: 58, h: 64, d: 2.5, a: 88, b: 16, g: 12, multi: 4 },
+      { s: 16, e: 22, x: 20, y: 5, r: 24, w: 46, h: 42, d: 13.0, a: 270, b: 45, g: 88, meteor: true, sweetspot: true },
+      { s: 16, e: 22, x: 0, y: -38, r: 42, w: 84, h: 84, d: 11.5, a: 72, b: 52, g: 82 }
+    ],
     cancelFreefallOnDown: true
   },
   ds: {
@@ -3039,7 +3190,7 @@ function startMove(f,key){
    const ok=f.diavoloFighter.activateTimeErase(false);
    if(!ok){fx('text',f.x,f.y-120,{txt:'¡FALTA CRIMSON (50)!',col:'#e11d48',dur:30});return false;}
   } else if(key==='us'){
-   f.vy=-16.5;f.vx=4*(f.in?f.in.x:0);f.ground=null;
+   f.ground=null;f.canceledFreefall=false;
   } else if(key==='final'){
    f.meter=0;f.ultMeter=0;
    f.diavoloFighter.usedUltThisAirSequence=true;
@@ -3331,18 +3482,74 @@ function stepAttack(f,spd){
    }
    sfx('slash');
   } else if(f.mvKey==='ss'){
-   if(f.mf>=8&&f.mf<=15){f.vx=18*f.face;f.vy=0;f.intan=Math.max(f.intan,2);if(G.frame%2===0)fx('line',f.x,f.y-34,{x2:f.x-f.face*22,y2:f.y-34,col:'#e11d48',dur:6});}
+   if(f.mf===0){sfx('vanish');fx('ring',f.x,f.y-34,{r:28,col:'#e11d48',dur:10});}
+   if(f.mf>=6&&f.mf<=14){
+    f.vx=22*f.face;f.vy=0;f.intan=Math.max(f.intan,2);
+    if(G.frame%2===0){
+     fx('line',f.x,f.y-36+rnd(-10,10),{x2:f.x-f.face*32,y2:f.y-36+rnd(-10,10),col:G.frame%4<2?'#e11d48':'#ffffff',dur:8});
+     fx('ember',f.x-f.face*18,f.y-34+rnd(-15,15),{col:'#dc2626',dur:14,vx:-f.face*1.5,vy:rnd(-0.5,0.5)});
+    }
+   }
+   if(f.mf===15){
+    sfx('slash');sfx('hit',7);f.vx=f.face*5;
+    fx('shock',f.x+f.face*48,f.y-40,{r:44,col:'#e11d48',dur:12});
+    fx('streak',f.x,f.y-40,{dir:f.face,len:100,col:'#f43f5e',w:3});
+    fx('ring',f.x+f.face*48,f.y-40,{r:34,col:'#ffffff',dur:10});
+    G.shake=Math.max(G.shake,6);
+   }
+   if(f.mf>=22)f.vx*=0.82;
   } else if(f.mvKey==='us'){
-   if(f.mf>=20&&f.in&&f.in.y>.5&&!f.canceledFreefall){f.canceledFreefall=true;f.st='air';f.intan=12;f.vy=2;fx('ring',f.x,f.y-34,{r:30,col:'#f43f5e',dur:10});}
+   if(f.mf===0){sfx('charge');f.intan=Math.max(f.intan,3);fx('ring',f.x,f.y-34,{r:22,col:'#f43f5e',dur:8});}
+   if(f.mf===5){
+    sfx('super');f.vy=-16.2;f.ground=null;
+    const steer=f.in?f.in.x:0;f.vx=steer*4.8;
+    if(Math.abs(steer)>0.2)f.face=Math.sign(steer);
+    fx('shock',f.x,f.y,{r:32,col:'#e11d48',flat:1,dur:12});
+    fx('ring',f.x,f.y-34,{r:50,col:'#dc2626',dur:14});
+   }
+   if(f.mf>5&&f.mf<16){
+    if(f.in&&Math.abs(f.in.x)>0.1)f.vx+=(f.in.x*4.5-f.vx)*0.2;
+    if(G.frame%2===0){
+     fx('ember',f.x+rnd(-16,16),f.y-rnd(10,50),{col:'#fb7185',dur:14,vx:rnd(-1,1),vy:2});
+     fx('ring',f.x,f.y-34,{r:24,col:'#f43f5e',dur:8});
+    }
+   }
+   if(f.mf===16){
+    sfx('slash');sfx('hit',8);G.shake=Math.max(G.shake,7);
+    fx('ring',f.x,f.y-34,{r:60,col:'#e11d48',dur:16});
+    fx('ring',f.x,f.y-34,{r:35,col:'#ffffff',dur:12});
+    fx('shock',f.x,f.y-34,{r:45,col:'#fb7185',dur:14});
+   }
+   if(f.mf>=18&&f.in&&f.in.y>0.45&&!f.canceledFreefall){
+    f.canceledFreefall=true;f.st='air';f.mv=null;f.mvKey=null;f.intan=14;f.vy=4;
+    sfx('vanish');
+    fx('ring',f.x,f.y-34,{r:38,col:'#fb7185',dur:12});
+    fx('text',f.x,f.y-100,{txt:'¡CANCELAR CAÍDA (EPITAPH)!',col:'#fb7185',dur:35});
+   }
   } else if(f.mvKey==='final'&&f.mf>=8&&f.mf<=14&&!G.diavoloCinematic){
    const xmin=f.x+(f.face>0?0:-120),xmax=f.x+(f.face>0?120:0),ymin=f.y-45,ymax=f.y+45;
-   for(const victim of G.fighters){
-    if(victim===f||!canBeHit(victim))continue;
-    const vr=hurtRect(victim);
-    if(vr.x2>xmin&&vr.x1<xmax&&vr.y2>ymin&&vr.y1<ymax){
-     victim.st='CINEMATIC_LOCKED';victim.vx=0;victim.vy=0;victim.intan=95;f.intan=95;
-     G.diavoloCinematic={diavolo:f,victim,timer:90,maxTimer:90};
-     break;
+   let captured=false;
+   if(G.epitaphEchoes&&G.epitaphEchoes.length>0){
+    for(const echo of G.epitaphEchoes){
+     if(echo.owner!==f&&echo.life>0){
+      const er=echo.hurtRect();
+      if(er.x2>xmin&&er.x1<xmax&&er.y2>ymin&&er.y1<ymax){
+       echo.state='hurt';f.intan=95;
+       G.diavoloCinematic={diavolo:f,victim:echo,timer:90,maxTimer:90};
+       captured=true;break;
+      }
+     }
+    }
+   }
+   if(!captured){
+    for(const victim of G.fighters){
+     if(victim===f||!canBeHit(victim))continue;
+     const vr=hurtRect(victim);
+     if(vr.x2>xmin&&vr.x1<xmax&&vr.y2>ymin&&vr.y1<ymax){
+      victim.st='CINEMATIC_LOCKED';victim.vx=0;victim.vy=0;victim.intan=95;f.intan=95;
+      G.diavoloCinematic={diavolo:f,victim,timer:90,maxTimer:90};
+      break;
+     }
     }
    }
   }
@@ -3564,6 +3771,17 @@ function hitPhase(){
     a.hit.set(t.i,a.mf);
     if(resolveDefense(a,t,hb,sc,a.face,hx,hy))continue;
     applyHit(a,t,hb,sc,a.face,hx,hy);
+   }
+   if(G.epitaphEchoes&&G.epitaphEchoes.length>0){
+    for(const echo of G.epitaphEchoes){
+     if(echo.owner===a||echo.life<=0)continue;
+     const last=a.hit.get(echo.id);
+     if(last!=null&&(!hb.multi||a.mf-last<hb.multi))continue;
+     if(circRect(hx,hy,hb.r*SZ,echo.hurtRect())){
+      a.hit.set(echo.id,a.mf);
+      echo.onHit(a,hb,sc,a.face,hx,hy,null);
+     }
+    }
    }
   }
  }
@@ -3793,6 +4011,21 @@ function stepProjs(){
    if(p.explode){explode(p);p.dead=true;break;}
    if(!p.pierce&&!p.multi&&p.t!=='beam')p.dead=true;
   }
+  if(G.epitaphEchoes&&G.epitaphEchoes.length>0){
+   for(const echo of G.epitaphEchoes){
+    if(echo.owner===p.owner||echo.life<=0)continue;
+    const last=p.hits.get(echo.id);
+    if(last!=null&&(!p.multi||p.age-last<p.multi))continue;
+    let hit=false;const R=echo.hurtRect();
+    if(p.t==='beam'){const x1=Math.min(p.x,p.x+p.dir*p.len),x2=Math.max(p.x,p.x+p.dir*p.len);hit=R.x2>x1&&R.x1<x2&&R.y2>p.y-p.h&&R.y1<p.y+p.h;}
+    else if(p.hw){hit=R.x2>p.x-p.hw&&R.x1<p.x+p.hw&&R.y2>p.y-p.hh&&R.y1<p.y+p.hh;}
+    else hit=circRect(p.x,p.y,p.r,R);
+    if(!hit)continue;
+    p.hits.set(echo.id,p.age);
+    echo.onHit(p.owner,p,p.sc,p.dir,p.x,p.y,p);
+    if(!p.pierce&&!p.multi&&p.t!=='beam')p.dead=true;
+   }
+  }
   if(p.t!=='beam'){for(const q of G.projs)if(q!==p&&!q.dead&&!p.dead&&q.owner!==p.owner&&q.t!=='beam'&&p.t!=='pull'&&q.t!=='pull'&&Math.hypot(q.x-p.x,q.y-p.y)<p.r+q.r){p.dead=q.dead=true;fx('spark',(p.x+q.x)/2,(p.y+q.y)/2,{d:6,col:'#ffffff'});}}
   if(p.age>=p.life&&!p.dead){if(p.explode)explode(p);p.dead=true;if(p.t==='clone'&&hasSheet(p.owner.C.id))fx('sprfx',p.x,p.y+8,{id:p.owner.C.id,ref:'x1:11',face:p.dir,dur:22,grow:1});}
   const B=G.stage.blast;if(p.x<B.l||p.x>B.r||p.y<B.t||p.y>B.b)p.dead=true;
@@ -3805,6 +4038,14 @@ function explode(p){
  fxAnim(p.explode.anim||'boom',p.x,p.y,{sc:p.explode.r/60});if(p.explode.anim){fx('ring',p.x,p.y,{r:p.explode.r,col:p.col,dur:20});fx('shock',p.x,p.y,{r:p.explode.r*.8,col:'#ffffff',dur:22});}
  if(p.explode.fx&&hasSheet(p.owner.C.id))fx('sprfx',p.x,p.y+(p.explode.fy==null?60:p.explode.fy),{id:p.owner.C.id,ref:p.explode.fx,face:p.dir,dur:30,grow:1});else fx('boom',p.x,p.y,{r:p.explode.r,col:p.col});G.shake=Math.max(G.shake,9);
  for(const t of G.fighters){if(t===p.owner||!canBeHit(t))continue;if(circRect(p.x,p.y,p.explode.r,hurtRect(t))){if(resolveDefense(p.owner,t,p.explode,p.sc,Math.sign(t.x-p.x)||1,t.x,t.y-34,p))continue;applyHit(null,t,p.explode,p.sc,Math.sign(t.x-p.x)||1,t.x,t.y-34,p);}}
+ if(G.epitaphEchoes&&G.epitaphEchoes.length>0){
+  for(const echo of G.epitaphEchoes){
+   if(echo.owner===p.owner||echo.life<=0)continue;
+   if(circRect(p.x,p.y,p.explode.r,echo.hurtRect())){
+    echo.onHit(p.owner,p.explode,p.sc,Math.sign(echo.x-p.x)||1,echo.x,echo.y-34,p);
+   }
+  }
+ }
 }
 
 /* =========================================================
@@ -3991,7 +4232,20 @@ function aiRaw(f){
  if(f.st==='grabbed'){if(G.frame%4===0)press('attack');return done();}
  const foes=G.fighters.filter(t=>t!==f&&!t.out&&t.dead===0);
  if(!foes.length)return done();
- let T=foes[0],bd=1e9;for(const t of foes){const d=Math.hypot(t.x-f.x,t.y-f.y)+(t.st==='respawn'?600:0)+(t.smokeT>0?900:0);if(d<bd){bd=d;T=t;}}
+ let T=foes[0],bd=1e9;
+ for(const t of foes){
+  let d=Math.hypot(t.x-f.x,t.y-f.y)+(t.st==='respawn'?600:0)+(t.smokeT>0?900:0);
+  if(t.diavoloFighter&&t.diavoloFighter.timeEraseTimer>0)d+=99999;
+  if(d<bd){bd=d;T=t;}
+ }
+ if(G.epitaphEchoes&&G.epitaphEchoes.length>0){
+  for(const echo of G.epitaphEchoes){
+   if(echo.owner!==f&&echo.life>0){
+    const ed=Math.hypot(echo.x-f.x,echo.y-f.y);
+    if(ed<bd){bd=ed;T=echo;}
+   }
+  }
+ }
  // medidores: Naruto medita y Goku carga ki cuando el rival está lejos
  if(f.ground&&f.st==='ground'&&bd>330&&!f.mode){if(f.C.id==='naruto'&&(f.gauge||0)<100&&bd>480){o.y=1;return done();}
   if(f.C.id==='goku'&&(f.gauge||0)<40){o.y=1;o.special=true;return done();}
@@ -4286,6 +4540,10 @@ function drawSpriteBody(f,S,flash){
  ctx.save();ctx.translate(Math.round(f.x+dx*f.face),Math.round(f.y));
  // Aura viva renderizada en capas dinámicas (drawLivingAuraBack y drawLivingAuraFront)
  if(flash)ctx.globalAlpha=.5;
+ if(f.diavoloFighter&&f.diavoloFighter.timeEraseTimer>0){
+  ctx.globalAlpha=0.55;
+  ctx.filter='sepia(1) saturate(5) hue-rotate(320deg) brightness(1.2)';
+ }
  let sq=f.sq||1;
  if(f.st==='ground'){
   if(f.anim==='idle'||!f.anim)sq+=Math.sin((G.frame+f.i*17)*0.08)*0.022;
@@ -5119,6 +5377,13 @@ function renderDiavoloCinematic(ctx, canvas) {
 function resolveDiavoloCinematic(C) {
   const f = C.diavolo, victim = C.victim;
   if (!victim || victim.dead || victim.out) return;
+  if (victim.id && typeof victim.id === 'string' && victim.id.startsWith('epitaph_echo')) {
+    victim.life = 0;
+    fx('text', victim.x, victim.y - 100, { txt: '¡ERA UNA ILUSIÓN DE DESTINO!', col: '#f43f5e', dur: 80 });
+    fx('vanish', victim.x, victim.y - 34, {});
+    fx('ring', victim.x, victim.y - 34, { r: 60, col: '#f43f5e', dur: 16 });
+    return;
+  }
 
   victim.pct += 35.0;
   f.dmgDone += 35.0;
@@ -5163,6 +5428,13 @@ function render(){
  for(const f of G.fighters)if(!f.out&&f.dead===0&&f.st!=='dead'&&modeOf(f).darkAura)drawDarkAura(f);
  if(G.shadows)for(const S of G.shadows){const f=S.owner;if(f.dead||f.out)continue;const ox=f.x;f.x=ox+S.dx;ctx.save();ctx.globalAlpha=.5;ctx.filter='sepia(1) hue-rotate(10deg) brightness(1.3)';drawFighter(f);ctx.restore();f.x=ox;}
  for(const f of G.fighters)if(!f.out&&f.dead===0&&f.st!=='dead')drawFighter(f);
+ for(const f of G.fighters){
+  if(f.C.id==='diavolo'&&f.diavoloFighter&&f.diavoloFighter.stand&&!f.dead)f.diavoloFighter.stand.render(ctx);
+ }
+ if(G.epitaphEchoes)for(const echo of G.epitaphEchoes)echo.render(ctx);
+ for(const f of G.fighters){
+  if(f.diavoloFighter)f.diavoloFighter.renderGlassShatter(ctx);
+ }
  for(const f of G.fighters)if(!f.out&&f.dead===0&&f.st!=='dead'&&modeOf(f).darkAura&&f.auraFront){const SZ=f.drawSize||1,H=300*SZ;drawFxFrame('gon',f.auraFront,f.x,f.y-H*.5+8*SZ,H*1.04,-f.face,.28);}
  for(const p of G.projs)if(p.t!=='pull')drawProj(p);
  drawOrb();
@@ -5206,15 +5478,9 @@ function render(){
       }
     }
   }
- // Diavolo Stand & Echoes
- for(const f of G.fighters){
-  if(f.C.id==='diavolo'&&f.stand&&!f.dead)f.stand.render(ctx);
- }
- if(G.epitaphEchoes)for(const echo of G.epitaphEchoes)echo.render(ctx);
  for(const f of G.fighters){
   if(f.diavoloFighter){
    f.diavoloFighter.renderTimeSkipFilter(ctx,cv);
-   f.diavoloFighter.renderGlassShatter(ctx,cv);
   }
  }
  if(G.diavoloCinematic)renderDiavoloCinematic(ctx,cv);
