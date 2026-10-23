@@ -3628,8 +3628,8 @@ const DIAVOLO_MV = {
     spr: [[0, B_DIA_E+'4.0'], [6, B_DIA_E+'4.1'], [14, B_DIA_E+'4.0'], [24, B_DIA_E+'4.1']]
   },
   final: {
-    nm: 'Court of the Crimson King', f: 90, limb: 'body', stand: true,
-    intan: [0, 90],
+    nm: 'Court of the Crimson King', f: 270, limb: 'body', stand: true,
+    intan: [0, 270],
     captureHb: { s: 8, e: 14, x: 60, y: 0, w: 120, h: 90 },
     spr: [[0, B_DIA_E+'4.0'], [8, B_DIA_E+'4.1'], [20, B_DIA_E+'4.2'], [38, B_DIA_E+'4.3'], [55, B_DIA_E+'4.4'], [72, B_DIA_E+'4.5']]
   }
@@ -7172,110 +7172,512 @@ function renderDiavoloCinematic(ctx, canvas) {
 
   const f = C.diavolo, victim = C.victim;
   const cw = canvas.width, ch = canvas.height;
+  const totalFrames = C.maxTimer || 260;
+  const frame = totalFrames - C.timer; // 0 to 260
+
   ctx.save();
 
-  const letterboxH = Math.min(80, ch * 0.14);
-  ctx.fillStyle = '#000000';
-  ctx.fillRect(0, 0, cw, letterboxH);
-  ctx.fillRect(0, ch - letterboxH, cw, letterboxH);
+  // Dynamic Letterbox bars with smooth easing
+  const maxLetterboxH = Math.min(84, ch * 0.14);
+  let letterboxH = maxLetterboxH;
+  if (frame < 18) {
+    letterboxH = (frame / 18) * maxLetterboxH;
+  } else if (frame > 242) {
+    letterboxH = Math.max(0, ((260 - frame) / 18) * maxLetterboxH);
+  }
 
-  ctx.fillStyle = 'rgba(88, 28, 28, 0.45)';
+  // ==========================================
+  // BACKGROUND: THE ERASED TIME CRIMSON VOID
+  // ==========================================
+  ctx.fillStyle = '#060103';
+  ctx.fillRect(0, 0, cw, ch);
+
+  // Deep space cosmic red nebula
+  const gradVoid = ctx.createRadialGradient(cw / 2, ch / 2, 40, cw / 2, ch / 2, Math.hypot(cw, ch) * 0.65);
+  gradVoid.addColorStop(0, 'rgba(168, 15, 38, 0.45)');
+  gradVoid.addColorStop(0.5, 'rgba(88, 10, 24, 0.35)');
+  gradVoid.addColorStop(1, 'rgba(15, 2, 6, 0.95)');
+  ctx.fillStyle = gradVoid;
   ctx.fillRect(0, letterboxH, cw, ch - letterboxH * 2);
 
-  ctx.strokeStyle = 'rgba(244, 63, 94, 0.35)';
-  ctx.lineWidth = 2;
-  for (let i = 0; i < 20; i++) {
-    const x0 = (i / 20) * cw;
+  // Floating crimson temporal debris / space dust
+  ctx.save();
+  for (let i = 0; i < 26; i++) {
+    const px = ((i * 97 + frame * 1.8) % cw);
+    const py = letterboxH + ((i * 131 + Math.sin(frame * 0.05 + i) * 35) % (ch - letterboxH * 2));
+    const pr = 1.5 + (i % 4) * 1.5;
+    ctx.fillStyle = i % 2 === 0 ? 'rgba(244, 63, 94, 0.45)' : 'rgba(254, 205, 211, 0.35)';
     ctx.beginPath();
-    ctx.moveTo(x0, letterboxH);
-    ctx.lineTo(x0 + Math.sin(G.frame * 0.3 + i) * 60, ch - letterboxH);
+    ctx.arc(px, py, pr, 0, TAU);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // Rotating Clock of Destiny in the background
+  ctx.save();
+  ctx.translate(cw / 2, ch / 2);
+  ctx.rotate(-frame * 0.008);
+  ctx.strokeStyle = 'rgba(225, 29, 72, 0.12)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(0, 0, Math.min(cw, ch) * 0.38, 0, TAU);
+  ctx.stroke();
+  for (let h = 0; h < 12; h++) {
+    const a = (h / 12) * TAU;
+    const r1 = Math.min(cw, ch) * 0.34, r2 = Math.min(cw, ch) * 0.38;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * r1, Math.sin(a) * r1);
+    ctx.lineTo(Math.cos(a) * r2, Math.sin(a) * r2);
     ctx.stroke();
   }
+  ctx.restore();
 
-  if (C.timer > 45) {
-    f.x = lerp(f.x, victim.x - victim.face * 42, 0.12);
-    f.face = victim.face;
-
-    for (let i = 1; i <= 5; i++) {
-      const ghostOffset = i * 22 * victim.face;
-      ctx.save();
-      ctx.globalAlpha = 0.28 * (1 - i * 0.15);
-      ctx.translate(victim.x + ghostOffset, victim.y);
-      ctx.scale(victim.face, 1);
-      ctx.fillStyle = '#f43f5e';
-      ctx.filter = 'sepia(1) saturate(8) hue-rotate(320deg)';
-      ctx.beginPath();
-      ctx.ellipse(0, -34, 18, 38, 0, 0, TAU);
-      ctx.fill();
-      ctx.fillRect(10, -36, 30, 8);
-      ctx.restore();
-    }
-
-    ctx.font = '900 36px Bangers, Impact, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#fef2f2';
-    ctx.strokeStyle = '#991b1b';
-    ctx.lineWidth = 5;
-    ctx.strokeText('« EN ESTE MUNDO... SOLO LOS RESULTADOS IMPORTAN »', cw / 2, letterboxH + 35);
-    ctx.fillText('« EN ESTE MUNDO... SOLO LOS RESULTADOS IMPORTAN »', cw / 2, letterboxH + 35);
-  }
-
-  if (C.timer === 45) {
-    sfx('boom'); sfx('shield');
-    if(typeof G !== 'undefined'){ G.shake = 32; G.impact = 6; }
-    f.x = victim.x - victim.face * 26;
-    f.face = victim.face;
-    if(f.diavoloFighter) f.diavoloFighter.renderGlassShatterTrigger(10);
-    fx('flash', 0, 0, { screen: 1, dur: 14 });
-    fx('shock', victim.x, victim.y - 34, { r: 85, col: '#dc2626' });
-    fx('ring', victim.x, victim.y - 34, { r: 65, col: '#ffffff', dur: 20 });
-    fx('spark', victim.x, victim.y - 34, { d: 35, col: '#f43f5e' });
-  }
-
-  if (C.timer <= 45) {
-    if (C.timer >= 40) {
-      ctx.globalCompositeOperation = 'difference';
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, letterboxH, cw, ch - letterboxH * 2);
-      ctx.globalCompositeOperation = 'source-over';
-    }
-
-    // Render King Crimson delivering the lethal Donut punch sprite!
-    const R_KC = typeof fref === 'function' ? fref('diavolo', 'stand:1.3') : null;
-    if (R_KC && R_KC.S && R_KC.S.ready) {
-      ctx.save();
-      ctx.imageSmoothingEnabled = false;
-      ctx.translate(victim.x - victim.face * 20, victim.y);
-      ctx.scale(victim.face, 1);
-      ctx.shadowColor = '#dc2626';
-      ctx.shadowBlur = 24;
-      const fr = R_KC.fr, sc = R_KC.sc * 1.25;
-      ctx.drawImage(R_KC.S.img, fr.sx, fr.sy, fr.w, fr.h, -fr.ax * sc, -fr.ay * sc, fr.w * sc, fr.h * sc);
-      ctx.restore();
-    }
+  // Heartbeat pulse effect in Acts 1 & 2
+  if (frame < 130 && (frame % 28 === 0 || frame % 28 === 6)) {
     ctx.save();
-    ctx.translate(victim.x, victim.y - 34);
-    ctx.strokeStyle = '#dc2626';
-    ctx.lineWidth = 8;
+    ctx.fillStyle = 'rgba(225, 29, 72, 0.12)';
+    ctx.fillRect(0, letterboxH, cw, ch - letterboxH * 2);
+    ctx.restore();
+    if (frame % 28 === 0 && typeof sfx === 'function') sfx('boom');
+  }
+
+  // ==========================================
+  // ACT 1: REALITY SHATTER & DESTINED PATH (0 - 65)
+  // ==========================================
+  if (frame <= 65) {
+    // Glass shatter shards drifting in 3D perspective
+    ctx.save();
+    for (let i = 0; i < 18; i++) {
+      const spd = 2.5 + (i % 5) * 1.2;
+      const ang = (i / 18) * TAU + (i * 0.1);
+      const dist = frame * spd;
+      const sx = cw / 2 + Math.cos(ang) * dist;
+      const sy = ch / 2 + Math.sin(ang) * dist;
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(frame * 0.04 + i);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+      ctx.strokeStyle = 'rgba(244, 63, 94, 0.7)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-16, -10); ctx.lineTo(18, -4); ctx.lineTo(10, 16); ctx.lineTo(-12, 12);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
+
+    // Victim advancing as a marionette of fate: 5 ghost echoes trailing forward
+    const vicId = victim.C ? victim.C.id : (victim.owner ? victim.owner.C.id : 'goku');
+    const R_vic = typeof fref === 'function' ? (fref(vicId, 'mov:1.0') || fref(vicId, 'mov:0.0')) : null;
+
+    ctx.save();
+    for (let i = 4; i >= 1; i--) {
+      const ghostDist = i * 36 * victim.face;
+      const gAlpha = 0.42 * (1 - i * 0.18);
+      ctx.save();
+      ctx.globalAlpha = gAlpha;
+      ctx.translate(victim.x + ghostDist, victim.y);
+      ctx.scale(victim.face, 1);
+      if (R_vic && R_vic.S && R_vic.S.ready) {
+        const fr = R_vic.fr, sc = R_vic.sc;
+        ctx.shadowColor = '#dc2626';
+        ctx.shadowBlur = 10;
+        ctx.drawImage(R_vic.S.img, fr.sx, fr.sy, fr.w, fr.h, -fr.ax * sc, -fr.ay * sc, fr.w * sc, fr.h * sc);
+      } else {
+        ctx.fillStyle = '#f43f5e';
+        ctx.beginPath();
+        ctx.ellipse(0, -34, 18, 38, 0, 0, TAU);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+
+    // Red thread of fate connecting victim echoes
+    ctx.save();
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([8, 6]);
     ctx.beginPath();
-    ctx.moveTo(-victim.face * 25, 0);
-    ctx.lineTo(victim.face * 42, 0);
-    ctx.stroke();
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.ellipse(victim.face * 42, 0, 8, 22, 0, 0, TAU);
+    ctx.moveTo(victim.x, victim.y - 34);
+    ctx.lineTo(victim.x + 160 * victim.face, victim.y - 34);
     ctx.stroke();
     ctx.restore();
 
-    ctx.font = '900 48px Bangers, Impact, sans-serif';
+    // Manga Menacing Kanji drifting up
+    ctx.save();
+    ctx.font = '900 24px "Impact", "Arial Black", sans-serif';
+    ctx.fillStyle = '#dc2626';
+    ctx.strokeStyle = '#450a0a';
+    ctx.lineWidth = 3;
+    for (let j = 0; j < 5; j++) {
+      const kx = cw * 0.15 + j * (cw * 0.18);
+      const ky = (ch * 0.75) - ((frame * 2.5 + j * 40) % (ch * 0.5));
+      ctx.strokeText('ゴ', kx, ky);
+      ctx.fillText('ゴ', kx, ky);
+    }
+    ctx.restore();
+
+    // Japanese quote & Subtitle Banner
+    ctx.save();
+    ctx.font = '900 32px Bangers, Impact, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fef2f2';
+    ctx.strokeStyle = '#881337';
+    ctx.lineWidth = 6;
+    ctx.strokeText('« KORE GA WAGA KING CRIMSON NO NOURYOKU !! »', cw / 2, letterboxH + 36);
+    ctx.fillText('« KORE GA WAGA KING CRIMSON NO NOURYOKU !! »', cw / 2, letterboxH + 36);
+
+    ctx.font = '700 18px "Segoe UI", sans-serif';
+    ctx.fillStyle = '#fecdd3';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3;
+    ctx.strokeText('¡¡ EL TIEMPO HA SIDO BORRADO... Y TUS ACCIONES YA NO TIENEN SIGNIFICADO !!', cw / 2, letterboxH + 64);
+    ctx.fillText('¡¡ EL TIEMPO HA SIDO BORRADO... Y TUS ACCIONES YA NO TIENEN SIGNIFICADO !!', cw / 2, letterboxH + 64);
+    ctx.restore();
+  }
+
+  // ==========================================
+  // ACT 2: EPITAPH'S FORETOLD DESTINY (66 - 130)
+  // ==========================================
+  else if (frame <= 130) {
+    // Diavolo & King Crimson position silently behind victim
+    f.x = lerp(f.x, victim.x - victim.face * 36, 0.18);
+    f.face = victim.face;
+
+    // Diagonal Comic Cut-in Panel
+    const panelProgress = Math.min(1.0, (frame - 66) / 14);
+    const panelY = ch * 0.24;
+    const panelH = ch * 0.38;
+
+    ctx.save();
+    ctx.beginPath();
+    const slideOffset = (1.0 - panelProgress) * cw;
+    ctx.moveTo(slideOffset - 30, panelY);
+    ctx.lineTo(cw + slideOffset + 30, panelY - 15);
+    ctx.lineTo(cw + slideOffset + 30, panelY + panelH);
+    ctx.lineTo(slideOffset - 30, panelY + panelH + 15);
+    ctx.closePath();
+    ctx.clip();
+
+    // Inside Panel: Dark crimson speedlines
+    ctx.fillStyle = '#2b070f';
+    ctx.fillRect(0, 0, cw, ch);
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.28)';
+    ctx.lineWidth = 2;
+    for (let l = 0; l < 24; l++) {
+      const ly = panelY + ((l * 23 + frame * 16) % panelH);
+      ctx.beginPath();
+      ctx.moveTo(0, ly);
+      ctx.lineTo(cw, ly - 8);
+      ctx.stroke();
+    }
+
+    // Render Diavolo Face in Left Side of Panel
+    const R_dia = typeof fref === 'function' ? fref('diavolo', 'mov:0.1') : null;
+    if (R_dia && R_dia.S && R_dia.S.ready) {
+      ctx.save();
+      ctx.translate(cw * 0.22, panelY + panelH * 0.88);
+      ctx.scale(1.4, 1.4);
+      ctx.shadowColor = '#e11d48'; ctx.shadowBlur = 18;
+      const fr = R_dia.fr, sc = R_dia.sc;
+      ctx.drawImage(R_dia.S.img, fr.sx, fr.sy, fr.w, fr.h, -fr.ax * sc, -fr.ay * sc, fr.w * sc, fr.h * sc);
+      ctx.restore();
+    }
+
+    // Render King Crimson looming right behind Diavolo with glowing Epitaph
+    const R_kc_head = typeof fref === 'function' ? fref('diavolo', 'stand:3.4') : null;
+    if (R_kc_head && R_kc_head.S && R_kc_head.S.ready) {
+      ctx.save();
+      ctx.translate(cw * 0.35, panelY + panelH * 0.86);
+      ctx.scale(1.5, 1.5);
+      ctx.shadowColor = '#dc2626'; ctx.shadowBlur = 24;
+      const fr = R_kc_head.fr, sc = R_kc_head.sc;
+      ctx.drawImage(R_kc_head.S.img, fr.sx, fr.sy, fr.w, fr.h, -fr.ax * sc, -fr.ay * sc, fr.w * sc, fr.h * sc);
+      ctx.restore();
+    }
+
+    // Epitaph psychic eye-beams radiating from forehead
+    ctx.save();
+    ctx.strokeStyle = '#fef08a';
+    ctx.lineWidth = 3.5;
+    ctx.shadowColor = '#facc15';
+    ctx.shadowBlur = 15;
+    ctx.beginPath();
+    ctx.moveTo(cw * 0.34, panelY + panelH * 0.28);
+    ctx.lineTo(cw * 0.65, panelY + panelH * 0.32);
+    ctx.moveTo(cw * 0.34, panelY + panelH * 0.34);
+    ctx.lineTo(cw * 0.65, panelY + panelH * 0.52);
+    ctx.stroke();
+    ctx.restore();
+
+    // Holographic future projection: The destined Donut Strike
+    ctx.save();
+    ctx.translate(cw * 0.72, panelY + panelH * 0.5);
+    ctx.strokeStyle = 'rgba(244, 63, 94, 0.75)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 52 + Math.sin(frame * 0.2) * 4, 0, TAU);
+    ctx.stroke();
+
+    // Wireframe premonition stencil
+    ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
+    ctx.fillRect(-22, -35, 18, 50); // victim
+    ctx.fillStyle = 'rgba(254, 205, 211, 0.8)';
+    ctx.fillRect(-38, -14, 48, 12); // penetrating stand arm
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(10, -8, 12, 0, TAU); ctx.stroke();
+    ctx.restore();
+
+    ctx.restore();
+
+    // Panel Metallic Borders
+    ctx.save();
+    ctx.strokeStyle = '#f43f5e';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(slideOffset - 30, panelY);
+    ctx.lineTo(cw + slideOffset + 30, panelY - 15);
+    ctx.moveTo(slideOffset - 30, panelY + panelH + 15);
+    ctx.lineTo(cw + slideOffset + 30, panelY + panelH);
+    ctx.stroke();
+    ctx.restore();
+
+    // Subtitle Text
+    ctx.save();
+    ctx.font = '900 30px Bangers, Impact, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fee2e2';
+    ctx.strokeStyle = '#881337';
+    ctx.lineWidth = 5;
+    ctx.strokeText('« 読めたぞ... お前の動きの軌跡がッ！ »', cw / 2, ch - letterboxH - 45);
+    ctx.fillText('« 読めたぞ... お前の動きの軌跡がッ！ »', cw / 2, ch - letterboxH - 45);
+
+    ctx.font = '700 17px "Segoe UI", sans-serif';
+    ctx.fillStyle = '#fecdd3'; ctx.strokeStyle = '#000000'; ctx.lineWidth = 3;
+    ctx.strokeText('« He leído la trayectoria de tus movimientos... El resultado ya está grabado en el destino. »', cw / 2, ch - letterboxH - 20);
+    ctx.fillText('« He leído la trayectoria de tus movimientos... El resultado ya está grabado en el destino. »', cw / 2, ch - letterboxH - 20);
+    ctx.restore();
+  }
+
+  // ==========================================
+  // ACT 3: THE BLOOD DROPS COUNTDOWN (131 - 185)
+  // ==========================================
+  else if (frame <= 185) {
+    f.x = victim.x - victim.face * 32;
+    f.face = victim.face;
+
+    // Dramatic noir silhouette lighting
+    ctx.fillStyle = 'rgba(10, 1, 3, 0.7)';
+    ctx.fillRect(0, letterboxH, cw, ch - letterboxH * 2);
+
+    // Drop 1 (Frame 136 - 158)
+    const drop1Active = frame >= 136;
+    const drop1Progress = Math.min(1.0, (frame - 136) / 20);
+    const dropY = letterboxH + drop1Progress * (ch * 0.45);
+
+    if (drop1Active && drop1Progress < 1.0) {
+      ctx.save();
+      ctx.translate(cw * 0.5, dropY);
+      // Falling liquid droplet shape
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.moveTo(0, -14);
+      ctx.bezierCurveTo(8, -6, 8, 8, 0, 10);
+      ctx.bezierCurveTo(-8, 8, -8, -6, 0, -14);
+      ctx.fill();
+      ctx.fillStyle = '#fecdd3';
+      ctx.beginPath(); ctx.arc(-2, 2, 2.5, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+
+    if (frame >= 156) {
+      // Impact Ripple 1
+      const ripRadius = (frame - 156) * 7.5;
+      ctx.save();
+      ctx.strokeStyle = `rgba(239, 68, 68, ${Math.max(0, 1 - (frame - 156) / 25)})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.ellipse(cw * 0.5, letterboxH + ch * 0.45, ripRadius * 1.5, ripRadius * 0.6, 0, 0, TAU);
+      ctx.stroke();
+      ctx.restore();
+      if (frame === 156 && typeof sfx === 'function') sfx('slash');
+    }
+
+    // Drop 2 (Frame 162 - 182)
+    const drop2Active = frame >= 162;
+    const drop2Progress = Math.min(1.0, (frame - 162) / 18);
+    const drop2Y = letterboxH + drop2Progress * (ch * 0.45);
+
+    if (drop2Active && drop2Progress < 1.0) {
+      ctx.save();
+      ctx.translate(cw * 0.52, drop2Y);
+      ctx.fillStyle = '#b91c1c';
+      ctx.beginPath();
+      ctx.moveTo(0, -14);
+      ctx.bezierCurveTo(8, -6, 8, 8, 0, 10);
+      ctx.bezierCurveTo(-8, 8, -8, -6, 0, -14);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    if (frame >= 180) {
+      const rip2Radius = (frame - 180) * 8.5;
+      ctx.save();
+      ctx.strokeStyle = `rgba(255, 255, 255, ${Math.max(0, 1 - (frame - 180) / 18)})`;
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.ellipse(cw * 0.52, letterboxH + ch * 0.45, rip2Radius * 1.5, rip2Radius * 0.6, 0, 0, TAU);
+      ctx.stroke();
+      ctx.restore();
+      if (frame === 180 && typeof sfx === 'function') sfx('vanish');
+    }
+
+    // High Tension Subtitles
+    ctx.save();
+    ctx.font = '900 38px Bangers, Impact, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 6;
+
+    if (frame < 162) {
+      ctx.fillStyle = '#f87171';
+      ctx.strokeText('« 一滴... (Una gota...) »', cw / 2, ch * 0.72);
+      ctx.fillText('« 一滴... (Una gota...) »', cw / 2, ch * 0.72);
+    } else {
+      ctx.fillStyle = '#ef4444';
+      ctx.strokeText('« 二滴... ¡EL TIEMPO VUELVE A FLUIR! »', cw / 2, ch * 0.72);
+      ctx.fillText('« 二滴... ¡EL TIEMPO VUELVE A FLUIR! »', cw / 2, ch * 0.72);
+    }
+    ctx.restore();
+  }
+
+  // ==========================================
+  // ACT 4: THE EXECUTION - DONUT STRIKE (186 - 235)
+  // ==========================================
+  else if (frame <= 235) {
+    const strikeFrame = frame - 186;
+
+    // Negative Inversion Flash on frame 186-192
+    if (strikeFrame <= 6) {
+      ctx.globalCompositeOperation = 'difference';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, cw, ch);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    if (strikeFrame === 0) {
+      if (typeof sfx === 'function') { sfx('boom'); sfx('shield'); }
+      if (typeof G !== 'undefined') { G.shake = 35; G.impact = 12; }
+      if (f.diavoloFighter) f.diavoloFighter.renderGlassShatterTrigger(14);
+      if (typeof fx === 'function') {
+        fx('flash', 0, 0, { screen: 1, dur: 16 });
+        fx('shock', victim.x, victim.y - 34, { r: 95, col: '#dc2626' });
+        fx('ring', victim.x, victim.y - 34, { r: 75, col: '#ffffff', dur: 22 });
+      }
+    }
+
+    // Dynamic Radial Speedlines exploding from penetration point
+    ctx.save();
+    ctx.translate(victim.x, victim.y - 34);
+    ctx.strokeStyle = strikeFrame % 2 === 0 ? 'rgba(254, 205, 211, 0.45)' : 'rgba(225, 29, 72, 0.65)';
+    ctx.lineWidth = 2.5;
+    for (let s = 0; s < 32; s++) {
+      const sang = (s / 32) * TAU + (strikeFrame * 0.08);
+      const slen = 110 + (s % 6) * 45;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(sang) * 20, Math.sin(sang) * 20);
+      ctx.lineTo(Math.cos(sang) * slen, Math.sin(sang) * slen);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Render King Crimson Delivering the Lethal Donut Punch Sprite
+    const R_KC = typeof fref === 'function' ? (strikeFrame < 24 ? fref('diavolo', 'stand:1.3') : fref('diavolo', 'stand:1.4')) : null;
+    if (R_KC && R_KC.S && R_KC.S.ready) {
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      ctx.translate(victim.x - victim.face * 18, victim.y);
+      ctx.scale(victim.face, 1);
+      ctx.shadowColor = '#dc2626';
+      ctx.shadowBlur = 28;
+      const fr = R_KC.fr, sc = R_KC.sc * 1.35;
+      ctx.drawImage(R_KC.S.img, fr.sx, fr.sy, fr.w, fr.h, -fr.ax * sc, -fr.ay * sc, fr.w * sc, fr.h * sc);
+      ctx.restore();
+    }
+
+    // Penetrating punch beam & exit wound plasma shockwave
+    ctx.save();
+    ctx.translate(victim.x, victim.y - 34);
+    ctx.strokeStyle = '#dc2626';
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.moveTo(-victim.face * 28, 0);
+    ctx.lineTo(victim.face * 48, 0);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.ellipse(victim.face * 48, 0, 10, 26, 0, 0, TAU);
+    ctx.stroke();
+    ctx.fillStyle = '#fee2e2';
+    ctx.beginPath();
+    ctx.arc(victim.face * 48, 0, 7, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+
+    // Giant Japanese Manga Impact Sound Effect: ドォォォンッ!!
+    ctx.save();
+    ctx.font = '900 68px "Impact", "Arial Black", sans-serif';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#fee2e2';
     ctx.strokeStyle = '#450a0a';
+    ctx.lineWidth = 8;
+    ctx.strokeText('ド ォ ォ ォ ン ッ !!', cw / 2, letterboxH + 58);
+    ctx.fillText('ド ォ ォ ォ ン ッ !!', cw / 2, letterboxH + 58);
+
+    // Climax Victory Typography
+    ctx.font = '900 36px Bangers, Impact, sans-serif';
+    ctx.fillStyle = '#ffd23f';
+    ctx.strokeStyle = '#7f1d1d';
     ctx.lineWidth = 6;
-    ctx.strokeText('¡¡ KING CRIMSON: DONUT STRIKE !!', cw / 2, ch / 2 - 30);
-    ctx.fillText('¡¡ KING CRIMSON: DONUT STRIKE !!', cw / 2, ch / 2 - 30);
+    ctx.strokeText('« ¡¡ EL VERDADERO VENCEDOR SOY YO... DIAVOLO !! »', cw / 2, ch - letterboxH - 45);
+    ctx.fillText('« ¡¡ EL VERDADERO VENCEDOR SOY YO... DIAVOLO !! »', cw / 2, ch - letterboxH - 45);
+
+    ctx.font = '900 24px "Segoe UI", sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
+    ctx.strokeText('¡¡ KING CRIMSON: DONUT STRIKE !!', cw / 2, ch - letterboxH - 18);
+    ctx.fillText('¡¡ KING CRIMSON: DONUT STRIKE !!', cw / 2, ch - letterboxH - 18);
+    ctx.restore();
   }
+
+  // ==========================================
+  // ACT 5: AFTERMATH & OBLIVION COLLAPSE (236 - 260)
+  // ==========================================
+  else {
+    // King Crimson retracts fist smoothly
+    const R_KC_retract = typeof fref === 'function' ? fref('diavolo', 'stand:1.5') : null;
+    if (R_KC_retract && R_KC_retract.S && R_KC_retract.S.ready) {
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      ctx.translate(victim.x - victim.face * 26, victim.y);
+      ctx.scale(victim.face, 1);
+      ctx.shadowColor = '#e11d48';
+      ctx.shadowBlur = 14;
+      const fr = R_KC_retract.fr, sc = R_KC_retract.sc * 1.25;
+      ctx.drawImage(R_KC_retract.S.img, fr.sx, fr.sy, fr.w, fr.h, -fr.ax * sc, -fr.ay * sc, fr.w * sc, fr.h * sc);
+      ctx.restore();
+    }
+  }
+
+  // Top and bottom letterbox border rendering
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, cw, letterboxH);
+  ctx.fillRect(0, ch - letterboxH, cw, letterboxH);
 
   ctx.restore();
 }
@@ -7285,30 +7687,35 @@ function resolveDiavoloCinematic(C) {
   if (!victim || victim.dead || victim.out) return;
   if (victim.id && typeof victim.id === 'string' && victim.id.startsWith('epitaph_echo')) {
     victim.life = 0;
-    fx('text', victim.x, victim.y - 100, { txt: '¡ERA UNA ILUSIÓN DE DESTINO!', col: '#f43f5e', dur: 80 });
-    fx('vanish', victim.x, victim.y - 34, {});
-    fx('ring', victim.x, victim.y - 34, { r: 60, col: '#f43f5e', dur: 16 });
+    if (typeof fx === 'function') {
+      fx('text', victim.x, victim.y - 100, { txt: '¡ERA UNA ILUSIÓN DE DESTINO!', col: '#f43f5e', dur: 80 });
+      fx('vanish', victim.x, victim.y - 34, {});
+      fx('ring', victim.x, victim.y - 34, { r: 60, col: '#f43f5e', dur: 16 });
+    }
     return;
   }
 
-  victim.pct += 35.0;
-  f.dmgDone += 35.0;
+  victim.pct += 42.0;
+  f.dmgDone += 42.0;
   victim.st = 'hitstun';
 
-  if (victim.pct >= 70) {
-    victim.vx = 45 * f.face;
-    victim.vy = -12;
+  // Instant K.O. check if victim is heavily damaged
+  if (victim.pct >= 65) {
+    victim.vx = 48 * f.face;
+    victim.vy = -13;
     victim.lvx = victim.vx; victim.lvy = victim.vy;
     victim.kb = 999;
     victim.hitstun = 180;
     victim.tumble = true;
-    if(typeof G !== 'undefined'){ G.shake = 35; }
-    sfx('ko');
-    fx('flash', 0, 0, { screen: 1, dur: 22 });
-    fx('text', victim.x, victim.y - 100, { txt: '¡DESINTEGRACIÓN TEMPORAL (K.O.)!', col: '#dc2626', dur: 90 });
+    if (typeof G !== 'undefined') { G.shake = 38; }
+    if (typeof sfx === 'function') sfx('ko');
+    if (typeof fx === 'function') {
+      fx('flash', 0, 0, { screen: 1, dur: 25 });
+      fx('text', victim.x, victim.y - 100, { txt: '¡DESINTEGRACIÓN TEMPORAL (K.O.)!', col: '#dc2626', dur: 90 });
+    }
   } else {
     const rad = 15 * D2R;
-    const kb = (victim.pct * 1.2 + 80);
+    const kb = (victim.pct * 1.3 + 85);
     const sp = kb * KB_SPEED;
     victim.vx = Math.cos(rad) * f.face * sp;
     victim.vy = -Math.sin(rad) * sp;
@@ -7316,12 +7723,18 @@ function resolveDiavoloCinematic(C) {
     victim.kb = kb;
     victim.hitstun = Math.floor(kb * 0.45);
     victim.tumble = true;
-    if(typeof G !== 'undefined'){ G.shake = 24; }
-    sfx('boom');
+    if (typeof G !== 'undefined') { G.shake = 26; }
+    if (typeof sfx === 'function') sfx('boom');
   }
+
+  f.st = 'ground';
+  f.mv = null;
+  f.mvKey = null;
+  f.intan = 30;
 }
 
 function render(){
+
  ctx.setTransform(dpr,0,0,dpr,0,0);
  if(!G.stage){ctx.fillStyle='#121319';ctx.fillRect(0,0,cw,ch);return;}
  drawBg(G.stage);
