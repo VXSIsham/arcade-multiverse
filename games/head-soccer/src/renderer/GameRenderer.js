@@ -1,6 +1,6 @@
-import { StadiumRenderer } from './StadiumRenderer.js?v=char_overhaul_v40';
-import { CharacterRenderer } from './CharacterRenderer.js?v=char_overhaul_v40';
-import { SpineDebugger } from './SpineDebugger.js?v=char_overhaul_v40';
+import { StadiumRenderer } from './StadiumRenderer.js?v=char_overhaul_v42';
+import { CharacterRenderer } from './CharacterRenderer.js?v=char_overhaul_v42';
+import { SpineDebugger } from './SpineDebugger.js?v=char_overhaul_v42';
 
 /**
  * Main game rendering pipeline coordinator with dynamic camera juice (shake & flash).
@@ -260,6 +260,7 @@ export class GameRenderer {
       facing: player.direction || 1,
       hp: player.hp,
       isSuperReady: sceneState.isPlayerSuperReady,
+      scaleMultiplier: player.shrinkMultiplier || 1.0,
       ball: ball,
       isGrounded: player.isGrounded,
       isDashing: player.isDashing,
@@ -287,6 +288,7 @@ export class GameRenderer {
         facing: sceneState.rivalBot.direction || -1,
         hp: sceneState.rivalBot.hp,
         isSuperReady: sceneState.rivalBot.power >= 100,
+        scaleMultiplier: sceneState.rivalBot.shrinkMultiplier || 1.0,
         ball: ball,
         isGrounded: sceneState.rivalBot.isGrounded,
         isDashing: sceneState.rivalBot.isDashing,
@@ -497,6 +499,43 @@ export class GameRenderer {
         ctx.beginPath();
         ctx.ellipse(0, 0, ball.radius + 7, ball.radius * 0.65, flightAngle, 0, Math.PI * 2);
         ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Roaring Anime Fireball Aura (Aerial Juggling Combo "¡EN LLAMAS!")
+    if (ball.isOnFire) {
+      ctx.save();
+      const time = performance.now() * 0.015;
+      const firePulse = 1.0 + Math.sin(time * 3) * 0.18;
+      const isSuperFire = (ball.fireLevel || 1) >= 2;
+
+      // Outer Heat Haze & Roaring Flame Corona
+      ctx.shadowColor = isSuperFire ? '#ff0033' : '#ff7700';
+      ctx.shadowBlur = isSuperFire ? 42 : 26;
+
+      const fireGrad = ctx.createRadialGradient(0, 0, ball.radius * 0.35, 0, 0, (ball.radius + 18) * firePulse);
+      fireGrad.addColorStop(0, '#ffffff');
+      fireGrad.addColorStop(0.25, '#ffd700');
+      fireGrad.addColorStop(0.65, isSuperFire ? '#ff2200' : '#ff7700');
+      fireGrad.addColorStop(1, 'rgba(255, 0, 0, 0)');
+
+      ctx.fillStyle = fireGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, (ball.radius + 18) * firePulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Whirling solar flares / flame tongues
+      const tongueCount = isSuperFire ? 8 : 6;
+      ctx.fillStyle = isSuperFire ? 'rgba(255, 60, 0, 0.75)' : 'rgba(255, 150, 0, 0.75)';
+      for (let i = 0; i < tongueCount; i++) {
+        const ang = (i * Math.PI * 2) / tongueCount + time * 1.6;
+        const len = (ball.radius + 10) + Math.sin(time * 4 + i) * 8;
+        const fx = Math.cos(ang) * len;
+        const fy = Math.sin(ang) * len;
+        ctx.beginPath();
+        ctx.arc(fx, fy, 6 * firePulse, 0, Math.PI * 2);
+        ctx.fill();
       }
       ctx.restore();
     }

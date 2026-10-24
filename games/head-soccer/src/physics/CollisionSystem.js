@@ -218,7 +218,8 @@ export class CollisionSystem {
     }
 
     // 1. Anatomically Calibrated Hitbox Updates (Matches Chibi 1.25x caricature proportion)
-    const headScale = (player.userHeadScale || 1.0) * 1.25;
+    const shrink = (player.shrinkMultiplier || 1.0);
+    const headScale = (player.userHeadScale || 1.0) * 1.25 * shrink;
 
     // Head Hitbox (Full skull cranium mass from crown to jaw: radius 48px scaled)
     player.headHitbox.x = skeleton.head.worldX + player.direction * (14 * headScale);
@@ -236,13 +237,13 @@ export class CollisionSystem {
     const footOffsetX = Math.abs(footTip.x - skeleton.root.x);
     player.kickHitbox.x = player.x + player.direction * (footOffsetX + 4);
     player.kickHitbox.y = footTip.y - 2;
-    player.kickHitbox.radius = 26;
+    player.kickHitbox.radius = Math.round(26 * shrink);
 
     // Torso Hitbox (Chest / Body trap: radius 24px)
     if (!player.torsoHitbox) player.torsoHitbox = { x: 0, y: 0, radius: 24 };
     player.torsoHitbox.x = skeleton.torso.worldX + player.direction * 4;
     player.torsoHitbox.y = skeleton.torso.worldY - 12;
-    player.torsoHitbox.radius = 24;
+    player.torsoHitbox.radius = Math.round(24 * shrink);
 
     const curAnim = player.animController.currentAnim;
     const isSpecialKick = ['bicycle_kick', 'rocket_kick', 'diving_header', 'scorpion_kick', 'smash_header'].includes(curAnim);
@@ -295,6 +296,7 @@ export class CollisionSystem {
 
           // Standard Super Parry
           ball.isSuper = false;
+          ball.superType = null;
           ball.lastKickedBy = 'player';
           ball.vx = 880;
           ball.vy = -260;
@@ -523,6 +525,7 @@ export class CollisionSystem {
           } else {
             // Standard Super Parry
             ball.isSuper = false;
+            ball.superType = null;
             ball.lastKickedBy = 'player';
             ball.vx = 820;
             ball.vy = -240;
@@ -712,26 +715,50 @@ export class CollisionSystem {
       }
     }
 
+    // Aerial Juggling Combo Event Hook ("¡EN LLAMAS!")
+    if (!ball.onAirComboHit) {
+      ball.onAirComboHit = (combo, x, y, dir = 1) => {
+        if (combo === 2) {
+          this.soundManager.playComboChime(2);
+          this.addFloatingText('⚡ COMBO x2! ⚽', x, y - 85, '#00f0ff', 22);
+        } else if (combo === 3) {
+          this.soundManager.playComboChime(3);
+          this.particleSystem.spawnFlameBurst(x, y, 22, ['#ff7700', '#ffd700', '#ffffff']);
+          this.triggerShake(10);
+          this.addFloatingText('🔥 COMBO x3! VOLLEY RUSH! 🔥', x, y - 95, '#ff8800', 25);
+        } else if (combo >= 4) {
+          this.soundManager.playComboChime(combo);
+          this.soundManager.play('superExplode');
+          this.particleSystem.spawnSonicBoom(x, y, dir, '#ff3700');
+          this.particleSystem.spawnFlameBurst(x, y, 32, ['#ff3700', '#ff0033', '#ffd700', '#ffffff']);
+          this.triggerShake(16);
+          this.triggerHitStop(0.06);
+          this.addFloatingText(`☄️💥 COMBO x${combo}! ¡¡EN LLAMAS!! 💥☄️`, x, y - 105, '#ff3700', 28);
+        }
+      };
+    }
+
     // Post, Crossbar & Top Corner joint collision event hook
     if (!ball.onCrossbarHit) {
       ball.onCrossbarHit = (cx, barY, speed, hitType = 'crossbar', isRight = false) => {
         this.soundManager.play('postClang');
+        if (speed > 400) this.soundManager.playSubBassKick();
         this.particleSystem.spawnPostHit(cx, barY);
-        this.triggerShake(speed > 450 ? 12 : 8);
+        this.triggerShake(speed > 450 ? 16 : 12);
+        this.triggerHitStop(0.065);
 
-        let bannerText = '💥 ¡TRAVESAÑO!';
+        let bannerText = '😱 ¡¡¡AL PALOOOOOOOOO!!! 💥⚽';
         let bannerColor = '#ffd700';
 
         if (hitType === 'corner') {
-          bannerText = '📐 ¡A LA ESCUADRA!';
+          bannerText = '😱 ¡¡¡AL ÁNGULO Y AL POSTE!!! 📐💥';
           bannerColor = '#00ffcc';
-          this.triggerHitStop(0.045);
         } else if (hitType === 'post') {
-          bannerText = '💥 ¡POSTE!';
+          bannerText = '😱 ¡¡¡POSTE ROTUNDO!!! 💥';
           bannerColor = '#ff9900';
         }
 
-        this.addFloatingText(bannerText, cx, barY - 35, bannerColor, 22);
+        this.addFloatingText(bannerText, cx, barY - 45, bannerColor, 24);
         this.onPostHitCallbacks.forEach(fn => fn(isRight, cx, barY, speed, hitType));
       };
     }

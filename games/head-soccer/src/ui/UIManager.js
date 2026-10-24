@@ -406,6 +406,7 @@ export class UIManager {
     bindActionBtn('btnJump', 'jump');
     bindActionBtn('btnSuper', 'super_shot');
     bindActionBtn('btnDash', 'dash');
+    bindActionBtn('btnTaunt', 'taunt');
 
     // Prevent focus outline on buttons so Space key doesn't trigger button clicks
     document.querySelectorAll('button').forEach(btn => {

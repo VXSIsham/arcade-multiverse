@@ -263,6 +263,11 @@ export class InputManager {
           e.preventDefault();
           this.emitP2Action('diving_header');
           return;
+        } else if (e.code === 'KeyY' || e.code === 'Numpad3' || e.code === 'KeyM') {
+          e.preventDefault();
+          this.vibrate(20);
+          this.emitP2Action('taunt');
+          return;
         }
       }
 
@@ -270,6 +275,10 @@ export class InputManager {
       if (e.code === 'Space' || e.code === 'KeyJ' || e.code === 'KeyX') {
         e.preventDefault();
         this.startKickCharge();
+      } else if (e.code === 'KeyT') {
+        e.preventDefault();
+        this.vibrate(20);
+        this.emitAction('taunt');
       } else if (e.code === 'KeyV') {
         e.preventDefault();
         this.vibrate(25);

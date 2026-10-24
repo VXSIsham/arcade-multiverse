@@ -536,6 +536,33 @@ const AnimationClips = {
         face: 'strain'
       };
     }
+  },
+
+  taunt: {
+    name: 'taunt',
+    duration: 0.65,
+    loop: false,
+    evaluate: (t) => {
+      // Hilarious flex / hip wiggle / wink / chest-thump provocation pose
+      const cycle = t * Math.PI * 4;
+      const wiggle = Math.sin(cycle);
+      const nod = Math.cos(cycle * 0.5);
+      return {
+        hipY: -32 + Math.abs(wiggle) * 4.5,
+        torsoRot: wiggle * 15,
+        headRot: nod * 20,
+        headScaleX: 1.12 + wiggle * 0.05,
+        headScaleY: 0.92 - wiggle * 0.05,
+        hairRot: 35 + wiggle * 18,
+        legFrontRot: 195 + wiggle * 10,
+        footFrontRot: -105 + wiggle * 12,
+        legBackRot: 165 - wiggle * 10,
+        footBackRot: -75 - wiggle * 12,
+        armFrontRot: 135 + wiggle * 45, // waving hands / flexing muscles
+        armBackRot: 225 - wiggle * 45,
+        face: 'celebrate'
+      };
+    }
   }
 };
 
@@ -853,6 +880,15 @@ class SoundManager {
         break;
       case 'chargeHum':
         this.playChargeHum();
+        break;
+      case 'taunt':
+        this.playTaunt();
+        break;
+      case 'slip':
+        this.playSlip();
+        break;
+      case 'shrink':
+        this.playShrink();
         break;
     }
   }
@@ -1277,6 +1313,91 @@ class SoundManager {
     osc.start(now);
     osc.stop(now + 0.08);
   }
+
+  playTaunt() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    // Comical sparkle chime / anime tooth shine ding
+    [1046.5, 1318.5, 1567.98, 2093.0].forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+      gain.gain.setValueAtTime(0.35, now + idx * 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.28);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now + idx * 0.05);
+      osc.stop(now + idx * 0.05 + 0.28);
+    });
+  }
+
+  playSlip() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    // Classic cartoon banana slide whistle
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(420, now);
+    osc.frequency.linearRampToValueAtTime(980, now + 0.12);
+    osc.frequency.exponentialRampToValueAtTime(140, now + 0.38);
+    gain.gain.setValueAtTime(0.65, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.42);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.42);
+
+    // Slipping turf squeak
+    const squeak = this.ctx.createOscillator();
+    const sGain = this.ctx.createGain();
+    squeak.type = 'triangle';
+    squeak.frequency.setValueAtTime(800, now + 0.08);
+    squeak.frequency.exponentialRampToValueAtTime(1400, now + 0.18);
+    sGain.gain.setValueAtTime(0.3, now + 0.08);
+    sGain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+    squeak.connect(sGain);
+    sGain.connect(this.ctx.destination);
+    squeak.start(now + 0.08);
+    squeak.stop(now + 0.22);
+  }
+
+  playComboChime(comboLevel = 2) {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const baseFreq = 330 * Math.pow(1.15, Math.min(8, comboLevel));
+    // Triumphant ascending triad chord
+    [baseFreq, baseFreq * 1.25, baseFreq * 1.5].forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.035);
+      gain.gain.setValueAtTime(0.28, now + idx * 0.035);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.035 + 0.24);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now + idx * 0.035);
+      osc.stop(now + idx * 0.035 + 0.24);
+    });
+  }
+
+  playShrink() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    // Sci-fi high-pitch shrink laser chirp
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(280, now);
+    osc.frequency.exponentialRampToValueAtTime(2400, now + 0.26);
+    gain.gain.setValueAtTime(0.55, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.30);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.30);
+  }
 }
 
 exports.SoundManager = SoundManager;
@@ -1658,10 +1779,10 @@ const CHARACTERS = [
       kick: 'assets/characters/poseidon_kick.png',
       ko: 'assets/characters/poseidon_ko.png'
     },
-    head: { width: 116, pivotX: 0.5, pivotY: 0.84 },
+    head: { width: 118, pivotX: 0.5, pivotY: 0.86 },
     jerseyFilter: 'hue-rotate(170deg) saturate(1.6) brightness(1.1)',
     stats: { speed: 1.05, jump: 1.1, power: 1.25 },
-    super: { type: 'poseidon', name: 'Tsunami Hidro-Cañón 🌊🔱', colors: ['#00d4ff', '#0044ff', '#e0ffff'] }
+    super: { type: 'poseidon', name: 'Tsunami Hidro-Cañón 🌊🔱', colors: ['#00d4ff', '#0077ff', '#e0ffff'] }
   },
   {
     id: 'titan',
@@ -1829,6 +1950,45 @@ const {  InputManager  } = __req('ui/InputManager.js');
 const {  UIManager  } = __req('ui/UIManager.js');
 const {  TournamentManager, GAME_MODES  } = __req('tournament/TournamentManager.js');
 
+const TAUNT_QUOTES = {
+  kenta: [
+    '¡DEMASIADO FÁCIL! 😎✨',
+    '¿ESO ES TODO LO QUE TIENES? 🇯🇵⚽',
+    '¡EL ARTE DEL FÚTBOL! 🥋🔥',
+    '¡NO PUEDES TOCARME! ⚡💨'
+  ],
+  luchador: [
+    '¡AQUÍ MANDO YO! 🐂🔥',
+    '¡SÁCATE A VOLAR! 🇲🇽🌮',
+    '¡SENTIRÁS LA FURIA DEL TORO! 💥',
+    '¡MÁS RESPETO AL CAMPEÓN! 👑🥊'
+  ],
+  cyborg: [
+    'ERROR 404: TALENTO NO ENCONTRADO 🤖⚙️',
+    'CALCULANDO TU DERROTA: 99.9% 💻',
+    'SISTEMA: OPONENTE OBSOLETO ⚡🔌',
+    'ACTUALIZA TU SOFTWARE, NOVATO 🎮'
+  ],
+  kage: [
+    'LENTO... NI VISTE MI SOMBRA 🥷💨',
+    'MI TÉCNICA ES INALCANZABLE 🍃✨',
+    'YA ESTÁS DERROTADO... 🌑⚡',
+    'EL SILENCIO ES MI ALIADO 🌪️'
+  ],
+  bjorn: [
+    '¡POR ODÍN! ¡MI ABUELA PATEA MÁS FUERTE! 🪓⚡',
+    '¡BRINDEMOS POR TU DERROTA! 🍺❄️',
+    '¡EL HIELO NO TIENE PIEDAD! 🛡️',
+    '¡RUGE LA TORMENTA NÓRDICA! 🐺'
+  ],
+  arthur: [
+    '¡POBRE RENDIMIENTO, PLEBEYO! 👑🛡️',
+    'EL REINO EXIGE MEJOR OPONENTE ⚔️✨',
+    '¡INCLÍNATE ANTE LA REALEZA! 🏰⚽',
+    '¡EXCALIBUR NUNCA FALLA! 🗡️🌟'
+  ]
+};
+
 /**
  * Head Soccer 2D — Skeletal Rig, Ragdoll Stun, Multi-Character Roster & Super Power Engine
  * Fast-paced arcade physics, instant kicks, physical platformer jumps, and comical low-HP stun scaling.
@@ -1875,6 +2035,8 @@ async function bootstrap() {
     hasShield: false,
     speedMultiplier: 1.0,
     giantHeadMultiplier: 1.0,
+    shrinkMultiplier: 1.0,
+    tauntCooldown: 0,
     isDashing: false,
     dashTimer: 0,
     dashVx: 0,
@@ -2005,6 +2167,46 @@ async function bootstrap() {
     }
   };
 
+  // Expressive & Comical Taunt / Burla Trigger (Rewards +20% to +35% Super Energy!)
+  const triggerTaunt = (isPlayer = true) => {
+    const actor = isPlayer ? player : rivalBot;
+    if (!actor || actor.isStunned || actor.isFrozen || isMatchOver) return;
+    if (isPlayer && ragdollSystem.isActive) return;
+    if (actor.tauntCooldown > 0) return;
+
+    actor.tauntCooldown = 2.0;
+    actor.animController.play('taunt');
+    soundManager.play('taunt');
+
+    const charId = actor.character?.id || (isPlayer ? 'kenta' : 'luchador');
+    const quotes = TAUNT_QUOTES[charId] || ['¡DEMASIADO FÁCIL! 😎✨'];
+    const quote = quotes[Math.floor(Math.random() * quotes.length)];
+
+    const opponent = isPlayer ? rivalBot : player;
+    const dist = opponent ? Math.hypot(actor.x - opponent.x, actor.y - opponent.y) : 999;
+    const isRisky = dist < 160;
+
+    const bonusPower = isRisky ? 35 : 20;
+    if (isPlayer) {
+      powerSystem.addPower(bonusPower);
+    } else {
+      rivalBot.power = Math.min(100, rivalBot.power + bonusPower);
+    }
+
+    // Sparkle particles & tooth shine stars
+    particleSystem.spawnSparks(actor.x + (actor.direction || 1) * 20, actor.y - 65, 18, '#ffd700');
+    particleSystem.spawnSparks(actor.x, actor.y - 45, 12, '#ffffff');
+
+    if (isRisky) {
+      collisionSystem.addFloatingText('🔥 ¡BURLA ARRIESGADA! +35% SUPER ⚡', actor.x, actor.y - 120, '#ff3700', 22);
+    }
+    collisionSystem.addFloatingText(quote, actor.x, actor.y - 95, '#ffd700', 21);
+
+    if (isPlayer) {
+      uiManager.setActiveAnim('taunt');
+    }
+  };
+
   // Snappy Action Trigger
   const triggerAction = (animName, data = null) => {
     soundManager.init();
@@ -2015,6 +2217,10 @@ async function bootstrap() {
     }
     if (animName === 'dash') {
       triggerDash();
+      return;
+    }
+    if (animName === 'taunt') {
+      triggerTaunt(true);
       return;
     }
 
@@ -2183,6 +2389,8 @@ async function bootstrap() {
       rivalBot.triggerSuper(ball, player, collisionSystem, superShots);
     } else if (animName === 'kick' || animName === 'bicycle_kick') {
       rivalBot.triggerKick(ball, player, collisionSystem);
+    } else if (animName === 'taunt') {
+      triggerTaunt(false);
     }
   };
 
@@ -2344,6 +2552,8 @@ async function bootstrap() {
     player.dashGhosts = [];
     player.isSpinning = false;
     player.flipAngle = 0;
+    player.shrinkMultiplier = 1.0;
+    player.tauntCooldown = 0;
     superShots.reset();
     player.animController.play('idle');
     rivalBot.resetPosition();
@@ -2351,6 +2561,8 @@ async function bootstrap() {
     rivalBot.y = renderer.groundY;
     rivalBot.hp = 100;
     rivalBot.power = 0;
+    rivalBot.shrinkMultiplier = 1.0;
+    rivalBot.tauntCooldown = 0;
     ball.reset(renderer.stageWidth * 0.5, renderer.groundY - 180);
     powerSystem.power = tournamentManager.currentMode === GAME_MODES.SURVIVAL ? 100 : 0;
     powerUpSystem.reset();
@@ -2572,9 +2784,19 @@ async function bootstrap() {
       const moveSpeed = 360 * speedMult;
       let isMoving = false;
 
-      // Dash Cooldown decrement
+      // Cooldown decrements
       if (player.dashCooldown > 0) {
         player.dashCooldown = Math.max(0, player.dashCooldown - dt);
+      }
+      if (player.tauntCooldown > 0) {
+        player.tauntCooldown = Math.max(0, player.tauntCooldown - dt);
+      }
+
+      // CPU Rival autonomous comical taunt when player is stunned!
+      if (!rivalBot.isHumanControlled && rivalBot.enabled && !rivalBot.isStunned && !rivalBot.isFrozen && (rivalBot.tauntCooldown || 0) <= 0) {
+        if (player.isStunned && Math.random() < 0.02) {
+          triggerTaunt(false);
+        }
       }
 
       // Smooth Physics Dash with Continuous Velocity Deceleration & Afterimages
@@ -2667,7 +2889,7 @@ async function bootstrap() {
 
       // 4. Locomotion & Animation State Machine
       const cur = animController.currentAnim;
-      const isOneShot = ['kick', 'rocket_kick', 'bicycle_kick', 'diving_header', 'scorpion_kick', 'smash_header', 'super_shot'].includes(cur);
+      const isOneShot = ['kick', 'rocket_kick', 'bicycle_kick', 'diving_header', 'scorpion_kick', 'smash_header', 'super_shot', 'taunt'].includes(cur);
       const isOneShotFinished = isOneShot && (animController.animTime >= animController.getClip().duration * 0.95);
 
       if (player.isStunned) {
@@ -2824,6 +3046,9 @@ class Ball {
     this.alpha = 1;
     this.squashX = 1.0;
     this.squashY = 1.0;
+    this.airCombo = 0;
+    this.isOnFire = false;
+    this.fireLevel = 0; // 1 = combo 3 volley rush, 2 = combo 4+ en llamas!
     this.onCrossbarHit = null;
     this.onNetBulge = null;
     this.trail = [];
@@ -2861,6 +3086,9 @@ class Ball {
     this.lastKickedBy = null;
     this.squashX = 1.0;
     this.squashY = 1.0;
+    this.airCombo = 0;
+    this.isOnFire = false;
+    this.fireLevel = 0;
     this.trail.length = 0;
   }
 
@@ -2913,6 +3141,10 @@ class Ball {
       // Rolling friction and spin damping on turf
       this.vx *= 0.97;
       this.spin *= 0.52;
+      // Juggling aerial combo drops on ground contact
+      this.airCombo = 0;
+      this.isOnFire = false;
+      this.fireLevel = 0;
     }
 
     // Ceiling
@@ -2951,10 +3183,12 @@ class Ball {
       this.superLife = 0;
     }
 
-    // Dynamic motion comet trail for fast balls
-    if (speed > 240) {
+    // Dynamic motion comet trail for fast balls or airborne combos on fire
+    if (speed > 240 || this.isOnFire) {
       let trailColor = '#00f0ff';
-      if (this.isSuper) {
+      if (this.isOnFire) {
+        trailColor = this.fireLevel >= 2 ? '#ff1100' : '#ff7700';
+      } else if (this.isSuper) {
         trailColor = (this.superColors && this.superColors[0]) || '#ff3700';
       } else if (this.shotType === 'bicycle') {
         trailColor = '#ffd700';
@@ -2977,6 +3211,7 @@ class Ball {
         life: 1.0,
         color: trailColor,
         isSuper: this.isSuper,
+        isOnFire: this.isOnFire,
         shotType: this.shotType
       });
     }
@@ -3076,6 +3311,22 @@ class Ball {
       this.superType = null;
     }
     this.lastKickedBy = kicker;
+
+    // Check if airborne hit for juggling combo (above pitch grass)
+    if (this.y < 570) {
+      this.airCombo = (this.airCombo || 0) + 1;
+      if (this.airCombo >= 3) {
+        this.isOnFire = true;
+        this.fireLevel = this.airCombo >= 4 ? 2 : 1;
+        if (this.airCombo >= 4) {
+          this.vx *= 1.25;
+          this.vy *= 1.20;
+        }
+      }
+      if (this.onAirComboHit) {
+        this.onAirComboHit(this.airCombo, this.x, this.y, Math.sign(powerX) || 1);
+      }
+    }
 
     const speed = Math.hypot(powerX, powerY);
     if (speed > 300) {
@@ -3470,7 +3721,8 @@ class CollisionSystem {
     }
 
     // 1. Anatomically Calibrated Hitbox Updates (Matches Chibi 1.25x caricature proportion)
-    const headScale = (player.userHeadScale || 1.0) * 1.25;
+    const shrink = (player.shrinkMultiplier || 1.0);
+    const headScale = (player.userHeadScale || 1.0) * 1.25 * shrink;
 
     // Head Hitbox (Full skull cranium mass from crown to jaw: radius 48px scaled)
     player.headHitbox.x = skeleton.head.worldX + player.direction * (14 * headScale);
@@ -3488,13 +3740,13 @@ class CollisionSystem {
     const footOffsetX = Math.abs(footTip.x - skeleton.root.x);
     player.kickHitbox.x = player.x + player.direction * (footOffsetX + 4);
     player.kickHitbox.y = footTip.y - 2;
-    player.kickHitbox.radius = 26;
+    player.kickHitbox.radius = Math.round(26 * shrink);
 
     // Torso Hitbox (Chest / Body trap: radius 24px)
     if (!player.torsoHitbox) player.torsoHitbox = { x: 0, y: 0, radius: 24 };
     player.torsoHitbox.x = skeleton.torso.worldX + player.direction * 4;
     player.torsoHitbox.y = skeleton.torso.worldY - 12;
-    player.torsoHitbox.radius = 24;
+    player.torsoHitbox.radius = Math.round(24 * shrink);
 
     const curAnim = player.animController.currentAnim;
     const isSpecialKick = ['bicycle_kick', 'rocket_kick', 'diving_header', 'scorpion_kick', 'smash_header'].includes(curAnim);
@@ -3547,6 +3799,7 @@ class CollisionSystem {
 
           // Standard Super Parry
           ball.isSuper = false;
+          ball.superType = null;
           ball.lastKickedBy = 'player';
           ball.vx = 880;
           ball.vy = -260;
@@ -3775,6 +4028,7 @@ class CollisionSystem {
           } else {
             // Standard Super Parry
             ball.isSuper = false;
+            ball.superType = null;
             ball.lastKickedBy = 'player';
             ball.vx = 820;
             ball.vy = -240;
@@ -3964,26 +4218,50 @@ class CollisionSystem {
       }
     }
 
+    // Aerial Juggling Combo Event Hook ("¡EN LLAMAS!")
+    if (!ball.onAirComboHit) {
+      ball.onAirComboHit = (combo, x, y, dir = 1) => {
+        if (combo === 2) {
+          this.soundManager.playComboChime(2);
+          this.addFloatingText('⚡ COMBO x2! ⚽', x, y - 85, '#00f0ff', 22);
+        } else if (combo === 3) {
+          this.soundManager.playComboChime(3);
+          this.particleSystem.spawnFlameBurst(x, y, 22, ['#ff7700', '#ffd700', '#ffffff']);
+          this.triggerShake(10);
+          this.addFloatingText('🔥 COMBO x3! VOLLEY RUSH! 🔥', x, y - 95, '#ff8800', 25);
+        } else if (combo >= 4) {
+          this.soundManager.playComboChime(combo);
+          this.soundManager.play('superExplode');
+          this.particleSystem.spawnSonicBoom(x, y, dir, '#ff3700');
+          this.particleSystem.spawnFlameBurst(x, y, 32, ['#ff3700', '#ff0033', '#ffd700', '#ffffff']);
+          this.triggerShake(16);
+          this.triggerHitStop(0.06);
+          this.addFloatingText(`☄️💥 COMBO x${combo}! ¡¡EN LLAMAS!! 💥☄️`, x, y - 105, '#ff3700', 28);
+        }
+      };
+    }
+
     // Post, Crossbar & Top Corner joint collision event hook
     if (!ball.onCrossbarHit) {
       ball.onCrossbarHit = (cx, barY, speed, hitType = 'crossbar', isRight = false) => {
         this.soundManager.play('postClang');
+        if (speed > 400) this.soundManager.playSubBassKick();
         this.particleSystem.spawnPostHit(cx, barY);
-        this.triggerShake(speed > 450 ? 12 : 8);
+        this.triggerShake(speed > 450 ? 16 : 12);
+        this.triggerHitStop(0.065);
 
-        let bannerText = '💥 ¡TRAVESAÑO!';
+        let bannerText = '😱 ¡¡¡AL PALOOOOOOOOO!!! 💥⚽';
         let bannerColor = '#ffd700';
 
         if (hitType === 'corner') {
-          bannerText = '📐 ¡A LA ESCUADRA!';
+          bannerText = '😱 ¡¡¡AL ÁNGULO Y AL POSTE!!! 📐💥';
           bannerColor = '#00ffcc';
-          this.triggerHitStop(0.045);
         } else if (hitType === 'post') {
-          bannerText = '💥 ¡POSTE!';
+          bannerText = '😱 ¡¡¡POSTE ROTUNDO!!! 💥';
           bannerColor = '#ff9900';
         }
 
-        this.addFloatingText(bannerText, cx, barY - 35, bannerColor, 22);
+        this.addFloatingText(bannerText, cx, barY - 45, bannerColor, 24);
         this.onPostHitCallbacks.forEach(fn => fn(isRight, cx, barY, speed, hitType));
       };
     }
@@ -4675,20 +4953,22 @@ class PowerUpSystem {
     this.crates = [];
     this.spawnTimer = 8.0; // First air drop 8s into match!
     this.gloves = []; // Active rocket boxing gloves
+    this.bananas = []; // Slippery banana peel traps on turf
     this.bombState = null; // Active dynamite on ball: { timer: 5.0, maxTime: 5.0 }
 
     // Active Buffs
-    this.playerBuffs = { speed: 0, shield: 0, giant: 0 };
-    this.rivalBuffs = { speed: 0, shield: 0, giant: 0 };
+    this.playerBuffs = { speed: 0, shield: 0, giant: 0, shrink: 0 };
+    this.rivalBuffs = { speed: 0, shield: 0, giant: 0, shrink: 0 };
   }
 
   reset() {
     this.crates.length = 0;
     this.gloves.length = 0;
+    this.bananas.length = 0;
     this.bombState = null;
     this.spawnTimer = 8.0;
-    this.playerBuffs = { speed: 0, shield: 0, giant: 0 };
-    this.rivalBuffs = { speed: 0, shield: 0, giant: 0 };
+    this.playerBuffs = { speed: 0, shield: 0, giant: 0, shrink: 0 };
+    this.rivalBuffs = { speed: 0, shield: 0, giant: 0, shrink: 0 };
   }
 
   update(dt, stageWidth, groundY, player, rivalBot, ball, collisionSystem) {
@@ -4813,6 +5093,52 @@ class PowerUpSystem {
       ball.isBomb = false;
     }
 
+    // 4b. Update Slippery Banana Peels on Turf
+    for (let i = this.bananas.length - 1; i >= 0; i--) {
+      const b = this.bananas[i];
+      b.life -= dt;
+      if (b.life <= 0) {
+        this.bananas.splice(i, 1);
+        continue;
+      }
+
+      // Check collision with Player
+      const dP1 = Math.hypot(b.x - player.x, b.y - player.y);
+      if (dP1 < 32 && !player.isStunned && !player.isKnockedOut) {
+        this.soundManager.play('slip');
+        this.particleSystem.spawnSparks(b.x, groundY, 18, '#ffd700');
+        player.isSpinning = true;
+        player.spinTime = 0;
+        player.spinDuration = 0.55;
+        player.flipAngle = 0;
+        player.vy = -320;
+        player.x -= player.direction * 35;
+        collisionSystem.applyDamage(player, 10, null, -360 * player.direction, -260, false);
+        collisionSystem.addFloatingText('🍌 ¡RESBALÓN CÓMICO! 🍌', player.x, player.y - 85, '#ffd700', 22);
+        this.bananas.splice(i, 1);
+        continue;
+      }
+
+      // Check collision with Rival
+      if (rivalBot && rivalBot.enabled && !rivalBot.isStunned) {
+        const dRival = Math.hypot(b.x - rivalBot.x, b.y - rivalBot.y);
+        if (dRival < 32) {
+          this.soundManager.play('slip');
+          this.particleSystem.spawnSparks(b.x, groundY, 18, '#ffd700');
+          rivalBot.isSpinning = true;
+          rivalBot.spinTime = 0;
+          rivalBot.spinDuration = 0.55;
+          rivalBot.flipAngle = 0;
+          rivalBot.vy = -320;
+          rivalBot.x -= (rivalBot.direction || -1) * 35;
+          if (rivalBot.takeDamage) rivalBot.takeDamage(10, 360, -260, false);
+          collisionSystem.addFloatingText('🍌 ¡RESBALÓN CÓMICO! 🍌', rivalBot.x, rivalBot.y - 85, '#ffd700', 22);
+          this.bananas.splice(i, 1);
+          continue;
+        }
+      }
+    }
+
     // 5. Update Active Buffs
     this.updateBuffs(this.playerBuffs, player, dt);
     if (rivalBot) this.updateBuffs(this.rivalBuffs, rivalBot, dt);
@@ -4840,11 +5166,21 @@ class PowerUpSystem {
     } else {
       entity.giantHeadMultiplier = 1.0;
     }
+
+    if (buffs.shrink > 0) {
+      buffs.shrink -= dt;
+      entity.shrinkMultiplier = 0.45;
+      if (Math.random() < 0.22) {
+        this.particleSystem.spawnSparks(entity.x, entity.y - 20, 2, '#ff00cc');
+      }
+    } else {
+      entity.shrinkMultiplier = 1.0;
+    }
   }
 
   spawnCrate(stageWidth) {
     const x = stageWidth * (0.24 + Math.random() * 0.52);
-    const crateTypes = ['speed', 'freeze', 'glove', 'bomb', 'shield', 'giant'];
+    const crateTypes = ['speed', 'freeze', 'glove', 'bomb', 'shield', 'giant', 'banana', 'shrink'];
     const type = crateTypes[Math.floor(Math.random() * crateTypes.length)];
 
     this.crates.push({
@@ -4908,6 +5244,35 @@ class PowerUpSystem {
       case 'giant':
         buffs.giant = 8.0;
         collisionSystem.addFloatingText(`${prefix}¡MEGA CABEZA! 🍄`, collector.x, collector.y - 90, '#ff00ff', 22);
+        break;
+
+      case 'banana':
+        const targetOpp = isP1 ? rivalBot : player;
+        const oppX = targetOpp ? targetOpp.x : 500;
+        this.bananas.push({
+          x: Math.max(90, Math.min(collector.x + (isP1 ? 1 : -1) * 75, 1200)),
+          y: collector.y - 6,
+          life: 20.0,
+          angle: (Math.random() - 0.5) * 0.4
+        });
+        this.bananas.push({
+          x: Math.max(90, Math.min(oppX + (Math.random() - 0.5) * 60, 1200)),
+          y: collector.y - 6,
+          life: 20.0,
+          angle: (Math.random() - 0.5) * 0.4
+        });
+        collisionSystem.addFloatingText(`${prefix}¡TRAMPAS DE PLÁTANO! 🍌`, collector.x, collector.y - 90, '#ffd700', 22);
+        break;
+
+      case 'shrink':
+        const oppBuffs = isP1 ? this.rivalBuffs : this.playerBuffs;
+        oppBuffs.shrink = 8.5;
+        this.soundManager.play('shrink');
+        if (opponent) {
+          opponent.shrinkMultiplier = 0.45;
+          this.particleSystem.spawnSparks(opponent.x, opponent.y - 40, 35, '#ff00cc');
+        }
+        collisionSystem.addFloatingText(`${prefix}¡RAYO ENCOJEDOR! 🔬🐭`, opponent ? opponent.x : collector.x, (opponent ? opponent.y : collector.y) - 95, '#ff00cc', 24);
         break;
     }
   }
@@ -5094,6 +5459,67 @@ class PowerUpSystem {
       ctx.lineWidth = 1.2;
       ctx.fillRect(-9, -13, 5, 26);
       ctx.strokeRect(-9, -13, 5, 26);
+
+      ctx.restore();
+    }
+
+    // 3. Render Slippery Banana Peels on Turf
+    for (const b of this.bananas) {
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(b.angle || 0);
+
+      // Soft ground shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+      ctx.beginPath();
+      ctx.ellipse(0, 4, 16, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Banana Peel Yellow Silhouette with golden sheen
+      ctx.shadowColor = 'rgba(255, 215, 0, 0.55)';
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = '#facc15';
+      ctx.strokeStyle = '#ca8a04';
+      ctx.lineWidth = 1.4;
+
+      // Center Stem
+      ctx.beginPath();
+      ctx.arc(0, -2, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Brown Stem Tip
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(-2, -6, 4, 4);
+
+      // 3 Splayed curved peels
+      ctx.fillStyle = '#fde047';
+      // Left peel
+      ctx.beginPath();
+      ctx.moveTo(-2, -2);
+      ctx.quadraticCurveTo(-12, -4, -18, 3);
+      ctx.quadraticCurveTo(-10, 5, -2, 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Right peel
+      ctx.beginPath();
+      ctx.moveTo(2, -2);
+      ctx.quadraticCurveTo(12, -4, 18, 3);
+      ctx.quadraticCurveTo(10, 5, 2, 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Front peel
+      ctx.beginPath();
+      ctx.moveTo(-3, 0);
+      ctx.quadraticCurveTo(0, 12, 0, 15);
+      ctx.quadraticCurveTo(3, 12, 3, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
 
       ctx.restore();
     }
@@ -5407,6 +5833,7 @@ class RivalBot {
     this.kickCooldown = 0;
     this.tackleCooldown = 0;
     this.jumpCooldown = 0;
+    this.tauntCooldown = 0;
     this.enabled = true;
     this.difficulty = 'medium';
   }
@@ -5687,6 +6114,7 @@ class RivalBot {
     if (this.kickCooldown > 0) this.kickCooldown -= dt;
     if (this.tackleCooldown > 0) this.tackleCooldown -= dt;
     if (this.jumpCooldown > 0) this.jumpCooldown -= dt;
+    if (this.tauntCooldown > 0) this.tauntCooldown -= dt;
     if (this.hitFlashTimer > 0) this.hitFlashTimer = Math.max(0, this.hitFlashTimer - dt);
 
     // Freeze recovery
@@ -6137,7 +6565,7 @@ class RivalBot {
 
     // 5. Animation transitions
     const cur = this.animController.currentAnim;
-    const isOneShot = ['kick', 'rocket_kick', 'bicycle_kick', 'diving_header', 'scorpion_kick', 'smash_header', 'super_shot'].includes(cur);
+    const isOneShot = ['kick', 'rocket_kick', 'bicycle_kick', 'diving_header', 'scorpion_kick', 'smash_header', 'super_shot', 'taunt'].includes(cur);
     const isFinished = isOneShot && (this.animController.animTime >= this.animController.getClip().duration * 0.95);
 
     if (!isOneShot || isFinished) {
@@ -6152,8 +6580,8 @@ class RivalBot {
 
     this.skeleton.setPosition(this.x, this.y);
     this.skeleton.setFacing(this.direction);
-    this.animController.setLookTarget(ball.x, ball.y);
-    this.animController.setVelocity(this.vx, this.vy);
+    if (this.animController.setLookTarget) this.animController.setLookTarget(ball.x, ball.y);
+    if (this.animController.setVelocity) this.animController.setVelocity(this.vx, this.vy);
     const animState = this.animController.update(dt);
 
     if (animState.aura || cur === 'super_shot') {
@@ -6479,21 +6907,28 @@ class SuperShots {
       // 12. Poseidon: Tsunami Hydro-Cannon Sweeping Pitch Wave
       case 'poseidon': {
         this.soundManager.play('superPower');
+        this.soundManager.play('recover');
         this.cameraFx?.shake(14);
         if (hasBall) {
-          ball.kick(dir * 1180, -260, true, owner);
+          ball.kick(dir * 1140, -280, true, owner);
           ball.superType = 'poseidon';
-          ball.superColors = ['#00d4ff', '#0044ff', '#e0ffff'];
+          ball.superColors = ['#00d4ff', '#0077ff', '#e0ffff'];
         }
+        const ground = caster ? caster.y : (targets?.player?.y || 500);
         this.activeAbilities.push({
           type: 'tsunami',
           owner,
+          dir,
           x: caster ? caster.x + dir * 45 : (dir > 0 ? 100 : 900),
-          y: (targets?.player?.y || 500) - 45,
-          vx: dir * 650,
-          radius: 75,
-          life: 2.2,
-          colors: ['#00d4ff', '#0044ff', '#ffffff']
+          y: ground,
+          vx: dir * 540,
+          radius: 65,
+          height: 90,
+          life: 2.3,
+          ballHitCooldown: 0.1,
+          hasHitOpponent: false,
+          hasBeenParried: false,
+          colors: ['#00d4ff', '#0077ff', '#ffffff']
         });
         break;
       }
@@ -6919,26 +7354,103 @@ class SuperShots {
         // --- TSUNAMI HYDRO WAVE ---
         case 'tsunami': {
           a.x += a.vx * dt;
-          this.particleSystem.spawnTrail(a.x, a.y, '#00d4ff');
-          this.particleSystem.spawnSparks(a.x, a.y - 20, 2, '#ffffff');
+          if (a.ballHitCooldown > 0) a.ballHitCooldown -= dt;
 
-          const distB = Math.hypot(a.x - ball.x, a.y - ball.y);
-          if (distB < a.radius + ball.radius) {
-            ball.vx = a.vx * 1.35;
-            ball.vy = -180;
-            ball.superType = 'poseidon';
-            ball.superColors = a.colors;
-            this.particleSystem.spawnSparks(ball.x, ball.y, 20, '#00d4ff');
+          this.particleSystem.spawnTrail(a.x, a.y - 30, '#00d4ff');
+          if (Math.random() < 0.4) {
+            this.particleSystem.spawnSparks(a.x - dir * 15, a.y - 15, 2, '#ffffff');
           }
 
-          if (opponent && !a.hasHitOpponent) {
-            const distO = Math.hypot(a.x - opponent.x, a.y - (opponent.y - 45));
-            if (distO < a.radius + 40) {
-              a.hasHitOpponent = true;
-              opponent.takeDamage ? opponent.takeDamage(26, dir * 420, -240, false) : collisionSystem?.applyDamage(player, 26, null, dir * 420, -240, false);
-              this.soundManager.play('recover');
-              this.particleSystem.spawnSparks(opponent.x, opponent.y - 40, 30, '#00d4ff');
-              collisionSystem?.addFloatingText('🌊 ¡TSUNAMI MARINO!', opponent.x, opponent.y - 95, '#00d4ff', 22);
+          // 1. Ability Clash Check
+          for (let j = this.activeAbilities.length - 1; j >= 0; j--) {
+            if (j === i) continue;
+            const other = this.activeAbilities[j];
+            if (other && other.owner !== a.owner) {
+              const clashDist = Math.abs(a.x - other.x);
+              if (clashDist < 75) {
+                this.soundManager.play('superExplode');
+                this.cameraFx?.shake(15);
+                this.particleSystem.spawnSonicBoom(a.x, a.y - 40, 1.4, '#00d4ff');
+                this.particleSystem.spawnSparks(a.x, a.y - 40, 45, '#ffd700');
+                collisionSystem?.addFloatingText('🌊⚡ ¡CHOQUE DE TITANES! 💥', a.x, a.y - 95, '#00ffff', 24);
+                a.life = 0;
+                other.life = 0;
+                ball.vx = (Math.random() - 0.5) * 300;
+                ball.vy = -750;
+                return;
+              }
+            }
+          }
+
+          // 2. Ball Surfing (Single powerful crest surge lob, never locks the ball!)
+          const distB = Math.hypot(a.x - ball.x, a.y - 35 - ball.y);
+          if (distB < a.radius + ball.radius && a.ballHitCooldown <= 0) {
+            a.ballHitCooldown = 0.65;
+            ball.kick(a.vx * 1.5, -530, true, a.owner);
+            ball.superType = 'poseidon';
+            ball.superColors = a.colors;
+            ball.spin = dir * 18;
+            this.soundManager.play('recover');
+            this.soundManager.play('superPower');
+            this.cameraFx?.shake(10);
+            this.particleSystem.spawnSonicBoom(ball.x, ball.y, dir, '#00d4ff');
+            this.particleSystem.spawnSparks(ball.x, ball.y, 25, '#ffffff');
+            collisionSystem?.addFloatingText('🌊 ¡MAREJADA HIDRO! 🔱', ball.x, ball.y - 75, '#00d4ff', 22);
+          }
+
+          // 3. Opponent Counterplay & Parry Windows
+          if (opponent && !a.hasHitOpponent && !a.hasBeenParried) {
+            const dx = Math.abs(a.x - opponent.x);
+            if (dx < a.radius + 35) {
+              const oppAnim = opponent.animController?.currentAnim;
+              const isActionParry = ['bicycle_kick', 'diving_header', 'rocket_kick', 'scorpion_kick', 'smash_header'].includes(oppAnim) ||
+                                    oppAnim === 'kick' || opponent.isKicking;
+              const isHighJump = opponent.y < (a.y - a.height - 15);
+
+              if (isHighJump) {
+                // A. Clean Jump Evade
+                if (!a.hasEvadedText) {
+                  a.hasEvadedText = true;
+                  this.particleSystem.spawnSparks(opponent.x, opponent.y, 10, '#00ffff');
+                  collisionSystem?.addFloatingText('🦘 ¡SALTO LIMPIO! 🌊', opponent.x, opponent.y - 85, '#00ffff', 20);
+                }
+              } else if (isActionParry) {
+                // B. Surf Parry (Counter-attack dispels wave!)
+                a.hasBeenParried = true;
+                a.life = 0.05;
+                this.soundManager.play('bounce');
+                this.soundManager.play('superExplode');
+                this.cameraFx?.shake(14);
+                this.particleSystem.spawnSonicBoom(opponent.x, opponent.y - 40, -dir, '#ffd700');
+                this.particleSystem.spawnSparks(opponent.x, opponent.y - 40, 40, '#00d4ff');
+                collisionSystem?.addFloatingText('🏄‍♂️ ¡SURF PARRY! 🔱🛡️', opponent.x, opponent.y - 105, '#ffd700', 26);
+
+                const distBOpp = Math.hypot(ball.x - opponent.x, ball.y - opponent.y);
+                if (distBOpp < 130) {
+                  ball.isSuper = false;
+                  ball.superType = null;
+                  ball.lastKickedBy = a.owner === 'player' ? 'rival' : 'player';
+                  ball.vx = -dir * 950;
+                  ball.vy = -340;
+                  ball.spin = -dir * 15;
+                }
+              } else {
+                // C. Direct Hit (Vórtice Marino Geyser Lift)
+                a.hasHitOpponent = true;
+                const dmg = 22;
+                const stunDur = 1.35;
+                if (opponent.takeDamage) {
+                  opponent.takeDamage(dmg, dir * 280, -480, true, stunDur);
+                } else if (collisionSystem) {
+                  collisionSystem.applyDamage(player, dmg, null, dir * 280, -480, true, stunDur);
+                }
+                this.soundManager.play('recover');
+                this.soundManager.play('superPower');
+                this.cameraFx?.shake(12);
+                this.particleSystem.spawnSparks(opponent.x, opponent.y - 40, 35, '#00d4ff');
+                this.particleSystem.spawnSonicBoom(opponent.x, opponent.y - 40, dir, '#00ffff');
+                collisionSystem?.addFloatingText('🌊 ¡VÓRTICE MARINO! 🌪️', opponent.x, opponent.y - 95, '#00d4ff', 24);
+              }
             }
           }
           break;
@@ -7376,38 +7888,99 @@ class SuperShots {
           break;
         }
 
-        // Tsunami: Surging Hydro Crest Wave
+        // Tsunami: Surging Hydro Crest Wave with Spinning Golden Trident
         case 'tsunami': {
           ctx.translate(a.x, a.y);
           const dir = Math.sign(a.vx) || 1;
           ctx.scale(dir, 1);
           ctx.shadowColor = '#00d4ff';
-          ctx.shadowBlur = 35;
+          ctx.shadowBlur = 32;
 
-          // Water body
-          const waveGrad = ctx.createLinearGradient(0, -60, 0, 40);
-          waveGrad.addColorStop(0, 'rgba(224, 255, 255, 0.95)');
-          waveGrad.addColorStop(0.3, 'rgba(0, 212, 255, 0.85)');
-          waveGrad.addColorStop(0.8, 'rgba(0, 68, 255, 0.85)');
-          waveGrad.addColorStop(1, 'rgba(0, 30, 120, 0.9)');
-          ctx.fillStyle = waveGrad;
+          const time = performance.now() * 0.008;
+          const waveHeight = a.height || 90;
+          const waveLength = a.radius * 1.4;
 
+          // 1. Undulating Abyss Blue Back Wave
+          ctx.fillStyle = 'rgba(0, 50, 160, 0.75)';
           ctx.beginPath();
-          ctx.moveTo(-a.radius, 40);
-          ctx.quadraticCurveTo(0, -65, a.radius * 0.7, -45);
-          // Curling wave crest
-          ctx.quadraticCurveTo(a.radius * 1.1, -30, a.radius * 0.8, -10);
-          ctx.quadraticCurveTo(a.radius * 0.5, -20, a.radius * 0.3, 0);
-          ctx.lineTo(a.radius * 0.5, 40);
+          ctx.moveTo(-waveLength * 1.1, 0);
+          ctx.quadraticCurveTo(-waveLength * 0.3, -waveHeight * 0.95, waveLength * 0.65, -waveHeight * 0.85);
+          ctx.lineTo(waveLength * 0.5, 0);
           ctx.closePath();
           ctx.fill();
 
-          // Foam line
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 4;
+          // 2. Main Luminous Cyan Water Body with Flowing Gradient
+          const waveGrad = ctx.createLinearGradient(0, -waveHeight, 0, 10);
+          waveGrad.addColorStop(0, 'rgba(224, 255, 255, 0.95)');
+          waveGrad.addColorStop(0.25, 'rgba(0, 212, 255, 0.90)');
+          waveGrad.addColorStop(0.7, 'rgba(0, 102, 255, 0.88)');
+          waveGrad.addColorStop(1, 'rgba(0, 40, 130, 0.95)');
+          ctx.fillStyle = waveGrad;
+
+          const curlWobble = Math.sin(time * 6) * 6;
           ctx.beginPath();
-          ctx.arc(a.radius * 0.75, -25, 14, 0, Math.PI * 1.5);
+          ctx.moveTo(-waveLength, 0);
+          ctx.quadraticCurveTo(-waveLength * 0.2, -waveHeight * 0.75, waveLength * 0.5, -waveHeight + curlWobble);
+          // Curling barrel crest
+          ctx.quadraticCurveTo(waveLength * 0.95, -waveHeight * 0.75, waveLength * 0.7, -waveHeight * 0.35);
+          ctx.quadraticCurveTo(waveLength * 0.45, -waveHeight * 0.45, waveLength * 0.3, 0);
+          ctx.closePath();
+          ctx.fill();
+
+          // 3. Frothy White Crest Foam
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 4.5;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.arc(waveLength * 0.65, -waveHeight * 0.75 + curlWobble * 0.5, 16, Math.PI * 0.7, Math.PI * 1.85);
           ctx.stroke();
+
+          // 4. Spinning Golden Trident Projectile at the Tip of the Surge
+          ctx.save();
+          ctx.translate(waveLength * 0.75, -waveHeight * 0.65);
+          ctx.rotate(time * 4);
+          ctx.shadowColor = '#ffd700';
+          ctx.shadowBlur = 18;
+          ctx.fillStyle = '#ffd700';
+          ctx.strokeStyle = '#ca8a04';
+          ctx.lineWidth = 1.6;
+
+          // Trident Head
+          ctx.beginPath();
+          // Center prong
+          ctx.moveTo(0, -18);
+          ctx.lineTo(3, -6);
+          ctx.lineTo(-3, -6);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          // Left prong
+          ctx.beginPath();
+          ctx.moveTo(-9, -13);
+          ctx.quadraticCurveTo(-11, -3, -3, 0);
+          ctx.lineTo(0, 0);
+          ctx.stroke();
+          // Right prong
+          ctx.beginPath();
+          ctx.moveTo(9, -13);
+          ctx.quadraticCurveTo(11, -3, 3, 0);
+          ctx.lineTo(0, 0);
+          ctx.stroke();
+          // Shaft
+          ctx.fillStyle = '#fef08a';
+          ctx.fillRect(-2, 0, 4, 18);
+          ctx.restore();
+
+          // 5. Ambient Luminous Water Droplets
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+          for (let d = 0; d < 4; d++) {
+            const dropTime = (time + d * 0.35) % 1;
+            const dx = waveLength * 0.6 - dropTime * 45;
+            const dy = -waveHeight * 0.7 - Math.sin(dropTime * Math.PI) * 22;
+            ctx.beginPath();
+            ctx.arc(dx, dy, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
           break;
         }
 
@@ -7541,7 +8114,7 @@ class AssetLoader {
         console.warn(`[AssetLoader] Failed to load ${item.src}`);
         resolve();
       };
-      img.src = `${item.src}?v=sprites_hd_v32`;
+      img.src = `${item.src}?v=sprites_hd_v45`;
       this.sprites[item.key] = img;
     }))).then(() => {
       this.loaded = true;
@@ -7601,6 +8174,14 @@ class CharacterRenderer {
     const kit = jerseyFilter ?? character?.jerseyFilter ?? 'none';
 
     ctx.save();
+
+    // Scale transformation (e.g. shrink ray mutator)
+    const scaleMult = options.scaleMultiplier || 1.0;
+    if (scaleMult !== 1.0) {
+      ctx.translate(skeleton.root.x, skeleton.root.y);
+      ctx.scale(scaleMult, scaleMult);
+      ctx.translate(-skeleton.root.x, -skeleton.root.y);
+    }
 
     // Mirror horizontally around character root origin when facing left
     if (facing < 0) {
@@ -8473,15 +9054,27 @@ class CharacterRenderer {
         break;
       }
       case 'poseidon': {
-        // Golden trident crown shimmer
-        const glint = Math.sin(time * 2.8);
-        if (glint > 0.4) {
-          ctx.fillStyle = 'rgba(255, 235, 59, 0.85)';
+        // Golden trident crown & seashell royal shimmer
+        const glint = Math.sin(time * 3.2);
+        if (glint > 0.25) {
+          ctx.save();
+          ctx.fillStyle = 'rgba(255, 235, 59, 0.9)';
           ctx.shadowColor = '#ffd700';
-          ctx.shadowBlur = 12;
+          ctx.shadowBlur = 14;
+          // Seashell center
           ctx.beginPath();
-          ctx.arc(0, -h * 0.78, 4, 0, Math.PI * 2);
+          ctx.arc(0, -h * 0.76, 4.5, 0, Math.PI * 2);
           ctx.fill();
+          // Center trident spire
+          ctx.beginPath();
+          ctx.arc(0, -h * 0.88, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+          // Side trident spires
+          ctx.beginPath();
+          ctx.arc(-w * 0.26, -h * 0.82, 3.0, 0, Math.PI * 2);
+          ctx.arc(w * 0.26, -h * 0.82, 3.0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
         }
         break;
       }
@@ -8660,40 +9253,59 @@ class CharacterRenderer {
     // 1. STUNNED / KO FACIAL EXPRESSIONS
     if (isStunned) {
       const time = performance.now() * 0.006;
-      // Animated Spinning Dizzy Spirals (@ @)
-      const drawSpiral = (cx, cy, r) => {
+      if (character?.id === 'poseidon') {
+        // Poseidon already has custom cartoon whirlpool eyes and tongue built into poseidon_ko.png!
+        // We add floating dizzy orbiting stars and water bubbles around his bump
         ctx.save();
-        ctx.strokeStyle = '#facc15';
-        ctx.lineWidth = 1.8;
-        ctx.shadowColor = '#eab308';
-        ctx.shadowBlur = 6;
-        ctx.beginPath();
-        const loops = 3;
-        for (let a = 0; a <= Math.PI * 2 * loops; a += 0.25) {
-          const curR = (a / (Math.PI * 2 * loops)) * r;
-          const px = cx + Math.cos(a + time * 3) * curR;
-          const py = cy + Math.sin(a + time * 3) * curR;
-          if (a === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
+        ctx.translate(-w * 0.20, -h * 0.88);
+        for (let s = 0; s < 3; s++) {
+          const a = time * 4 + (s * Math.PI * 2) / 3;
+          const sx = Math.cos(a) * 18;
+          const sy = Math.sin(a) * 7;
+          ctx.fillStyle = '#ffd700';
+          ctx.shadowColor = '#00e5ff';
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.arc(sx, sy, 3, 0, Math.PI * 2);
+          ctx.fill();
         }
+        ctx.restore();
+      } else {
+        // Animated Spinning Dizzy Spirals (@ @)
+        const drawSpiral = (cx, cy, r) => {
+          ctx.save();
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = 1.8;
+          ctx.shadowColor = '#eab308';
+          ctx.shadowBlur = 6;
+          ctx.beginPath();
+          const loops = 3;
+          for (let a = 0; a <= Math.PI * 2 * loops; a += 0.25) {
+            const curR = (a / (Math.PI * 2 * loops)) * r;
+            const px = cx + Math.cos(a + time * 3) * curR;
+            const py = cy + Math.sin(a + time * 3) * curR;
+            if (a === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+          ctx.restore();
+        };
+
+        drawSpiral(eyeFrontX, eyeFrontY, 7);
+        drawSpiral(eyeBackX, eyeBackY, 6);
+
+        // Comical Wavy Dizzy Mouth
+        ctx.save();
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        const mouthY = -h * 0.26;
+        ctx.moveTo(-w * 0.12, mouthY);
+        ctx.quadraticCurveTo(-w * 0.06, mouthY - 4, 0, mouthY);
+        ctx.quadraticCurveTo(w * 0.06, mouthY + 4, w * 0.12, mouthY);
         ctx.stroke();
         ctx.restore();
-      };
-
-      drawSpiral(eyeFrontX, eyeFrontY, 7);
-      drawSpiral(eyeBackX, eyeBackY, 6);
-
-      // Comical Wavy Dizzy Mouth
-      ctx.save();
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 2.2;
-      ctx.beginPath();
-      const mouthY = -h * 0.26;
-      ctx.moveTo(-w * 0.12, mouthY);
-      ctx.quadraticCurveTo(-w * 0.06, mouthY - 4, 0, mouthY);
-      ctx.quadraticCurveTo(w * 0.06, mouthY + 4, w * 0.12, mouthY);
-      ctx.stroke();
-      ctx.restore();
+      }
 
       // Dripping Animated Sweat Droplets
       const t = performance.now() * 0.004;
@@ -8852,11 +9464,14 @@ class CharacterRenderer {
       ctx.restore();
     };
 
-    drawEyeDetails(eyeFrontX, eyeFrontY, 6, 8, true);
-    drawEyeDetails(eyeBackX, eyeBackY, 5, 7, false);
+    const hasFrontalEyes = character?.id === 'poseidon' || character?.id === 'anubis';
+    if (!hasFrontalEyes) {
+      drawEyeDetails(eyeFrontX, eyeFrontY, 6, 8, true);
+      drawEyeDetails(eyeBackX, eyeBackY, 5, 7, false);
+    }
 
     // 3. BATTLE SQUINT & FURROWED BROWS (Active in sprint, jump, or kicks)
-    if (isAction) {
+    if (isAction && !hasFrontalEyes) {
       ctx.save();
       ctx.strokeStyle = '#0f172a';
       ctx.lineWidth = 2.2;
@@ -9266,6 +9881,7 @@ class GameRenderer {
       facing: player.direction || 1,
       hp: player.hp,
       isSuperReady: sceneState.isPlayerSuperReady,
+      scaleMultiplier: player.shrinkMultiplier || 1.0,
       ball: ball,
       isGrounded: player.isGrounded,
       isDashing: player.isDashing,
@@ -9293,6 +9909,7 @@ class GameRenderer {
         facing: sceneState.rivalBot.direction || -1,
         hp: sceneState.rivalBot.hp,
         isSuperReady: sceneState.rivalBot.power >= 100,
+        scaleMultiplier: sceneState.rivalBot.shrinkMultiplier || 1.0,
         ball: ball,
         isGrounded: sceneState.rivalBot.isGrounded,
         isDashing: sceneState.rivalBot.isDashing,
@@ -9503,6 +10120,43 @@ class GameRenderer {
         ctx.beginPath();
         ctx.ellipse(0, 0, ball.radius + 7, ball.radius * 0.65, flightAngle, 0, Math.PI * 2);
         ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Roaring Anime Fireball Aura (Aerial Juggling Combo "¡EN LLAMAS!")
+    if (ball.isOnFire) {
+      ctx.save();
+      const time = performance.now() * 0.015;
+      const firePulse = 1.0 + Math.sin(time * 3) * 0.18;
+      const isSuperFire = (ball.fireLevel || 1) >= 2;
+
+      // Outer Heat Haze & Roaring Flame Corona
+      ctx.shadowColor = isSuperFire ? '#ff0033' : '#ff7700';
+      ctx.shadowBlur = isSuperFire ? 42 : 26;
+
+      const fireGrad = ctx.createRadialGradient(0, 0, ball.radius * 0.35, 0, 0, (ball.radius + 18) * firePulse);
+      fireGrad.addColorStop(0, '#ffffff');
+      fireGrad.addColorStop(0.25, '#ffd700');
+      fireGrad.addColorStop(0.65, isSuperFire ? '#ff2200' : '#ff7700');
+      fireGrad.addColorStop(1, 'rgba(255, 0, 0, 0)');
+
+      ctx.fillStyle = fireGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, (ball.radius + 18) * firePulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Whirling solar flares / flame tongues
+      const tongueCount = isSuperFire ? 8 : 6;
+      ctx.fillStyle = isSuperFire ? 'rgba(255, 60, 0, 0.75)' : 'rgba(255, 150, 0, 0.75)';
+      for (let i = 0; i < tongueCount; i++) {
+        const ang = (i * Math.PI * 2) / tongueCount + time * 1.6;
+        const len = (ball.radius + 10) + Math.sin(time * 4 + i) * 8;
+        const fx = Math.cos(ang) * len;
+        const fy = Math.sin(ang) * len;
+        ctx.beginPath();
+        ctx.arc(fx, fy, 6 * firePulse, 0, Math.PI * 2);
+        ctx.fill();
       }
       ctx.restore();
     }
@@ -10906,6 +11560,11 @@ class InputManager {
           e.preventDefault();
           this.emitP2Action('diving_header');
           return;
+        } else if (e.code === 'KeyY' || e.code === 'Numpad3' || e.code === 'KeyM') {
+          e.preventDefault();
+          this.vibrate(20);
+          this.emitP2Action('taunt');
+          return;
         }
       }
 
@@ -10913,6 +11572,10 @@ class InputManager {
       if (e.code === 'Space' || e.code === 'KeyJ' || e.code === 'KeyX') {
         e.preventDefault();
         this.startKickCharge();
+      } else if (e.code === 'KeyT') {
+        e.preventDefault();
+        this.vibrate(20);
+        this.emitAction('taunt');
       } else if (e.code === 'KeyV') {
         e.preventDefault();
         this.vibrate(25);
@@ -11446,6 +12109,7 @@ class UIManager {
     bindActionBtn('btnJump', 'jump');
     bindActionBtn('btnSuper', 'super_shot');
     bindActionBtn('btnDash', 'dash');
+    bindActionBtn('btnTaunt', 'taunt');
 
     // Prevent focus outline on buttons so Space key doesn't trigger button clicks
     document.querySelectorAll('button').forEach(btn => {

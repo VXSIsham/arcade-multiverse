@@ -1,6 +1,6 @@
-import { Skeleton } from '../core/Skeleton.js?v=char_overhaul_v40';
-import { AnimationController } from '../animation/AnimationController.js?v=char_overhaul_v40';
-import { getCharacter } from '../data/Characters.js?v=char_overhaul_v40';
+import { Skeleton } from '../core/Skeleton.js?v=char_overhaul_v42';
+import { AnimationController } from '../animation/AnimationController.js?v=char_overhaul_v42';
+import { getCharacter } from '../data/Characters.js?v=char_overhaul_v42';
 
 /**
  * Autonomous CPU Rival Opponent for 1v1 Head Soccer.
@@ -65,6 +65,7 @@ export class RivalBot {
     this.kickCooldown = 0;
     this.tackleCooldown = 0;
     this.jumpCooldown = 0;
+    this.tauntCooldown = 0;
     this.enabled = true;
     this.difficulty = 'medium';
   }
@@ -345,6 +346,7 @@ export class RivalBot {
     if (this.kickCooldown > 0) this.kickCooldown -= dt;
     if (this.tackleCooldown > 0) this.tackleCooldown -= dt;
     if (this.jumpCooldown > 0) this.jumpCooldown -= dt;
+    if (this.tauntCooldown > 0) this.tauntCooldown -= dt;
     if (this.hitFlashTimer > 0) this.hitFlashTimer = Math.max(0, this.hitFlashTimer - dt);
 
     // Freeze recovery
@@ -795,7 +797,7 @@ export class RivalBot {
 
     // 5. Animation transitions
     const cur = this.animController.currentAnim;
-    const isOneShot = ['kick', 'rocket_kick', 'bicycle_kick', 'diving_header', 'scorpion_kick', 'smash_header', 'super_shot'].includes(cur);
+    const isOneShot = ['kick', 'rocket_kick', 'bicycle_kick', 'diving_header', 'scorpion_kick', 'smash_header', 'super_shot', 'taunt'].includes(cur);
     const isFinished = isOneShot && (this.animController.animTime >= this.animController.getClip().duration * 0.95);
 
     if (!isOneShot || isFinished) {
@@ -810,8 +812,8 @@ export class RivalBot {
 
     this.skeleton.setPosition(this.x, this.y);
     this.skeleton.setFacing(this.direction);
-    this.animController.setLookTarget(ball.x, ball.y);
-    this.animController.setVelocity(this.vx, this.vy);
+    if (this.animController.setLookTarget) this.animController.setLookTarget(ball.x, ball.y);
+    if (this.animController.setVelocity) this.animController.setVelocity(this.vx, this.vy);
     const animState = this.animController.update(dt);
 
     if (animState.aura || cur === 'super_shot') {

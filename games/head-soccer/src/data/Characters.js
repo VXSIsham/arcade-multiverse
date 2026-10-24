@@ -177,10 +177,10 @@ export const CHARACTERS = [
       kick: 'assets/characters/poseidon_kick.png',
       ko: 'assets/characters/poseidon_ko.png'
     },
-    head: { width: 116, pivotX: 0.5, pivotY: 0.84 },
+    head: { width: 118, pivotX: 0.5, pivotY: 0.86 },
     jerseyFilter: 'hue-rotate(170deg) saturate(1.6) brightness(1.1)',
     stats: { speed: 1.05, jump: 1.1, power: 1.25 },
-    super: { type: 'poseidon', name: 'Tsunami Hidro-Cañón 🌊🔱', colors: ['#00d4ff', '#0044ff', '#e0ffff'] }
+    super: { type: 'poseidon', name: 'Tsunami Hidro-Cañón 🌊🔱', colors: ['#00d4ff', '#0077ff', '#e0ffff'] }
   },
   {
     id: 'titan',

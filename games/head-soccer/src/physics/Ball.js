@@ -33,6 +33,9 @@ export class Ball {
     this.alpha = 1;
     this.squashX = 1.0;
     this.squashY = 1.0;
+    this.airCombo = 0;
+    this.isOnFire = false;
+    this.fireLevel = 0; // 1 = combo 3 volley rush, 2 = combo 4+ en llamas!
     this.onCrossbarHit = null;
     this.onNetBulge = null;
     this.trail = [];
@@ -70,6 +73,9 @@ export class Ball {
     this.lastKickedBy = null;
     this.squashX = 1.0;
     this.squashY = 1.0;
+    this.airCombo = 0;
+    this.isOnFire = false;
+    this.fireLevel = 0;
     this.trail.length = 0;
   }
 
@@ -122,6 +128,10 @@ export class Ball {
       // Rolling friction and spin damping on turf
       this.vx *= 0.97;
       this.spin *= 0.52;
+      // Juggling aerial combo drops on ground contact
+      this.airCombo = 0;
+      this.isOnFire = false;
+      this.fireLevel = 0;
     }
 
     // Ceiling
@@ -160,10 +170,12 @@ export class Ball {
       this.superLife = 0;
     }
 
-    // Dynamic motion comet trail for fast balls
-    if (speed > 240) {
+    // Dynamic motion comet trail for fast balls or airborne combos on fire
+    if (speed > 240 || this.isOnFire) {
       let trailColor = '#00f0ff';
-      if (this.isSuper) {
+      if (this.isOnFire) {
+        trailColor = this.fireLevel >= 2 ? '#ff1100' : '#ff7700';
+      } else if (this.isSuper) {
         trailColor = (this.superColors && this.superColors[0]) || '#ff3700';
       } else if (this.shotType === 'bicycle') {
         trailColor = '#ffd700';
@@ -186,6 +198,7 @@ export class Ball {
         life: 1.0,
         color: trailColor,
         isSuper: this.isSuper,
+        isOnFire: this.isOnFire,
         shotType: this.shotType
       });
     }
@@ -285,6 +298,22 @@ export class Ball {
       this.superType = null;
     }
     this.lastKickedBy = kicker;
+
+    // Check if airborne hit for juggling combo (above pitch grass)
+    if (this.y < 570) {
+      this.airCombo = (this.airCombo || 0) + 1;
+      if (this.airCombo >= 3) {
+        this.isOnFire = true;
+        this.fireLevel = this.airCombo >= 4 ? 2 : 1;
+        if (this.airCombo >= 4) {
+          this.vx *= 1.25;
+          this.vy *= 1.20;
+        }
+      }
+      if (this.onAirComboHit) {
+        this.onAirComboHit(this.airCombo, this.x, this.y, Math.sign(powerX) || 1);
+      }
+    }
 
     const speed = Math.hypot(powerX, powerY);
     if (speed > 300) {

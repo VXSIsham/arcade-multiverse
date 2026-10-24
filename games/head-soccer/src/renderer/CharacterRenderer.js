@@ -34,6 +34,14 @@ export class CharacterRenderer {
 
     ctx.save();
 
+    // Scale transformation (e.g. shrink ray mutator)
+    const scaleMult = options.scaleMultiplier || 1.0;
+    if (scaleMult !== 1.0) {
+      ctx.translate(skeleton.root.x, skeleton.root.y);
+      ctx.scale(scaleMult, scaleMult);
+      ctx.translate(-skeleton.root.x, -skeleton.root.y);
+    }
+
     // Mirror horizontally around character root origin when facing left
     if (facing < 0) {
       ctx.translate(skeleton.root.x, skeleton.root.y);
@@ -905,15 +913,27 @@ export class CharacterRenderer {
         break;
       }
       case 'poseidon': {
-        // Golden trident crown shimmer
-        const glint = Math.sin(time * 2.8);
-        if (glint > 0.4) {
-          ctx.fillStyle = 'rgba(255, 235, 59, 0.85)';
+        // Golden trident crown & seashell royal shimmer
+        const glint = Math.sin(time * 3.2);
+        if (glint > 0.25) {
+          ctx.save();
+          ctx.fillStyle = 'rgba(255, 235, 59, 0.9)';
           ctx.shadowColor = '#ffd700';
-          ctx.shadowBlur = 12;
+          ctx.shadowBlur = 14;
+          // Seashell center
           ctx.beginPath();
-          ctx.arc(0, -h * 0.78, 4, 0, Math.PI * 2);
+          ctx.arc(0, -h * 0.76, 4.5, 0, Math.PI * 2);
           ctx.fill();
+          // Center trident spire
+          ctx.beginPath();
+          ctx.arc(0, -h * 0.88, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+          // Side trident spires
+          ctx.beginPath();
+          ctx.arc(-w * 0.26, -h * 0.82, 3.0, 0, Math.PI * 2);
+          ctx.arc(w * 0.26, -h * 0.82, 3.0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
         }
         break;
       }
@@ -1092,40 +1112,59 @@ export class CharacterRenderer {
     // 1. STUNNED / KO FACIAL EXPRESSIONS
     if (isStunned) {
       const time = performance.now() * 0.006;
-      // Animated Spinning Dizzy Spirals (@ @)
-      const drawSpiral = (cx, cy, r) => {
+      if (character?.id === 'poseidon') {
+        // Poseidon already has custom cartoon whirlpool eyes and tongue built into poseidon_ko.png!
+        // We add floating dizzy orbiting stars and water bubbles around his bump
         ctx.save();
-        ctx.strokeStyle = '#facc15';
-        ctx.lineWidth = 1.8;
-        ctx.shadowColor = '#eab308';
-        ctx.shadowBlur = 6;
-        ctx.beginPath();
-        const loops = 3;
-        for (let a = 0; a <= Math.PI * 2 * loops; a += 0.25) {
-          const curR = (a / (Math.PI * 2 * loops)) * r;
-          const px = cx + Math.cos(a + time * 3) * curR;
-          const py = cy + Math.sin(a + time * 3) * curR;
-          if (a === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
+        ctx.translate(-w * 0.20, -h * 0.88);
+        for (let s = 0; s < 3; s++) {
+          const a = time * 4 + (s * Math.PI * 2) / 3;
+          const sx = Math.cos(a) * 18;
+          const sy = Math.sin(a) * 7;
+          ctx.fillStyle = '#ffd700';
+          ctx.shadowColor = '#00e5ff';
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.arc(sx, sy, 3, 0, Math.PI * 2);
+          ctx.fill();
         }
+        ctx.restore();
+      } else {
+        // Animated Spinning Dizzy Spirals (@ @)
+        const drawSpiral = (cx, cy, r) => {
+          ctx.save();
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = 1.8;
+          ctx.shadowColor = '#eab308';
+          ctx.shadowBlur = 6;
+          ctx.beginPath();
+          const loops = 3;
+          for (let a = 0; a <= Math.PI * 2 * loops; a += 0.25) {
+            const curR = (a / (Math.PI * 2 * loops)) * r;
+            const px = cx + Math.cos(a + time * 3) * curR;
+            const py = cy + Math.sin(a + time * 3) * curR;
+            if (a === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+          ctx.restore();
+        };
+
+        drawSpiral(eyeFrontX, eyeFrontY, 7);
+        drawSpiral(eyeBackX, eyeBackY, 6);
+
+        // Comical Wavy Dizzy Mouth
+        ctx.save();
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        const mouthY = -h * 0.26;
+        ctx.moveTo(-w * 0.12, mouthY);
+        ctx.quadraticCurveTo(-w * 0.06, mouthY - 4, 0, mouthY);
+        ctx.quadraticCurveTo(w * 0.06, mouthY + 4, w * 0.12, mouthY);
         ctx.stroke();
         ctx.restore();
-      };
-
-      drawSpiral(eyeFrontX, eyeFrontY, 7);
-      drawSpiral(eyeBackX, eyeBackY, 6);
-
-      // Comical Wavy Dizzy Mouth
-      ctx.save();
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 2.2;
-      ctx.beginPath();
-      const mouthY = -h * 0.26;
-      ctx.moveTo(-w * 0.12, mouthY);
-      ctx.quadraticCurveTo(-w * 0.06, mouthY - 4, 0, mouthY);
-      ctx.quadraticCurveTo(w * 0.06, mouthY + 4, w * 0.12, mouthY);
-      ctx.stroke();
-      ctx.restore();
+      }
 
       // Dripping Animated Sweat Droplets
       const t = performance.now() * 0.004;
@@ -1284,11 +1323,14 @@ export class CharacterRenderer {
       ctx.restore();
     };
 
-    drawEyeDetails(eyeFrontX, eyeFrontY, 6, 8, true);
-    drawEyeDetails(eyeBackX, eyeBackY, 5, 7, false);
+    const hasFrontalEyes = character?.id === 'poseidon' || character?.id === 'anubis';
+    if (!hasFrontalEyes) {
+      drawEyeDetails(eyeFrontX, eyeFrontY, 6, 8, true);
+      drawEyeDetails(eyeBackX, eyeBackY, 5, 7, false);
+    }
 
     // 3. BATTLE SQUINT & FURROWED BROWS (Active in sprint, jump, or kicks)
-    if (isAction) {
+    if (isAction && !hasFrontalEyes) {
       ctx.save();
       ctx.strokeStyle = '#0f172a';
       ctx.lineWidth = 2.2;

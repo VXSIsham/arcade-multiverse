@@ -16,20 +16,22 @@ export class PowerUpSystem {
     this.crates = [];
     this.spawnTimer = 8.0; // First air drop 8s into match!
     this.gloves = []; // Active rocket boxing gloves
+    this.bananas = []; // Slippery banana peel traps on turf
     this.bombState = null; // Active dynamite on ball: { timer: 5.0, maxTime: 5.0 }
 
     // Active Buffs
-    this.playerBuffs = { speed: 0, shield: 0, giant: 0 };
-    this.rivalBuffs = { speed: 0, shield: 0, giant: 0 };
+    this.playerBuffs = { speed: 0, shield: 0, giant: 0, shrink: 0 };
+    this.rivalBuffs = { speed: 0, shield: 0, giant: 0, shrink: 0 };
   }
 
   reset() {
     this.crates.length = 0;
     this.gloves.length = 0;
+    this.bananas.length = 0;
     this.bombState = null;
     this.spawnTimer = 8.0;
-    this.playerBuffs = { speed: 0, shield: 0, giant: 0 };
-    this.rivalBuffs = { speed: 0, shield: 0, giant: 0 };
+    this.playerBuffs = { speed: 0, shield: 0, giant: 0, shrink: 0 };
+    this.rivalBuffs = { speed: 0, shield: 0, giant: 0, shrink: 0 };
   }
 
   update(dt, stageWidth, groundY, player, rivalBot, ball, collisionSystem) {
@@ -154,6 +156,52 @@ export class PowerUpSystem {
       ball.isBomb = false;
     }
 
+    // 4b. Update Slippery Banana Peels on Turf
+    for (let i = this.bananas.length - 1; i >= 0; i--) {
+      const b = this.bananas[i];
+      b.life -= dt;
+      if (b.life <= 0) {
+        this.bananas.splice(i, 1);
+        continue;
+      }
+
+      // Check collision with Player
+      const dP1 = Math.hypot(b.x - player.x, b.y - player.y);
+      if (dP1 < 32 && !player.isStunned && !player.isKnockedOut) {
+        this.soundManager.play('slip');
+        this.particleSystem.spawnSparks(b.x, groundY, 18, '#ffd700');
+        player.isSpinning = true;
+        player.spinTime = 0;
+        player.spinDuration = 0.55;
+        player.flipAngle = 0;
+        player.vy = -320;
+        player.x -= player.direction * 35;
+        collisionSystem.applyDamage(player, 10, null, -360 * player.direction, -260, false);
+        collisionSystem.addFloatingText('🍌 ¡RESBALÓN CÓMICO! 🍌', player.x, player.y - 85, '#ffd700', 22);
+        this.bananas.splice(i, 1);
+        continue;
+      }
+
+      // Check collision with Rival
+      if (rivalBot && rivalBot.enabled && !rivalBot.isStunned) {
+        const dRival = Math.hypot(b.x - rivalBot.x, b.y - rivalBot.y);
+        if (dRival < 32) {
+          this.soundManager.play('slip');
+          this.particleSystem.spawnSparks(b.x, groundY, 18, '#ffd700');
+          rivalBot.isSpinning = true;
+          rivalBot.spinTime = 0;
+          rivalBot.spinDuration = 0.55;
+          rivalBot.flipAngle = 0;
+          rivalBot.vy = -320;
+          rivalBot.x -= (rivalBot.direction || -1) * 35;
+          if (rivalBot.takeDamage) rivalBot.takeDamage(10, 360, -260, false);
+          collisionSystem.addFloatingText('🍌 ¡RESBALÓN CÓMICO! 🍌', rivalBot.x, rivalBot.y - 85, '#ffd700', 22);
+          this.bananas.splice(i, 1);
+          continue;
+        }
+      }
+    }
+
     // 5. Update Active Buffs
     this.updateBuffs(this.playerBuffs, player, dt);
     if (rivalBot) this.updateBuffs(this.rivalBuffs, rivalBot, dt);
@@ -181,11 +229,21 @@ export class PowerUpSystem {
     } else {
       entity.giantHeadMultiplier = 1.0;
     }
+
+    if (buffs.shrink > 0) {
+      buffs.shrink -= dt;
+      entity.shrinkMultiplier = 0.45;
+      if (Math.random() < 0.22) {
+        this.particleSystem.spawnSparks(entity.x, entity.y - 20, 2, '#ff00cc');
+      }
+    } else {
+      entity.shrinkMultiplier = 1.0;
+    }
   }
 
   spawnCrate(stageWidth) {
     const x = stageWidth * (0.24 + Math.random() * 0.52);
-    const crateTypes = ['speed', 'freeze', 'glove', 'bomb', 'shield', 'giant'];
+    const crateTypes = ['speed', 'freeze', 'glove', 'bomb', 'shield', 'giant', 'banana', 'shrink'];
     const type = crateTypes[Math.floor(Math.random() * crateTypes.length)];
 
     this.crates.push({
@@ -249,6 +307,35 @@ export class PowerUpSystem {
       case 'giant':
         buffs.giant = 8.0;
         collisionSystem.addFloatingText(`${prefix}¡MEGA CABEZA! 🍄`, collector.x, collector.y - 90, '#ff00ff', 22);
+        break;
+
+      case 'banana':
+        const targetOpp = isP1 ? rivalBot : player;
+        const oppX = targetOpp ? targetOpp.x : 500;
+        this.bananas.push({
+          x: Math.max(90, Math.min(collector.x + (isP1 ? 1 : -1) * 75, 1200)),
+          y: collector.y - 6,
+          life: 20.0,
+          angle: (Math.random() - 0.5) * 0.4
+        });
+        this.bananas.push({
+          x: Math.max(90, Math.min(oppX + (Math.random() - 0.5) * 60, 1200)),
+          y: collector.y - 6,
+          life: 20.0,
+          angle: (Math.random() - 0.5) * 0.4
+        });
+        collisionSystem.addFloatingText(`${prefix}¡TRAMPAS DE PLÁTANO! 🍌`, collector.x, collector.y - 90, '#ffd700', 22);
+        break;
+
+      case 'shrink':
+        const oppBuffs = isP1 ? this.rivalBuffs : this.playerBuffs;
+        oppBuffs.shrink = 8.5;
+        this.soundManager.play('shrink');
+        if (opponent) {
+          opponent.shrinkMultiplier = 0.45;
+          this.particleSystem.spawnSparks(opponent.x, opponent.y - 40, 35, '#ff00cc');
+        }
+        collisionSystem.addFloatingText(`${prefix}¡RAYO ENCOJEDOR! 🔬🐭`, opponent ? opponent.x : collector.x, (opponent ? opponent.y : collector.y) - 95, '#ff00cc', 24);
         break;
     }
   }
@@ -435,6 +522,67 @@ export class PowerUpSystem {
       ctx.lineWidth = 1.2;
       ctx.fillRect(-9, -13, 5, 26);
       ctx.strokeRect(-9, -13, 5, 26);
+
+      ctx.restore();
+    }
+
+    // 3. Render Slippery Banana Peels on Turf
+    for (const b of this.bananas) {
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(b.angle || 0);
+
+      // Soft ground shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+      ctx.beginPath();
+      ctx.ellipse(0, 4, 16, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Banana Peel Yellow Silhouette with golden sheen
+      ctx.shadowColor = 'rgba(255, 215, 0, 0.55)';
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = '#facc15';
+      ctx.strokeStyle = '#ca8a04';
+      ctx.lineWidth = 1.4;
+
+      // Center Stem
+      ctx.beginPath();
+      ctx.arc(0, -2, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Brown Stem Tip
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(-2, -6, 4, 4);
+
+      // 3 Splayed curved peels
+      ctx.fillStyle = '#fde047';
+      // Left peel
+      ctx.beginPath();
+      ctx.moveTo(-2, -2);
+      ctx.quadraticCurveTo(-12, -4, -18, 3);
+      ctx.quadraticCurveTo(-10, 5, -2, 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Right peel
+      ctx.beginPath();
+      ctx.moveTo(2, -2);
+      ctx.quadraticCurveTo(12, -4, 18, 3);
+      ctx.quadraticCurveTo(10, 5, 2, 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Front peel
+      ctx.beginPath();
+      ctx.moveTo(-3, 0);
+      ctx.quadraticCurveTo(0, 12, 0, 15);
+      ctx.quadraticCurveTo(3, 12, 3, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
 
       ctx.restore();
     }

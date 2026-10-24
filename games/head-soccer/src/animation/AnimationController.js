@@ -1,4 +1,4 @@
-import { AnimationClips } from './AnimationClip.js?v=char_overhaul_v40';
+import { AnimationClips } from './AnimationClip.js?v=char_overhaul_v42';
 
 /**
  * Advanced State Machine, Timeline Sequencer and Pose Blender for Head Soccer.

@@ -1,21 +1,60 @@
-import { Skeleton } from './core/Skeleton.js?v=char_overhaul_v40';
-import { AnimationController } from './animation/AnimationController.js?v=char_overhaul_v40';
-import { Ball } from './physics/Ball.js?v=char_overhaul_v40';
-import { CollisionSystem } from './physics/CollisionSystem.js?v=char_overhaul_v40';
-import { ParticleSystem } from './physics/ParticleSystem.js?v=char_overhaul_v40';
-import { RagdollSystem } from './physics/RagdollSystem.js?v=char_overhaul_v40';
-import { PowerSystem } from './physics/PowerSystem.js?v=char_overhaul_v40';
-import { PowerUpSystem } from './physics/PowerUpSystem.js?v=char_overhaul_v40';
-import { RivalBot } from './physics/RivalBot.js?v=char_overhaul_v40';
-import { SuperShots } from './physics/SuperShots.js?v=char_overhaul_v40';
-import { CHARACTERS, getCharacter } from './data/Characters.js?v=char_overhaul_v40';
-import { SoundManager } from './audio/SoundManager.js?v=char_overhaul_v40';
-import { AssetLoader } from './renderer/AssetLoader.js?v=char_overhaul_v40';
-import { GameRenderer } from './renderer/GameRenderer.js?v=char_overhaul_v40';
-import { SpineExporter } from './export/SpineExporter.js?v=char_overhaul_v40';
-import { InputManager } from './ui/InputManager.js?v=char_overhaul_v40';
-import { UIManager } from './ui/UIManager.js?v=char_overhaul_v40';
-import { TournamentManager, GAME_MODES } from './tournament/TournamentManager.js?v=char_overhaul_v40';
+import { Skeleton } from './core/Skeleton.js?v=char_overhaul_v42';
+import { AnimationController } from './animation/AnimationController.js?v=char_overhaul_v42';
+import { Ball } from './physics/Ball.js?v=char_overhaul_v42';
+import { CollisionSystem } from './physics/CollisionSystem.js?v=char_overhaul_v42';
+import { ParticleSystem } from './physics/ParticleSystem.js?v=char_overhaul_v42';
+import { RagdollSystem } from './physics/RagdollSystem.js?v=char_overhaul_v42';
+import { PowerSystem } from './physics/PowerSystem.js?v=char_overhaul_v42';
+import { PowerUpSystem } from './physics/PowerUpSystem.js?v=char_overhaul_v42';
+import { RivalBot } from './physics/RivalBot.js?v=char_overhaul_v42';
+import { SuperShots } from './physics/SuperShots.js?v=char_overhaul_v42';
+import { CHARACTERS, getCharacter } from './data/Characters.js?v=char_overhaul_v42';
+import { SoundManager } from './audio/SoundManager.js?v=char_overhaul_v42';
+import { AssetLoader } from './renderer/AssetLoader.js?v=char_overhaul_v42';
+import { GameRenderer } from './renderer/GameRenderer.js?v=char_overhaul_v42';
+import { SpineExporter } from './export/SpineExporter.js?v=char_overhaul_v42';
+import { InputManager } from './ui/InputManager.js?v=char_overhaul_v42';
+import { UIManager } from './ui/UIManager.js?v=char_overhaul_v42';
+import { TournamentManager, GAME_MODES } from './tournament/TournamentManager.js?v=char_overhaul_v42';
+
+const TAUNT_QUOTES = {
+  kenta: [
+    '¡DEMASIADO FÁCIL! 😎✨',
+    '¿ESO ES TODO LO QUE TIENES? 🇯🇵⚽',
+    '¡EL ARTE DEL FÚTBOL! 🥋🔥',
+    '¡NO PUEDES TOCARME! ⚡💨'
+  ],
+  luchador: [
+    '¡AQUÍ MANDO YO! 🐂🔥',
+    '¡SÁCATE A VOLAR! 🇲🇽🌮',
+    '¡SENTIRÁS LA FURIA DEL TORO! 💥',
+    '¡MÁS RESPETO AL CAMPEÓN! 👑🥊'
+  ],
+  cyborg: [
+    'ERROR 404: TALENTO NO ENCONTRADO 🤖⚙️',
+    'CALCULANDO TU DERROTA: 99.9% 💻',
+    'SISTEMA: OPONENTE OBSOLETO ⚡🔌',
+    'ACTUALIZA TU SOFTWARE, NOVATO 🎮'
+  ],
+  kage: [
+    'LENTO... NI VISTE MI SOMBRA 🥷💨',
+    'MI TÉCNICA ES INALCANZABLE 🍃✨',
+    'YA ESTÁS DERROTADO... 🌑⚡',
+    'EL SILENCIO ES MI ALIADO 🌪️'
+  ],
+  bjorn: [
+    '¡POR ODÍN! ¡MI ABUELA PATEA MÁS FUERTE! 🪓⚡',
+    '¡BRINDEMOS POR TU DERROTA! 🍺❄️',
+    '¡EL HIELO NO TIENE PIEDAD! 🛡️',
+    '¡RUGE LA TORMENTA NÓRDICA! 🐺'
+  ],
+  arthur: [
+    '¡POBRE RENDIMIENTO, PLEBEYO! 👑🛡️',
+    'EL REINO EXIGE MEJOR OPONENTE ⚔️✨',
+    '¡INCLÍNATE ANTE LA REALEZA! 🏰⚽',
+    '¡EXCALIBUR NUNCA FALLA! 🗡️🌟'
+  ]
+};
 
 /**
  * Head Soccer 2D — Skeletal Rig, Ragdoll Stun, Multi-Character Roster & Super Power Engine
@@ -63,6 +102,8 @@ async function bootstrap() {
     hasShield: false,
     speedMultiplier: 1.0,
     giantHeadMultiplier: 1.0,
+    shrinkMultiplier: 1.0,
+    tauntCooldown: 0,
     isDashing: false,
     dashTimer: 0,
     dashVx: 0,
@@ -193,6 +234,46 @@ async function bootstrap() {
     }
   };
 
+  // Expressive & Comical Taunt / Burla Trigger (Rewards +20% to +35% Super Energy!)
+  const triggerTaunt = (isPlayer = true) => {
+    const actor = isPlayer ? player : rivalBot;
+    if (!actor || actor.isStunned || actor.isFrozen || isMatchOver) return;
+    if (isPlayer && ragdollSystem.isActive) return;
+    if (actor.tauntCooldown > 0) return;
+
+    actor.tauntCooldown = 2.0;
+    actor.animController.play('taunt');
+    soundManager.play('taunt');
+
+    const charId = actor.character?.id || (isPlayer ? 'kenta' : 'luchador');
+    const quotes = TAUNT_QUOTES[charId] || ['¡DEMASIADO FÁCIL! 😎✨'];
+    const quote = quotes[Math.floor(Math.random() * quotes.length)];
+
+    const opponent = isPlayer ? rivalBot : player;
+    const dist = opponent ? Math.hypot(actor.x - opponent.x, actor.y - opponent.y) : 999;
+    const isRisky = dist < 160;
+
+    const bonusPower = isRisky ? 35 : 20;
+    if (isPlayer) {
+      powerSystem.addPower(bonusPower);
+    } else {
+      rivalBot.power = Math.min(100, rivalBot.power + bonusPower);
+    }
+
+    // Sparkle particles & tooth shine stars
+    particleSystem.spawnSparks(actor.x + (actor.direction || 1) * 20, actor.y - 65, 18, '#ffd700');
+    particleSystem.spawnSparks(actor.x, actor.y - 45, 12, '#ffffff');
+
+    if (isRisky) {
+      collisionSystem.addFloatingText('🔥 ¡BURLA ARRIESGADA! +35% SUPER ⚡', actor.x, actor.y - 120, '#ff3700', 22);
+    }
+    collisionSystem.addFloatingText(quote, actor.x, actor.y - 95, '#ffd700', 21);
+
+    if (isPlayer) {
+      uiManager.setActiveAnim('taunt');
+    }
+  };
+
   // Snappy Action Trigger
   const triggerAction = (animName, data = null) => {
     soundManager.init();
@@ -203,6 +284,10 @@ async function bootstrap() {
     }
     if (animName === 'dash') {
       triggerDash();
+      return;
+    }
+    if (animName === 'taunt') {
+      triggerTaunt(true);
       return;
     }
 
@@ -371,6 +456,8 @@ async function bootstrap() {
       rivalBot.triggerSuper(ball, player, collisionSystem, superShots);
     } else if (animName === 'kick' || animName === 'bicycle_kick') {
       rivalBot.triggerKick(ball, player, collisionSystem);
+    } else if (animName === 'taunt') {
+      triggerTaunt(false);
     }
   };
 
@@ -532,6 +619,8 @@ async function bootstrap() {
     player.dashGhosts = [];
     player.isSpinning = false;
     player.flipAngle = 0;
+    player.shrinkMultiplier = 1.0;
+    player.tauntCooldown = 0;
     superShots.reset();
     player.animController.play('idle');
     rivalBot.resetPosition();
@@ -539,6 +628,8 @@ async function bootstrap() {
     rivalBot.y = renderer.groundY;
     rivalBot.hp = 100;
     rivalBot.power = 0;
+    rivalBot.shrinkMultiplier = 1.0;
+    rivalBot.tauntCooldown = 0;
     ball.reset(renderer.stageWidth * 0.5, renderer.groundY - 180);
     powerSystem.power = tournamentManager.currentMode === GAME_MODES.SURVIVAL ? 100 : 0;
     powerUpSystem.reset();
@@ -760,9 +851,19 @@ async function bootstrap() {
       const moveSpeed = 360 * speedMult;
       let isMoving = false;
 
-      // Dash Cooldown decrement
+      // Cooldown decrements
       if (player.dashCooldown > 0) {
         player.dashCooldown = Math.max(0, player.dashCooldown - dt);
+      }
+      if (player.tauntCooldown > 0) {
+        player.tauntCooldown = Math.max(0, player.tauntCooldown - dt);
+      }
+
+      // CPU Rival autonomous comical taunt when player is stunned!
+      if (!rivalBot.isHumanControlled && rivalBot.enabled && !rivalBot.isStunned && !rivalBot.isFrozen && (rivalBot.tauntCooldown || 0) <= 0) {
+        if (player.isStunned && Math.random() < 0.02) {
+          triggerTaunt(false);
+        }
       }
 
       // Smooth Physics Dash with Continuous Velocity Deceleration & Afterimages
@@ -855,7 +956,7 @@ async function bootstrap() {
 
       // 4. Locomotion & Animation State Machine
       const cur = animController.currentAnim;
-      const isOneShot = ['kick', 'rocket_kick', 'bicycle_kick', 'diving_header', 'scorpion_kick', 'smash_header', 'super_shot'].includes(cur);
+      const isOneShot = ['kick', 'rocket_kick', 'bicycle_kick', 'diving_header', 'scorpion_kick', 'smash_header', 'super_shot', 'taunt'].includes(cur);
       const isOneShotFinished = isOneShot && (animController.animTime >= animController.getClip().duration * 0.95);
 
       if (player.isStunned) {

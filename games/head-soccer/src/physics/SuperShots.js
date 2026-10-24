@@ -284,21 +284,28 @@ export class SuperShots {
       // 12. Poseidon: Tsunami Hydro-Cannon Sweeping Pitch Wave
       case 'poseidon': {
         this.soundManager.play('superPower');
+        this.soundManager.play('recover');
         this.cameraFx?.shake(14);
         if (hasBall) {
-          ball.kick(dir * 1180, -260, true, owner);
+          ball.kick(dir * 1140, -280, true, owner);
           ball.superType = 'poseidon';
-          ball.superColors = ['#00d4ff', '#0044ff', '#e0ffff'];
+          ball.superColors = ['#00d4ff', '#0077ff', '#e0ffff'];
         }
+        const ground = caster ? caster.y : (targets?.player?.y || 500);
         this.activeAbilities.push({
           type: 'tsunami',
           owner,
+          dir,
           x: caster ? caster.x + dir * 45 : (dir > 0 ? 100 : 900),
-          y: (targets?.player?.y || 500) - 45,
-          vx: dir * 650,
-          radius: 75,
-          life: 2.2,
-          colors: ['#00d4ff', '#0044ff', '#ffffff']
+          y: ground,
+          vx: dir * 540,
+          radius: 65,
+          height: 90,
+          life: 2.3,
+          ballHitCooldown: 0.1,
+          hasHitOpponent: false,
+          hasBeenParried: false,
+          colors: ['#00d4ff', '#0077ff', '#ffffff']
         });
         break;
       }
@@ -724,26 +731,103 @@ export class SuperShots {
         // --- TSUNAMI HYDRO WAVE ---
         case 'tsunami': {
           a.x += a.vx * dt;
-          this.particleSystem.spawnTrail(a.x, a.y, '#00d4ff');
-          this.particleSystem.spawnSparks(a.x, a.y - 20, 2, '#ffffff');
+          if (a.ballHitCooldown > 0) a.ballHitCooldown -= dt;
 
-          const distB = Math.hypot(a.x - ball.x, a.y - ball.y);
-          if (distB < a.radius + ball.radius) {
-            ball.vx = a.vx * 1.35;
-            ball.vy = -180;
-            ball.superType = 'poseidon';
-            ball.superColors = a.colors;
-            this.particleSystem.spawnSparks(ball.x, ball.y, 20, '#00d4ff');
+          this.particleSystem.spawnTrail(a.x, a.y - 30, '#00d4ff');
+          if (Math.random() < 0.4) {
+            this.particleSystem.spawnSparks(a.x - dir * 15, a.y - 15, 2, '#ffffff');
           }
 
-          if (opponent && !a.hasHitOpponent) {
-            const distO = Math.hypot(a.x - opponent.x, a.y - (opponent.y - 45));
-            if (distO < a.radius + 40) {
-              a.hasHitOpponent = true;
-              opponent.takeDamage ? opponent.takeDamage(26, dir * 420, -240, false) : collisionSystem?.applyDamage(player, 26, null, dir * 420, -240, false);
-              this.soundManager.play('recover');
-              this.particleSystem.spawnSparks(opponent.x, opponent.y - 40, 30, '#00d4ff');
-              collisionSystem?.addFloatingText('🌊 ¡TSUNAMI MARINO!', opponent.x, opponent.y - 95, '#00d4ff', 22);
+          // 1. Ability Clash Check
+          for (let j = this.activeAbilities.length - 1; j >= 0; j--) {
+            if (j === i) continue;
+            const other = this.activeAbilities[j];
+            if (other && other.owner !== a.owner) {
+              const clashDist = Math.abs(a.x - other.x);
+              if (clashDist < 75) {
+                this.soundManager.play('superExplode');
+                this.cameraFx?.shake(15);
+                this.particleSystem.spawnSonicBoom(a.x, a.y - 40, 1.4, '#00d4ff');
+                this.particleSystem.spawnSparks(a.x, a.y - 40, 45, '#ffd700');
+                collisionSystem?.addFloatingText('🌊⚡ ¡CHOQUE DE TITANES! 💥', a.x, a.y - 95, '#00ffff', 24);
+                a.life = 0;
+                other.life = 0;
+                ball.vx = (Math.random() - 0.5) * 300;
+                ball.vy = -750;
+                return;
+              }
+            }
+          }
+
+          // 2. Ball Surfing (Single powerful crest surge lob, never locks the ball!)
+          const distB = Math.hypot(a.x - ball.x, a.y - 35 - ball.y);
+          if (distB < a.radius + ball.radius && a.ballHitCooldown <= 0) {
+            a.ballHitCooldown = 0.65;
+            ball.kick(a.vx * 1.5, -530, true, a.owner);
+            ball.superType = 'poseidon';
+            ball.superColors = a.colors;
+            ball.spin = dir * 18;
+            this.soundManager.play('recover');
+            this.soundManager.play('superPower');
+            this.cameraFx?.shake(10);
+            this.particleSystem.spawnSonicBoom(ball.x, ball.y, dir, '#00d4ff');
+            this.particleSystem.spawnSparks(ball.x, ball.y, 25, '#ffffff');
+            collisionSystem?.addFloatingText('🌊 ¡MAREJADA HIDRO! 🔱', ball.x, ball.y - 75, '#00d4ff', 22);
+          }
+
+          // 3. Opponent Counterplay & Parry Windows
+          if (opponent && !a.hasHitOpponent && !a.hasBeenParried) {
+            const dx = Math.abs(a.x - opponent.x);
+            if (dx < a.radius + 35) {
+              const oppAnim = opponent.animController?.currentAnim;
+              const isActionParry = ['bicycle_kick', 'diving_header', 'rocket_kick', 'scorpion_kick', 'smash_header'].includes(oppAnim) ||
+                                    oppAnim === 'kick' || opponent.isKicking;
+              const isHighJump = opponent.y < (a.y - a.height - 15);
+
+              if (isHighJump) {
+                // A. Clean Jump Evade
+                if (!a.hasEvadedText) {
+                  a.hasEvadedText = true;
+                  this.particleSystem.spawnSparks(opponent.x, opponent.y, 10, '#00ffff');
+                  collisionSystem?.addFloatingText('🦘 ¡SALTO LIMPIO! 🌊', opponent.x, opponent.y - 85, '#00ffff', 20);
+                }
+              } else if (isActionParry) {
+                // B. Surf Parry (Counter-attack dispels wave!)
+                a.hasBeenParried = true;
+                a.life = 0.05;
+                this.soundManager.play('bounce');
+                this.soundManager.play('superExplode');
+                this.cameraFx?.shake(14);
+                this.particleSystem.spawnSonicBoom(opponent.x, opponent.y - 40, -dir, '#ffd700');
+                this.particleSystem.spawnSparks(opponent.x, opponent.y - 40, 40, '#00d4ff');
+                collisionSystem?.addFloatingText('🏄‍♂️ ¡SURF PARRY! 🔱🛡️', opponent.x, opponent.y - 105, '#ffd700', 26);
+
+                const distBOpp = Math.hypot(ball.x - opponent.x, ball.y - opponent.y);
+                if (distBOpp < 130) {
+                  ball.isSuper = false;
+                  ball.superType = null;
+                  ball.lastKickedBy = a.owner === 'player' ? 'rival' : 'player';
+                  ball.vx = -dir * 950;
+                  ball.vy = -340;
+                  ball.spin = -dir * 15;
+                }
+              } else {
+                // C. Direct Hit (Vórtice Marino Geyser Lift)
+                a.hasHitOpponent = true;
+                const dmg = 22;
+                const stunDur = 1.35;
+                if (opponent.takeDamage) {
+                  opponent.takeDamage(dmg, dir * 280, -480, true, stunDur);
+                } else if (collisionSystem) {
+                  collisionSystem.applyDamage(player, dmg, null, dir * 280, -480, true, stunDur);
+                }
+                this.soundManager.play('recover');
+                this.soundManager.play('superPower');
+                this.cameraFx?.shake(12);
+                this.particleSystem.spawnSparks(opponent.x, opponent.y - 40, 35, '#00d4ff');
+                this.particleSystem.spawnSonicBoom(opponent.x, opponent.y - 40, dir, '#00ffff');
+                collisionSystem?.addFloatingText('🌊 ¡VÓRTICE MARINO! 🌪️', opponent.x, opponent.y - 95, '#00d4ff', 24);
+              }
             }
           }
           break;
@@ -1181,38 +1265,99 @@ export class SuperShots {
           break;
         }
 
-        // Tsunami: Surging Hydro Crest Wave
+        // Tsunami: Surging Hydro Crest Wave with Spinning Golden Trident
         case 'tsunami': {
           ctx.translate(a.x, a.y);
           const dir = Math.sign(a.vx) || 1;
           ctx.scale(dir, 1);
           ctx.shadowColor = '#00d4ff';
-          ctx.shadowBlur = 35;
+          ctx.shadowBlur = 32;
 
-          // Water body
-          const waveGrad = ctx.createLinearGradient(0, -60, 0, 40);
-          waveGrad.addColorStop(0, 'rgba(224, 255, 255, 0.95)');
-          waveGrad.addColorStop(0.3, 'rgba(0, 212, 255, 0.85)');
-          waveGrad.addColorStop(0.8, 'rgba(0, 68, 255, 0.85)');
-          waveGrad.addColorStop(1, 'rgba(0, 30, 120, 0.9)');
-          ctx.fillStyle = waveGrad;
+          const time = performance.now() * 0.008;
+          const waveHeight = a.height || 90;
+          const waveLength = a.radius * 1.4;
 
+          // 1. Undulating Abyss Blue Back Wave
+          ctx.fillStyle = 'rgba(0, 50, 160, 0.75)';
           ctx.beginPath();
-          ctx.moveTo(-a.radius, 40);
-          ctx.quadraticCurveTo(0, -65, a.radius * 0.7, -45);
-          // Curling wave crest
-          ctx.quadraticCurveTo(a.radius * 1.1, -30, a.radius * 0.8, -10);
-          ctx.quadraticCurveTo(a.radius * 0.5, -20, a.radius * 0.3, 0);
-          ctx.lineTo(a.radius * 0.5, 40);
+          ctx.moveTo(-waveLength * 1.1, 0);
+          ctx.quadraticCurveTo(-waveLength * 0.3, -waveHeight * 0.95, waveLength * 0.65, -waveHeight * 0.85);
+          ctx.lineTo(waveLength * 0.5, 0);
           ctx.closePath();
           ctx.fill();
 
-          // Foam line
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 4;
+          // 2. Main Luminous Cyan Water Body with Flowing Gradient
+          const waveGrad = ctx.createLinearGradient(0, -waveHeight, 0, 10);
+          waveGrad.addColorStop(0, 'rgba(224, 255, 255, 0.95)');
+          waveGrad.addColorStop(0.25, 'rgba(0, 212, 255, 0.90)');
+          waveGrad.addColorStop(0.7, 'rgba(0, 102, 255, 0.88)');
+          waveGrad.addColorStop(1, 'rgba(0, 40, 130, 0.95)');
+          ctx.fillStyle = waveGrad;
+
+          const curlWobble = Math.sin(time * 6) * 6;
           ctx.beginPath();
-          ctx.arc(a.radius * 0.75, -25, 14, 0, Math.PI * 1.5);
+          ctx.moveTo(-waveLength, 0);
+          ctx.quadraticCurveTo(-waveLength * 0.2, -waveHeight * 0.75, waveLength * 0.5, -waveHeight + curlWobble);
+          // Curling barrel crest
+          ctx.quadraticCurveTo(waveLength * 0.95, -waveHeight * 0.75, waveLength * 0.7, -waveHeight * 0.35);
+          ctx.quadraticCurveTo(waveLength * 0.45, -waveHeight * 0.45, waveLength * 0.3, 0);
+          ctx.closePath();
+          ctx.fill();
+
+          // 3. Frothy White Crest Foam
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 4.5;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.arc(waveLength * 0.65, -waveHeight * 0.75 + curlWobble * 0.5, 16, Math.PI * 0.7, Math.PI * 1.85);
           ctx.stroke();
+
+          // 4. Spinning Golden Trident Projectile at the Tip of the Surge
+          ctx.save();
+          ctx.translate(waveLength * 0.75, -waveHeight * 0.65);
+          ctx.rotate(time * 4);
+          ctx.shadowColor = '#ffd700';
+          ctx.shadowBlur = 18;
+          ctx.fillStyle = '#ffd700';
+          ctx.strokeStyle = '#ca8a04';
+          ctx.lineWidth = 1.6;
+
+          // Trident Head
+          ctx.beginPath();
+          // Center prong
+          ctx.moveTo(0, -18);
+          ctx.lineTo(3, -6);
+          ctx.lineTo(-3, -6);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          // Left prong
+          ctx.beginPath();
+          ctx.moveTo(-9, -13);
+          ctx.quadraticCurveTo(-11, -3, -3, 0);
+          ctx.lineTo(0, 0);
+          ctx.stroke();
+          // Right prong
+          ctx.beginPath();
+          ctx.moveTo(9, -13);
+          ctx.quadraticCurveTo(11, -3, 3, 0);
+          ctx.lineTo(0, 0);
+          ctx.stroke();
+          // Shaft
+          ctx.fillStyle = '#fef08a';
+          ctx.fillRect(-2, 0, 4, 18);
+          ctx.restore();
+
+          // 5. Ambient Luminous Water Droplets
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+          for (let d = 0; d < 4; d++) {
+            const dropTime = (time + d * 0.35) % 1;
+            const dx = waveLength * 0.6 - dropTime * 45;
+            const dy = -waveHeight * 0.7 - Math.sin(dropTime * Math.PI) * 22;
+            ctx.beginPath();
+            ctx.arc(dx, dy, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
           break;
         }
 

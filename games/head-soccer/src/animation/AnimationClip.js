@@ -523,5 +523,32 @@ export const AnimationClips = {
         face: 'strain'
       };
     }
+  },
+
+  taunt: {
+    name: 'taunt',
+    duration: 0.65,
+    loop: false,
+    evaluate: (t) => {
+      // Hilarious flex / hip wiggle / wink / chest-thump provocation pose
+      const cycle = t * Math.PI * 4;
+      const wiggle = Math.sin(cycle);
+      const nod = Math.cos(cycle * 0.5);
+      return {
+        hipY: -32 + Math.abs(wiggle) * 4.5,
+        torsoRot: wiggle * 15,
+        headRot: nod * 20,
+        headScaleX: 1.12 + wiggle * 0.05,
+        headScaleY: 0.92 - wiggle * 0.05,
+        hairRot: 35 + wiggle * 18,
+        legFrontRot: 195 + wiggle * 10,
+        footFrontRot: -105 + wiggle * 12,
+        legBackRot: 165 - wiggle * 10,
+        footBackRot: -75 - wiggle * 12,
+        armFrontRot: 135 + wiggle * 45, // waving hands / flexing muscles
+        armBackRot: 225 - wiggle * 45,
+        face: 'celebrate'
+      };
+    }
   }
 };
